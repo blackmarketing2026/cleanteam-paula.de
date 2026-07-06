@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CleanTeam Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main id="login-screen" class="login-shell">
+      <section class="login-panel" aria-labelledby="login-title">
+        <div class="brand-mark" aria-hidden="true">
+          <span>CT</span>
+        </div>
+        <p class="eyebrow">CleanTeam Salemanagement</p>
+        <h1 id="login-title">Dashboard Login</h1>
+        <p class="muted">
+          Testzugang: <strong>demo@cleanteam.de</strong> / <strong>CleanTeam2026!</strong>
+        </p>
+        <form id="login-form" class="form-stack" autocomplete="on">
+          <label>
+            E-Mail-Adresse
+            <input id="login-email" type="email" value="demo@cleanteam.de" required />
+          </label>
+          <label>
+            Passwort
+            <input id="login-password" type="password" value="CleanTeam2026!" required />
+          </label>
+          <p id="login-error" class="error-text" hidden>Die Zugangsdaten stimmen nicht.</p>
+          <button class="primary-button full-width" type="submit">
+            <i data-lucide="log-in" aria-hidden="true"></i>
+            Einloggen
+          </button>
+        </form>
+      </section>
+    </main>
+
+    <main id="app-shell" class="app-shell" hidden>
+      <aside class="sidebar" aria-label="Hauptnavigation">
+        <div class="sidebar-brand">
+          <div class="brand-mark compact" aria-hidden="true">
+            <span>CT</span>
+          </div>
+          <div>
+            <strong>CleanTeam</strong>
+            <span>Dashboard</span>
+          </div>
+        </div>
+        <nav class="nav-list">
+          <button class="nav-link active" type="button" data-view="overview">
+            <i data-lucide="layout-dashboard" aria-hidden="true"></i>
+            Übersicht
+          </button>
+          <button class="nav-link" type="button" data-view="customers">
+            <i data-lucide="users-round" aria-hidden="true"></i>
+            Kunden
+          </button>
+          <button class="nav-link" type="button" data-view="offers">
+            <i data-lucide="file-text" aria-hidden="true"></i>
+            Angebote
+          </button>
+          <button class="nav-link" type="button" data-view="contracts">
+            <i data-lucide="signature" aria-hidden="true"></i>
+            Verträge
+          </button>
+        </nav>
+        <button id="logout-button" class="ghost-button sidebar-logout" type="button">
+          <i data-lucide="log-out" aria-hidden="true"></i>
+          Abmelden
+        </button>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <button id="menu-button" class="icon-button mobile-only" type="button" aria-label="Navigation öffnen">
+            <i data-lucide="menu" aria-hidden="true"></i>
+          </button>
+          <div>
+            <p class="eyebrow">CleanTeam</p>
+            <h2 id="view-title">Übersicht</h2>
+          </div>
+          <div class="topbar-actions">
+            <button id="quick-customer" class="secondary-button" type="button">
+              <i data-lucide="user-plus" aria-hidden="true"></i>
+              Kunde
+            </button>
+            <button id="quick-offer" class="primary-button" type="button">
+              <i data-lucide="plus" aria-hidden="true"></i>
+              Angebot
+            </button>
+          </div>
+        </header>
+
+        <div id="mobile-backdrop" class="mobile-backdrop" hidden></div>
+
+        <section id="overview-view" class="view active-view" aria-labelledby="overview-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="overview-heading">Heute im Blick</h3>
+              <p class="muted">Kunden, Angebote und signierte Verträge an einem Ort.</p>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card">
+              <span>Kunden</span>
+              <strong id="metric-customers">0</strong>
+              <small>aktive Datensätze</small>
+            </article>
+            <article class="metric-card">
+              <span>Angebote</span>
+              <strong id="metric-offers">0</strong>
+              <small>erstellt</small>
+            </article>
+            <article class="metric-card">
+              <span>Verträge</span>
+              <strong id="metric-contracts">0</strong>
+              <small>generiert</small>
+            </article>
+            <article class="metric-card">
+              <span>Signiert</span>
+              <strong id="metric-signed">0</strong>
+              <small>online abgeschlossen</small>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <h4>Neueste Angebote</h4>
+                  <p class="muted">Mit Kundendaten, Quadratmetern und Intervall.</p>
+                </div>
+              </div>
+              <div id="recent-offers" class="compact-list"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <h4>Vertragsstatus</h4>
+                  <p class="muted">Schneller Überblick über offene Signaturen.</p>
+                </div>
+              </div>
+              <div id="contract-status" class="status-stack"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="customers-view" class="view" aria-labelledby="customers-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="customers-heading">Kundenverwaltung</h3>
+              <p class="muted">Stammdaten, Ansprechpartner und Adresse pflegen.</p>
+            </div>
+            <button id="new-customer-button" class="primary-button" type="button">
+              <i data-lucide="user-plus" aria-hidden="true"></i>
+              Neuer Kunde
+            </button>
+          </div>
+
+          <div class="split-layout">
+            <section class="panel form-panel" aria-labelledby="customer-form-heading">
+              <div class="panel-header">
+                <div>
+                  <h4 id="customer-form-heading">Kunde anlegen</h4>
+                  <p class="muted">Pflichtfelder sind markiert.</p>
+                </div>
+              </div>
+              <form id="customer-form" class="form-grid">
+                <input id="customer-id" type="hidden" />
+                <label class="span-2">
+                  Firmen- oder Kundenname *
+                  <input id="customer-name" type="text" required placeholder="z. B. Beispiel GmbH" />
+                </label>
+                <label>
+                  E-Mail-Adresse *
+                  <input id="customer-email" type="email" required placeholder="kontakt@firma.de" />
+                </label>
+                <label>
+                  Telefonnummer *
+                  <input id="customer-phone" type="tel" required placeholder="+49 711 123456" />
+                </label>
+                <label>
+                  Ansprechpartner *
+                  <select id="customer-salutation" required>
+                    <option value="Herr">Herr</option>
+                    <option value="Frau">Frau</option>
+                  </select>
+                </label>
+                <label>
+                  Nachname *
+                  <input id="customer-contact-lastname" type="text" required placeholder="Schneider" />
+                </label>
+                <label class="span-2">
+                  Adresse *
+                  <input id="customer-address" type="text" required placeholder="Musterstraße" />
+                </label>
+                <label>
+                  Hausnummer *
+                  <input id="customer-house-number" type="text" required placeholder="12a" />
+                </label>
+                <label>
+                  Postleitzahl *
+                  <input id="customer-zip" type="text" inputmode="numeric" required placeholder="70173" />
+                </label>
+                <label class="span-2">
+                  Stadt *
+                  <input id="customer-city" type="text" required placeholder="Stuttgart" />
+                </label>
+                <div class="form-actions span-2">
+                  <button id="cancel-customer-edit" class="ghost-button" type="button" hidden>
+                    <i data-lucide="x" aria-hidden="true"></i>
+                    Abbrechen
+                  </button>
+                  <button class="primary-button" type="submit">
+                    <i data-lucide="save" aria-hidden="true"></i>
+                    Kunde speichern
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel" aria-labelledby="customer-list-heading">
+              <div class="panel-header wrap-header">
+                <div>
+                  <h4 id="customer-list-heading">Kundenliste</h4>
+                  <p class="muted">Suchen, bearbeiten oder Angebot erstellen.</p>
+                </div>
+                <label class="search-field">
+                  <i data-lucide="search" aria-hidden="true"></i>
+                  <input id="customer-search" type="search" placeholder="Kunden suchen" />
+                </label>
+              </div>
+              <div id="customer-list" class="record-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="offers-view" class="view" aria-labelledby="offers-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="offers-heading">Angebotserstellung</h3>
+              <p class="muted">Fläche, Intervall und Kundendaten werden zu einem Angebot zusammengeführt.</p>
+            </div>
+          </div>
+
+          <div class="split-layout">
+            <section class="panel form-panel" aria-labelledby="offer-form-heading">
+              <div class="panel-header">
+                <div>
+                  <h4 id="offer-form-heading">Neues Angebot</h4>
+                  <p class="muted">Der Preis wird als Demo-Kalkulation berechnet.</p>
+                </div>
+              </div>
+              <form id="offer-form" class="form-grid">
+                <label class="span-2">
+                  Kunde *
+                  <select id="offer-customer" required></select>
+                </label>
+                <label>
+                  Quadratmeter *
+                  <input id="offer-square-meters" type="number" min="1" step="1" required placeholder="250" />
+                </label>
+                <label>
+                  Intervall *
+                  <select id="offer-interval" required>
+                    <option value="Einmalig">Einmalig</option>
+                    <option value="Wöchentlich">Wöchentlich</option>
+                    <option value="14-tägig">14-tägig</option>
+                    <option value="Monatlich">Monatlich</option>
+                    <option value="Quartalsweise">Quartalsweise</option>
+                  </select>
+                </label>
+                <label>
+                  Startdatum
+                  <input id="offer-start-date" type="date" />
+                </label>
+                <label>
+                  Leistung
+                  <select id="offer-service">
+                    <option value="Unterhaltsreinigung">Unterhaltsreinigung</option>
+                    <option value="Büroreinigung">Büroreinigung</option>
+                    <option value="Treppenhausreinigung">Treppenhausreinigung</option>
+                    <option value="Grundreinigung">Grundreinigung</option>
+                    <option value="Glasreinigung">Glasreinigung</option>
+                  </select>
+                </label>
+                <label class="span-2">
+                  Notizen
+                  <textarea id="offer-notes" rows="4" placeholder="Besondere Wünsche, Schlüsselübergabe, Reinigungszeiten"></textarea>
+                </label>
+                <div class="price-preview span-2">
+                  <span>Geschätzter Nettowert</span>
+                  <strong id="offer-price-preview">0,00 €</strong>
+                </div>
+                <div class="form-actions span-2">
+                  <button class="primary-button" type="submit">
+                    <i data-lucide="file-plus-2" aria-hidden="true"></i>
+                    Angebot erstellen
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel" aria-labelledby="offer-list-heading">
+              <div class="panel-header">
+                <div>
+                  <h4 id="offer-list-heading">Angebote</h4>
+                  <p class="muted">Aus jedem Angebot kann ein Vertrag erzeugt werden.</p>
+                </div>
+              </div>
+              <div id="offer-list" class="record-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="contracts-view" class="view" aria-labelledby="contracts-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="contracts-heading">Verträge & Signatur</h3>
+              <p class="muted">Vertrag aus Angebot erstellen und online unterschreiben.</p>
+            </div>
+          </div>
+
+          <div class="contract-layout">
+            <section class="panel" aria-labelledby="contract-list-heading">
+              <div class="panel-header">
+                <div>
+                  <h4 id="contract-list-heading">Vertragsliste</h4>
+                  <p class="muted">Wählen Sie einen Vertrag zur Ansicht aus.</p>
+                </div>
+              </div>
+              <div id="contract-list" class="record-list"></div>
+            </section>
+
+            <section class="panel contract-panel" aria-labelledby="contract-preview-heading">
+              <div class="panel-header wrap-header">
+                <div>
+                  <h4 id="contract-preview-heading">Vertragsvorschau</h4>
+                  <p class="muted">Reinigungsvertrag mit Kundendaten und Angebotskonditionen.</p>
+                </div>
+                <button id="print-contract" class="secondary-button" type="button">
+                  <i data-lucide="printer" aria-hidden="true"></i>
+                  Drucken
+                </button>
+              </div>
+              <article id="contract-preview" class="contract-preview empty-state">
+                Noch kein Vertrag ausgewählt.
+              </article>
+              <div id="signature-area" class="signature-area" hidden>
+                <div class="signature-header">
+                  <div>
+                    <h4>Online signieren</h4>
+                    <p class="muted">Mit Maus, Finger oder Stift unterschreiben.</p>
+                  </div>
+                  <button id="clear-signature" class="ghost-button" type="button">
+                    <i data-lucide="eraser" aria-hidden="true"></i>
+                    Leeren
+                  </button>
+                </div>
+                <canvas id="signature-pad" width="900" height="260" aria-label="Signaturfeld"></canvas>
+                <div class="form-actions">
+                  <button id="save-signature" class="primary-button" type="button">
+                    <i data-lucide="badge-check" aria-hidden="true"></i>
+                    Vertrag signieren
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
