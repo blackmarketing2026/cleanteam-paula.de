@@ -35,6 +35,7 @@ const els = {
   loginPassword: document.querySelector("#login-password"),
   loginError: document.querySelector("#login-error"),
   logoutButton: document.querySelector("#logout-button"),
+  resetDemo: document.querySelector("#reset-demo"),
   navLinks: document.querySelectorAll(".nav-link"),
   views: document.querySelectorAll(".view"),
   viewTitle: document.querySelector("#view-title"),
@@ -87,32 +88,6 @@ const titles = {
   contracts: "Verträge & Signatur",
   settings: "Einstellungen",
 };
-
-async function apiFetch(path, options = {}) {
-  const response = await fetch(path, {
-    credentials: "same-origin",
-    ...options,
-    headers: options.body ? { "Content-Type": "application/json", ...options.headers } : options.headers,
-  });
-
-  let data = {};
-  try {
-    data = await response.json();
-  } catch (error) {
-    data = {};
-  }
-
-  if (!response.ok) {
-    throw new Error(data.error || "Es ist ein Fehler aufgetreten.");
-  }
-
-  return data;
-}
-
-const apiGet = (path) => apiFetch(path);
-const apiPost = (path, body) => apiFetch(path, { method: "POST", body: JSON.stringify(body || {}) });
-const apiPut = (path, body) => apiFetch(path, { method: "PUT", body: JSON.stringify(body || {}) });
-const apiDelete = (path) => apiFetch(path, { method: "DELETE" });
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -256,9 +231,9 @@ function closeMobileNav() {
 async function loadAll() {
   try {
     const [customers, offers, contracts] = await Promise.all([
-      apiGet("api/customers.php"),
-      apiGet("api/offers.php"),
-      apiGet("api/contracts.php"),
+      FakeAPI.getCustomers(),
+      FakeAPI.getOffers(),
+      FakeAPI.getContracts(),
     ]);
 
     state.data.customers = customers;
@@ -417,8 +392,8 @@ function renderOffers() {
 function renderOfferCard(offer) {
   const validity = offerValidity(offer);
   const sentLabel = offer.sentAt
-    ? `Gesendet am ${formatDate(offer.sentAt)}`
-    : "Noch nicht per E-Mail versendet";
+    ? `„Gesendet" am ${formatDate(offer.sentAt)} (simuliert)`
+    : "Noch nicht versendet";
 
   const contractButton = offer.contractId
     ? `
@@ -452,7 +427,11 @@ function renderOfferCard(offer) {
       <div class="record-actions">
         <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
-          Angebot senden
+          Angebot senden (simuliert)
+        </button>
+        <button class="secondary-button" type="button" data-action="open-offer-view" data-id="${escapeHtml(offer.id)}">
+          <i data-lucide="external-link" aria-hidden="true"></i>
+          Kundenansicht öffnen
         </button>
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="link" aria-hidden="true"></i>
@@ -473,7 +452,7 @@ function renderContracts() {
 
   els.contractList.innerHTML = contracts.length
     ? contracts.map(renderContractCard).join("")
-    : `<div class="empty-state">Noch keine Verträge vorhanden.</div>`;
+    : `<div class="empty-state">Noch keine Verträge vorhanden. Öffnen Sie eine Kundenansicht und starten Sie den Vertragsassistenten.</div>`;
 
   if (state.selectedContractId && !getContract(state.selectedContractId)) {
     state.selectedContractId = null;
@@ -567,7 +546,7 @@ function renderContractDocument(contract) {
     statusBlock = `
       <section class="signature-box">
         <strong>Digitale Signatur des Kunden</strong>
-        <span>Der Kunde durchläuft aktuell den Vertragsassistenten über den Angebots-Link.</span>
+        <span>Der Kunde durchläuft aktuell den Vertragsassistenten in der Kundenansicht.</span>
       </section>
     `;
   }
@@ -689,10 +668,10 @@ async function handleCustomerSubmit(event) {
 
   try {
     if (id) {
-      await apiPut(`api/customers.php?id=${encodeURIComponent(id)}`, payload);
+      await FakeAPI.updateCustomer(id, payload);
       showToast("Kunde wurde aktualisiert.");
     } else {
-      await apiPost("api/customers.php", payload);
+      await FakeAPI.createCustomer(payload);
       showToast("Kunde wurde angelegt.");
     }
 
@@ -723,7 +702,7 @@ async function handleOfferSubmit(event) {
   };
 
   try {
-    await apiPost("api/offers.php", payload);
+    await FakeAPI.createOffer(payload);
     els.offerForm.reset();
     els.offerStartDate.value = todayAsInputValue();
     updateOfferPreview();
@@ -736,12 +715,20 @@ async function handleOfferSubmit(event) {
 
 async function sendOffer(id) {
   try {
-    await apiPost(`api/send-offer.php?id=${encodeURIComponent(id)}`);
+    await FakeAPI.sendOffer(id);
     await loadAll();
-    showToast("Angebot wurde per E-Mail versendet.");
+    showToast("Demo: Angebot wurde als versendet markiert (keine echte E-Mail). Öffnen Sie die Kundenansicht über den Button.");
   } catch (error) {
     showToast(error.message);
   }
+}
+
+function openOfferView(id) {
+  const offer = getOffer(id);
+  if (!offer) {
+    return;
+  }
+  window.open(offer.publicUrl, "_blank");
 }
 
 async function copyOfferLink(id) {
@@ -770,7 +757,7 @@ async function deleteCustomer(id) {
   }
 
   try {
-    await apiDelete(`api/customers.php?id=${encodeURIComponent(id)}`);
+    await FakeAPI.deleteCustomer(id);
     await loadAll();
     showToast("Kunde wurde gelöscht.");
   } catch (error) {
@@ -785,7 +772,7 @@ async function deleteOffer(id) {
   }
 
   try {
-    await apiDelete(`api/offers.php?id=${encodeURIComponent(id)}`);
+    await FakeAPI.deleteOffer(id);
     if (state.selectedContractId && !state.data.contracts.some((contract) => contract.id === state.selectedContractId)) {
       state.selectedContractId = null;
     }
@@ -803,7 +790,7 @@ async function deleteContract(id) {
   }
 
   try {
-    await apiDelete(`api/contracts.php?id=${encodeURIComponent(id)}`);
+    await FakeAPI.deleteContract(id);
     if (state.selectedContractId === id) {
       state.selectedContractId = null;
     }
@@ -816,7 +803,7 @@ async function deleteContract(id) {
 
 async function loadSmtpSettings() {
   try {
-    const settings = await apiGet("api/settings.php");
+    const settings = await FakeAPI.getSettings();
     els.smtpHost.value = settings.host || "";
     els.smtpPort.value = settings.port || 587;
     els.smtpEncryption.value = settings.encryption || "tls";
@@ -846,8 +833,8 @@ async function handleSmtpSubmit(event) {
   };
 
   try {
-    await apiPost("api/settings.php", payload);
-    showToast("Einstellungen wurden gespeichert.");
+    await FakeAPI.saveSettings(payload);
+    showToast("Einstellungen wurden gespeichert (simuliert).");
     await loadSmtpSettings();
   } catch (error) {
     showToast(error.message);
@@ -856,8 +843,8 @@ async function handleSmtpSubmit(event) {
 
 async function sendTestMail() {
   try {
-    await apiPost("api/settings.php?action=test");
-    showToast("Test-E-Mail wurde an die Absenderadresse gesendet.");
+    await FakeAPI.sendTestMail();
+    showToast("Demo: Test-E-Mail wurde simuliert (kein echter Versand).");
   } catch (error) {
     showToast(error.message);
   }
@@ -893,6 +880,10 @@ function handleRecordAction(event) {
     sendOffer(id);
   }
 
+  if (action === "open-offer-view") {
+    openOfferView(id);
+  }
+
   if (action === "copy-offer-link") {
     copyOfferLink(id);
   }
@@ -923,7 +914,7 @@ function bindEvents() {
     const password = els.loginPassword.value;
 
     try {
-      await apiPost("api/login.php", { email, password });
+      await FakeAPI.login(email, password);
       els.loginError.hidden = true;
       showApp();
     } catch (error) {
@@ -933,12 +924,17 @@ function bindEvents() {
   });
 
   els.logoutButton.addEventListener("click", async () => {
-    try {
-      await apiPost("api/logout.php");
-    } catch (error) {
-      // Ignore network errors on logout, still return to the login screen.
-    }
+    await FakeAPI.logout();
     showLogin();
+  });
+
+  els.resetDemo.addEventListener("click", () => {
+    const confirmed = window.confirm("Demo-Daten zurücksetzen? Alle in der Demo angelegten Kunden, Angebote und Verträge werden gelöscht.");
+    if (!confirmed) {
+      return;
+    }
+    localStorage.removeItem("cleanteam-demo-data-v1");
+    window.location.reload();
   });
 
   els.navLinks.forEach((button) => {
@@ -988,7 +984,7 @@ async function init() {
   els.offerStartDate.value = todayAsInputValue();
 
   try {
-    const session = await apiGet("api/me.php");
+    const session = await FakeAPI.me();
     if (session.loggedIn) {
       showApp();
       return;

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>CleanTeam – Ihr Angebot (Demo)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <style>
+      .demo-banner {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: #a86608;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 800;
+        text-align: center;
+        padding: 8px 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-banner">
+      DEMO-MODUS &ndash; das ist die simulierte Sicht des Kunden auf diesen Angebots-Link
+    </div>
+
+    <main class="public-shell">
+      <header class="public-header">
+        <div class="brand-mark" aria-hidden="true"><span>CT</span></div>
+        <div>
+          <strong>CleanTeam</strong>
+          <span>Ihr persönliches Angebot</span>
+        </div>
+      </header>
+
+      <div class="public-card" id="public-card">
+        <section id="screen-loading" class="public-screen active-screen">
+          <p class="muted">Angebot wird geladen …</p>
+        </section>
+
+        <section id="screen-error" class="public-screen">
+          <h2>Link nicht verfügbar</h2>
+          <p id="error-message" class="muted"></p>
+        </section>
+
+        <section id="screen-offer" class="public-screen">
+          <p class="eyebrow">Angebot</p>
+          <h2>Ihr individuelles Reinigungsangebot</h2>
+          <dl id="offer-summary" class="data-check"></dl>
+          <p id="offer-validity" class="muted"></p>
+          <div class="form-actions">
+            <button id="start-contract" class="primary-button" type="button">
+              Jetzt zum Vertrag
+            </button>
+          </div>
+        </section>
+
+        <section id="screen-abgelehnt" class="public-screen">
+          <h2>Vielen Dank für Ihre Rückmeldung</h2>
+          <p class="muted">
+            Bitte kontaktieren Sie CleanTeam, damit wir das Angebot für Sie anpassen können.
+            Wir melden uns schnellstmöglich bei Ihnen.
+          </p>
+        </section>
+
+        <section id="screen-daten" class="public-screen wizard-screen">
+          <p class="step-indicator">Schritt 1 von 7</p>
+          <h2>Sind diese Angaben korrekt?</h2>
+          <dl id="data-check-list" class="data-check"></dl>
+          <p class="question">Sind die oben stehenden Daten korrekt?</p>
+          <div class="form-actions">
+            <button class="ghost-button" data-yesno="no" type="button">Nein</button>
+            <button class="primary-button" data-yesno="yes" type="button">Ja, korrekt</button>
+          </div>
+        </section>
+
+        <section id="screen-intervall" class="public-screen wizard-screen">
+          <p class="step-indicator">Schritt 2 von 7</p>
+          <h2>Ist das besprochene Intervall korrekt?</h2>
+          <p class="question" id="interval-check-text"></p>
+          <div class="form-actions">
+            <button class="ghost-button" data-yesno="no" type="button">Nein</button>
+            <button class="primary-button" data-yesno="yes" type="button">Ja, korrekt</button>
+          </div>
+        </section>
+
+        <section id="screen-vollmacht" class="public-screen wizard-screen">
+          <p class="step-indicator">Schritt 3 von 7</p>
+          <h2>Sind Sie berechtigt, Verträge für Ihre Firma abzuschließen?</h2>
+          <div class="form-actions">
+            <button class="ghost-button" id="auth-no" type="button">Nein</button>
+            <button class="primary-button" id="auth-yes" type="button">Ja, ich bin berechtigt</button>
+          </div>
+          <div id="representation-field" class="representation-field" hidden>
+            <label>
+              In welcher Vertretung handeln Sie? *
+              <textarea id="representation-note" rows="3" placeholder="z. B. Prokurist, Bevollmächtigter, Geschäftsführer einer anderen Gesellschaft …"></textarea>
+            </label>
+            <div class="form-actions">
+              <button class="primary-button" id="representation-continue" type="button">Weiter</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="screen-vertragspartner" class="public-screen wizard-screen">
+          <p class="step-indicator">Schritt 4 von 7</p>
+          <h2>Vertragspartner</h2>
+          <dl id="partner-details" class="data-check"></dl>
+          <div class="form-actions">
+            <button class="primary-button" data-next="leistung" type="button">Weiter</button>
+          </div>
+        </section>
+
+        <section id="screen-leistung" class="public-screen wizard-screen">
+          <p class="step-indicator">Schritt 5 von 7</p>
+          <h2>Leistungsumfang</h2>
+          <dl id="service-details" class="data-check"></dl>
+          <div class="form-actions">
+            <button class="primary-button" data-next="bedingungen" type="button">Weiter</button>
+          </div>
+        </section>
+
+        <section id="screen-bedingungen" class="public-screen wizard-screen">
+          <p class="step-indicator">Schritt 6 von 7</p>
+          <h2>Vertragsbedingungen</h2>
+          <div class="terms-text">
+            <p>
+              CleanTeam übernimmt die oben beschriebene Reinigungsleistung gemäß Angebot.
+              Leistungszeiten, Zugang und Objektbesonderheiten werden vor Leistungsbeginn abgestimmt.
+            </p>
+            <p>
+              Alle Preise verstehen sich netto zuzüglich der gesetzlichen Umsatzsteuer. Bei
+              wiederkehrenden Leistungen verlängert sich der Vertrag automatisch, sofern er nicht
+              form- und fristgerecht gekündigt wird.
+            </p>
+            <p>
+              Mit der Signatur im nächsten Schritt bestätigen Sie den Abschluss dieses Vertrags zu
+              den genannten Konditionen.
+            </p>
+          </div>
+          <div class="form-actions">
+            <button class="primary-button" data-next="signatur" type="button">Weiter zur Unterschrift</button>
+          </div>
+        </section>
+
+        <section id="screen-signatur" class="public-screen wizard-screen">
+          <p class="step-indicator">Schritt 7 von 7</p>
+          <h2>Vertrag unterschreiben</h2>
+          <p class="muted">Bitte unterschreiben Sie mit dem Finger, Stift oder der Maus.</p>
+          <div class="signature-area">
+            <canvas id="signature-pad" width="900" height="260" aria-label="Signaturfeld"></canvas>
+            <div class="form-actions">
+              <button id="clear-signature" class="ghost-button" type="button">Leeren</button>
+              <button id="save-signature" class="primary-button" type="button">Vertrag jetzt unterschreiben</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="screen-fertig" class="public-screen">
+          <h2>Vielen Dank, Ihr Vertrag ist unterschrieben!</h2>
+          <p class="muted">
+            Sie können den vollständigen Vertrag unten einsehen, ausdrucken oder als PDF speichern.
+          </p>
+          <div class="form-actions">
+            <button id="print-final-contract" class="secondary-button" type="button">
+              Drucken / Als PDF speichern
+            </button>
+          </div>
+          <article id="final-contract-document" class="contract-preview"></article>
+        </section>
+      </div>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="fake-backend.js"></script>
+    <script src="public.js"></script>
+  </body>
+</html>
