@@ -427,7 +427,7 @@ button svg {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -582,6 +582,15 @@ button svg {
 .record-lines span {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.record-side {
+  display: grid;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  justify-items: end;
+  gap: 6px;
+  text-align: right;
 }
 
 .record-actions {
@@ -796,6 +805,121 @@ button svg {
   z-index: 18;
 }
 
+.public-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  min-height: 100vh;
+  padding: 32px 20px 60px;
+  background:
+    linear-gradient(120deg, rgba(19, 121, 216, 0.1), transparent 42%),
+    var(--blue-050);
+}
+
+.public-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 720px;
+  color: var(--blue-950);
+}
+
+.public-header strong,
+.public-header span {
+  display: block;
+}
+
+.public-header span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.public-card {
+  width: 100%;
+  max-width: 720px;
+  min-width: 0;
+  border: 1px solid rgba(10, 79, 145, 0.12);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+  padding: 32px;
+}
+
+.public-screen {
+  display: none;
+}
+
+.public-screen.active-screen {
+  display: grid;
+  gap: 16px;
+}
+
+.step-indicator {
+  margin: 0;
+  color: var(--blue-700);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.question {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.data-check {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 9px 18px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.data-check dt {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.data-check dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.representation-field {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.terms-text {
+  display: grid;
+  gap: 12px;
+  color: #172235;
+  line-height: 1.6;
+}
+
+@media (max-width: 560px) {
+  .public-shell {
+    padding: 20px 12px 40px;
+  }
+
+  .public-card {
+    padding: 20px;
+  }
+
+  .data-check {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
 @media (max-width: 1120px) {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -947,6 +1071,21 @@ button svg {
   .contract-layout,
   .panel,
   .contract-preview {
+    display: block;
+    width: 100%;
+    min-height: auto;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .public-header,
+  .public-screen .form-actions {
+    display: none !important;
+  }
+
+  .public-shell,
+  .public-card {
     display: block;
     width: 100%;
     min-height: auto;

@@ -21,16 +21,17 @@
         <p class="eyebrow">CleanTeam Salemanagement</p>
         <h1 id="login-title">Dashboard Login</h1>
         <p class="muted">
-          Testzugang: <strong>demo@cleanteam.de</strong> / <strong>CleanTeam2026!</strong>
+          Noch kein Konto vorhanden? Der erste Login legt automatisch das Admin-Konto mit den
+          eingegebenen Zugangsdaten an.
         </p>
         <form id="login-form" class="form-stack" autocomplete="on">
           <label>
             E-Mail-Adresse
-            <input id="login-email" type="email" value="demo@cleanteam.de" required />
+            <input id="login-email" type="email" placeholder="name@cleanteam.de" required />
           </label>
           <label>
             Passwort
-            <input id="login-password" type="password" value="CleanTeam2026!" required />
+            <input id="login-password" type="password" placeholder="Passwort" required />
           </label>
           <p id="login-error" class="error-text" hidden>Die Zugangsdaten stimmen nicht.</p>
           <button class="primary-button full-width" type="submit">
@@ -68,6 +69,10 @@
           <button class="nav-link" type="button" data-view="contracts">
             <i data-lucide="signature" aria-hidden="true"></i>
             Verträge
+          </button>
+          <button class="nav-link" type="button" data-view="settings">
+            <i data-lucide="settings" aria-hidden="true"></i>
+            Einstellungen
           </button>
         </nav>
         <button id="logout-button" class="ghost-button sidebar-logout" type="button">
@@ -127,6 +132,11 @@
               <span>Signiert</span>
               <strong id="metric-signed">0</strong>
               <small>online abgeschlossen</small>
+            </article>
+            <article class="metric-card">
+              <span>Rückfragen</span>
+              <strong id="metric-followups">0</strong>
+              <small>Kunde meldet Korrekturbedarf</small>
             </article>
           </div>
 
@@ -255,7 +265,7 @@
               <div class="panel-header">
                 <div>
                   <h4 id="offer-form-heading">Neues Angebot</h4>
-                  <p class="muted">Der Preis wird als Demo-Kalkulation berechnet.</p>
+                  <p class="muted">Der Preis wird automatisch berechnet.</p>
                 </div>
               </div>
               <form id="offer-form" class="form-grid">
@@ -312,7 +322,7 @@
               <div class="panel-header">
                 <div>
                   <h4 id="offer-list-heading">Angebote</h4>
-                  <p class="muted">Aus jedem Angebot kann ein Vertrag erzeugt werden.</p>
+                  <p class="muted">Per E-Mail versenden – der Vertrag entsteht automatisch, sobald der Kunde den Link öffnet.</p>
                 </div>
               </div>
               <div id="offer-list" class="record-list"></div>
@@ -324,7 +334,7 @@
           <div class="section-heading">
             <div>
               <h3 id="contracts-heading">Verträge & Signatur</h3>
-              <p class="muted">Vertrag aus Angebot erstellen und online unterschreiben.</p>
+              <p class="muted">Verträge entstehen automatisch, sobald ein Kunde den Angebots-Link öffnet und den Vertragsassistenten durchläuft.</p>
             </div>
           </div>
 
@@ -353,27 +363,70 @@
               <article id="contract-preview" class="contract-preview empty-state">
                 Noch kein Vertrag ausgewählt.
               </article>
-              <div id="signature-area" class="signature-area" hidden>
-                <div class="signature-header">
-                  <div>
-                    <h4>Online signieren</h4>
-                    <p class="muted">Mit Maus, Finger oder Stift unterschreiben.</p>
-                  </div>
-                  <button id="clear-signature" class="ghost-button" type="button">
-                    <i data-lucide="eraser" aria-hidden="true"></i>
-                    Leeren
-                  </button>
-                </div>
-                <canvas id="signature-pad" width="900" height="260" aria-label="Signaturfeld"></canvas>
-                <div class="form-actions">
-                  <button id="save-signature" class="primary-button" type="button">
-                    <i data-lucide="badge-check" aria-hidden="true"></i>
-                    Vertrag signieren
-                  </button>
-                </div>
-              </div>
             </section>
           </div>
+        </section>
+
+        <section id="settings-view" class="view" aria-labelledby="settings-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="settings-heading">Einstellungen</h3>
+              <p class="muted">SMTP-Zugangsdaten für den E-Mail-Versand von Angeboten.</p>
+            </div>
+          </div>
+
+          <section class="panel form-panel" aria-labelledby="smtp-form-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="smtp-form-heading">SMTP-Server</h4>
+                <p class="muted">Wird für den Versand der Angebots-E-Mails an Kunden verwendet.</p>
+              </div>
+            </div>
+            <form id="smtp-form" class="form-grid">
+              <label class="span-2">
+                SMTP-Host *
+                <input id="smtp-host" type="text" required placeholder="smtp.strato.de" />
+              </label>
+              <label>
+                Port *
+                <input id="smtp-port" type="number" min="1" max="65535" required placeholder="587" />
+              </label>
+              <label>
+                Verschlüsselung *
+                <select id="smtp-encryption" required>
+                  <option value="tls">STARTTLS (empfohlen, meist Port 587)</option>
+                  <option value="ssl">SSL/TLS (meist Port 465)</option>
+                  <option value="none">Keine</option>
+                </select>
+              </label>
+              <label>
+                Benutzername
+                <input id="smtp-username" type="text" placeholder="versand@cleanteam.de" />
+              </label>
+              <label>
+                Passwort
+                <input id="smtp-password" type="password" placeholder="Unverändert lassen = altes Passwort behalten" autocomplete="new-password" />
+              </label>
+              <label>
+                Absendername *
+                <input id="smtp-from-name" type="text" required placeholder="CleanTeam" />
+              </label>
+              <label>
+                Absender-E-Mail *
+                <input id="smtp-from-email" type="email" required placeholder="versand@cleanteam.de" />
+              </label>
+              <div class="form-actions span-2">
+                <button id="send-test-mail" class="ghost-button" type="button">
+                  <i data-lucide="send" aria-hidden="true"></i>
+                  Test-E-Mail senden
+                </button>
+                <button class="primary-button" type="submit">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Einstellungen speichern
+                </button>
+              </div>
+            </form>
+          </section>
         </section>
       </section>
     </main>

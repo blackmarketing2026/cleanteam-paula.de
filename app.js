@@ -1,11 +1,3 @@
-const STORAGE_KEY = "cleanteam-dashboard-v1";
-const SESSION_KEY = "cleanteam-session";
-
-const TEST_USER = {
-  email: "demo@cleanteam.de",
-  password: "CleanTeam2026!",
-};
-
 const intervalFactors = {
   Einmalig: 1,
   Wöchentlich: 4.33,
@@ -22,44 +14,17 @@ const serviceRates = {
   Glasreinigung: 3.2,
 };
 
-const initialData = {
-  customers: [
-    {
-      id: "customer-1",
-      name: "Musterbau GmbH",
-      email: "kontakt@musterbau.de",
-      phone: "+49 711 245678",
-      salutation: "Frau",
-      contactLastName: "Schneider",
-      address: "Königstraße",
-      houseNumber: "18",
-      zip: "70173",
-      city: "Stuttgart",
-      createdAt: "2026-07-01T10:10:00.000Z",
-    },
-    {
-      id: "customer-2",
-      name: "Praxis am Park",
-      email: "verwaltung@praxis-park.de",
-      phone: "+49 7153 808080",
-      salutation: "Herr",
-      contactLastName: "Weber",
-      address: "Parkallee",
-      houseNumber: "7",
-      zip: "73728",
-      city: "Esslingen",
-      createdAt: "2026-07-02T08:30:00.000Z",
-    },
-  ],
-  offers: [],
-  contracts: [],
+const CONTRACT_STATUS_LABELS = {
+  entwurf: "Läuft beim Kunden",
+  daten_abgelehnt: "Rückfrage: Daten prüfen",
+  intervall_abgelehnt: "Rückfrage: Intervall prüfen",
+  signiert: "Signiert",
 };
 
 const state = {
-  data: loadData(),
+  data: { customers: [], offers: [], contracts: [] },
   currentView: "overview",
   selectedContractId: null,
-  signatureHasInk: false,
 };
 
 const els = {
@@ -95,16 +60,22 @@ const els = {
   offerList: document.querySelector("#offer-list"),
   contractList: document.querySelector("#contract-list"),
   contractPreview: document.querySelector("#contract-preview"),
-  signatureArea: document.querySelector("#signature-area"),
-  signaturePad: document.querySelector("#signature-pad"),
-  clearSignature: document.querySelector("#clear-signature"),
-  saveSignature: document.querySelector("#save-signature"),
   printContract: document.querySelector("#print-contract"),
+  smtpForm: document.querySelector("#smtp-form"),
+  smtpHost: document.querySelector("#smtp-host"),
+  smtpPort: document.querySelector("#smtp-port"),
+  smtpEncryption: document.querySelector("#smtp-encryption"),
+  smtpUsername: document.querySelector("#smtp-username"),
+  smtpPassword: document.querySelector("#smtp-password"),
+  smtpFromName: document.querySelector("#smtp-from-name"),
+  smtpFromEmail: document.querySelector("#smtp-from-email"),
+  sendTestMail: document.querySelector("#send-test-mail"),
   toast: document.querySelector("#toast"),
   metricCustomers: document.querySelector("#metric-customers"),
   metricOffers: document.querySelector("#metric-offers"),
   metricContracts: document.querySelector("#metric-contracts"),
   metricSigned: document.querySelector("#metric-signed"),
+  metricFollowups: document.querySelector("#metric-followups"),
   recentOffers: document.querySelector("#recent-offers"),
   contractStatus: document.querySelector("#contract-status"),
 };
@@ -114,69 +85,34 @@ const titles = {
   customers: "Kundenverwaltung",
   offers: "Angebotserstellung",
   contracts: "Verträge & Signatur",
+  settings: "Einstellungen",
 };
 
-function deepClone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
+async function apiFetch(path, options = {}) {
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    ...options,
+    headers: options.body ? { "Content-Type": "application/json", ...options.headers } : options.headers,
+  });
 
-function loadData() {
+  let data = {};
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) {
-      return deepClone(initialData);
-    }
-
-    const parsed = JSON.parse(saved);
-    return {
-      customers: Array.isArray(parsed.customers) ? parsed.customers : [],
-      offers: Array.isArray(parsed.offers) ? parsed.offers : [],
-      contracts: Array.isArray(parsed.contracts) ? parsed.contracts : [],
-    };
+    data = await response.json();
   } catch (error) {
-    return deepClone(initialData);
-  }
-}
-
-function saveData() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-  } catch (error) {
-    showToast("Hinweis: Die Demo-Daten koennen in dieser Browseransicht nicht dauerhaft gespeichert werden.");
-  }
-}
-
-function rememberSession() {
-  try {
-    sessionStorage.setItem(SESSION_KEY, "true");
-  } catch (error) {
-    // The dashboard can still run for the current page view.
-  }
-}
-
-function clearSession() {
-  try {
-    sessionStorage.removeItem(SESSION_KEY);
-  } catch (error) {
-    // Some embedded previews block session storage.
-  }
-}
-
-function hasSession() {
-  try {
-    return sessionStorage.getItem(SESSION_KEY) === "true";
-  } catch (error) {
-    return false;
-  }
-}
-
-function createId(prefix) {
-  if (window.crypto && typeof window.crypto.randomUUID === "function") {
-    return `${prefix}-${window.crypto.randomUUID()}`;
+    data = {};
   }
 
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  if (!response.ok) {
+    throw new Error(data.error || "Es ist ein Fehler aufgetreten.");
+  }
+
+  return data;
 }
+
+const apiGet = (path) => apiFetch(path);
+const apiPost = (path, body) => apiFetch(path, { method: "POST", body: JSON.stringify(body || {}) });
+const apiPut = (path, body) => apiFetch(path, { method: "PUT", body: JSON.stringify(body || {}) });
+const apiDelete = (path) => apiFetch(path, { method: "DELETE" });
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -240,32 +176,23 @@ function contactName(customer) {
   return `${customer.salutation} ${customer.contactLastName}`;
 }
 
-function customerSnapshot(customer) {
-  return {
-    id: customer.id,
-    name: customer.name,
-    email: customer.email,
-    phone: customer.phone,
-    salutation: customer.salutation,
-    contactLastName: customer.contactLastName,
-    address: customer.address,
-    houseNumber: customer.houseNumber,
-    zip: customer.zip,
-    city: customer.city,
-  };
-}
+function offerValidity(offer) {
+  const diffMs = new Date(offer.expiresAt).getTime() - Date.now();
 
-function offerSnapshot(offer) {
-  return {
-    id: offer.id,
-    squareMeters: offer.squareMeters,
-    interval: offer.interval,
-    service: offer.service,
-    startDate: offer.startDate,
-    notes: offer.notes,
-    price: offer.price,
-    createdAt: offer.createdAt,
-  };
+  if (diffMs <= 0) {
+    return { label: "Abgelaufen", className: "danger" };
+  }
+
+  const days = Math.floor(diffMs / 86400000);
+  if (days >= 1) {
+    return {
+      label: `Noch ${days} ${days === 1 ? "Tag" : "Tage"} gültig`,
+      className: days <= 2 ? "warning" : "success",
+    };
+  }
+
+  const hours = Math.max(1, Math.floor(diffMs / 3600000));
+  return { label: `Noch ${hours} Std. gültig`, className: "warning" };
 }
 
 function showToast(message) {
@@ -292,7 +219,7 @@ function showLogin() {
 function showApp() {
   els.loginScreen.hidden = true;
   els.appShell.hidden = false;
-  renderAll();
+  loadAll();
 }
 
 function switchView(view) {
@@ -308,6 +235,11 @@ function switchView(view) {
   });
 
   closeMobileNav();
+
+  if (view === "settings") {
+    loadSmtpSettings();
+  }
+
   renderAll();
 }
 
@@ -319,6 +251,23 @@ function openMobileNav() {
 function closeMobileNav() {
   els.sidebar.classList.remove("open");
   els.mobileBackdrop.hidden = true;
+}
+
+async function loadAll() {
+  try {
+    const [customers, offers, contracts] = await Promise.all([
+      apiGet("api/customers.php"),
+      apiGet("api/offers.php"),
+      apiGet("api/contracts.php"),
+    ]);
+
+    state.data.customers = customers;
+    state.data.offers = offers;
+    state.data.contracts = contracts;
+    renderAll();
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 function renderAll() {
@@ -335,7 +284,10 @@ function renderMetrics() {
   els.metricCustomers.textContent = state.data.customers.length;
   els.metricOffers.textContent = state.data.offers.length;
   els.metricContracts.textContent = state.data.contracts.length;
-  els.metricSigned.textContent = state.data.contracts.filter((contract) => contract.status === "Signiert").length;
+  els.metricSigned.textContent = state.data.contracts.filter((contract) => contract.status === "signiert").length;
+  els.metricFollowups.textContent = state.data.contracts.filter((contract) =>
+    contract.status === "daten_abgelehnt" || contract.status === "intervall_abgelehnt",
+  ).length;
 
   const latestOffers = [...state.data.offers]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -357,8 +309,8 @@ function renderMetrics() {
         .join("")
     : `<div class="empty-state">Noch keine Angebote vorhanden.</div>`;
 
-  const openContracts = state.data.contracts.filter((contract) => contract.status !== "Signiert").length;
-  const signedContracts = state.data.contracts.filter((contract) => contract.status === "Signiert").length;
+  const openContracts = state.data.contracts.filter((contract) => contract.status === "entwurf").length;
+  const signedContracts = state.data.contracts.filter((contract) => contract.status === "signiert").length;
   els.contractStatus.innerHTML = `
     <article class="status-item">
       <div>
@@ -463,20 +415,19 @@ function renderOffers() {
 }
 
 function renderOfferCard(offer) {
-  const contract = state.data.contracts.find((item) => item.offerId === offer.id);
-  const contractButton = contract
+  const validity = offerValidity(offer);
+  const sentLabel = offer.sentAt
+    ? `Gesendet am ${formatDate(offer.sentAt)}`
+    : "Noch nicht per E-Mail versendet";
+
+  const contractButton = offer.contractId
     ? `
-      <button class="secondary-button" type="button" data-action="open-contract" data-id="${escapeHtml(contract.id)}">
+      <button class="secondary-button" type="button" data-action="open-contract" data-id="${escapeHtml(offer.contractId)}">
         <i data-lucide="signature" aria-hidden="true"></i>
-        Vertrag öffnen
+        Vertrag ansehen
       </button>
     `
-    : `
-      <button class="primary-button" type="button" data-action="create-contract" data-id="${escapeHtml(offer.id)}">
-        <i data-lucide="file-signature" aria-hidden="true"></i>
-        Vertrag erstellen
-      </button>
-    `;
+    : "";
 
   return `
     <article class="record-item">
@@ -486,15 +437,27 @@ function renderOfferCard(offer) {
           <div class="record-meta">
             <span>${escapeHtml(offer.service)} · ${offer.squareMeters} m² · ${escapeHtml(offer.interval)}</span>
             <span>Erstellt am ${formatDate(offer.createdAt)} · Start ${formatDate(offer.startDate)}</span>
+            <span>${escapeHtml(sentLabel)}</span>
           </div>
         </div>
-        <span class="badge">${formatCurrency(offer.price)}</span>
+        <div class="record-side">
+          <span class="badge">${formatCurrency(offer.price)}</span>
+          <span class="badge ${validity.className}">${escapeHtml(validity.label)}</span>
+        </div>
       </div>
       <div class="record-lines">
         <span>${escapeHtml(contactName(offer.customer))}</span>
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
+        <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
+          <i data-lucide="send" aria-hidden="true"></i>
+          Angebot senden
+        </button>
+        <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
+          <i data-lucide="link" aria-hidden="true"></i>
+          Link kopieren
+        </button>
         ${contractButton}
         <button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
@@ -523,9 +486,19 @@ function renderContracts() {
   renderContractPreview();
 }
 
+function contractBadgeClass(status) {
+  if (status === "signiert") {
+    return "success";
+  }
+  if (status === "daten_abgelehnt" || status === "intervall_abgelehnt") {
+    return "danger";
+  }
+  return "warning";
+}
+
 function renderContractCard(contract) {
   const selected = contract.id === state.selectedContractId ? " selected" : "";
-  const badgeClass = contract.status === "Signiert" ? "success" : "warning";
+  const badgeClass = contractBadgeClass(contract.status);
 
   return `
     <article class="record-item${selected}">
@@ -537,7 +510,7 @@ function renderContractCard(contract) {
             <span>${escapeHtml(contract.offer.service)} · ${contract.offer.squareMeters} m²</span>
           </div>
         </div>
-        <span class="badge ${badgeClass}">${escapeHtml(contract.status)}</span>
+        <span class="badge ${badgeClass}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span>
       </div>
       <div class="record-actions">
         <button class="secondary-button" type="button" data-action="select-contract" data-id="${escapeHtml(contract.id)}">
@@ -555,39 +528,53 @@ function renderContractCard(contract) {
 
 function renderContractPreview() {
   const contract = getContract(state.selectedContractId);
-  clearSignaturePad();
 
   if (!contract) {
     els.contractPreview.className = "contract-preview empty-state";
     els.contractPreview.textContent = "Noch kein Vertrag ausgewählt.";
-    els.signatureArea.hidden = true;
     els.printContract.disabled = true;
     return;
   }
 
   els.contractPreview.className = "contract-preview";
   els.printContract.disabled = false;
-  els.signatureArea.hidden = contract.status === "Signiert";
   els.contractPreview.innerHTML = renderContractDocument(contract);
   refreshIcons();
 }
 
 function renderContractDocument(contract) {
-  const signedBlock =
-    contract.status === "Signiert"
-      ? `
-        <section class="signature-box">
-          <strong>Digitale Signatur des Kunden</strong>
-          <img src="${contract.signatureDataUrl}" alt="Digitale Signatur" />
-          <span>Signiert am ${formatDate(contract.signedAt)}</span>
-        </section>
-      `
-      : `
-        <section class="signature-box">
-          <strong>Digitale Signatur des Kunden</strong>
-          <span>Der Vertrag ist vorbereitet und wartet auf die Online-Signatur.</span>
-        </section>
-      `;
+  const badgeClass = contractBadgeClass(contract.status);
+  const statusLabel = CONTRACT_STATUS_LABELS[contract.status] || contract.status;
+
+  let statusBlock;
+  if (contract.status === "signiert") {
+    statusBlock = `
+      <section class="signature-box">
+        <strong>Digitale Signatur des Kunden</strong>
+        <img src="${contract.signatureDataUrl}" alt="Digitale Signatur" />
+        <span>Signiert am ${formatDate(contract.signedAt)}</span>
+      </section>
+    `;
+  } else if (contract.status === "daten_abgelehnt" || contract.status === "intervall_abgelehnt") {
+    const reason = contract.status === "daten_abgelehnt" ? "die Angebotsdaten" : "das vereinbarte Intervall";
+    statusBlock = `
+      <section class="signature-box">
+        <strong>Rückfrage vom Kunden</strong>
+        <span>Der Kunde hat ${escapeHtml(reason)} beim Vertragsassistenten als nicht korrekt markiert. Bitte Kontakt aufnehmen und ein neues Angebot erstellen.</span>
+      </section>
+    `;
+  } else {
+    statusBlock = `
+      <section class="signature-box">
+        <strong>Digitale Signatur des Kunden</strong>
+        <span>Der Kunde durchläuft aktuell den Vertragsassistenten über den Angebots-Link.</span>
+      </section>
+    `;
+  }
+
+  const representationBlock = contract.authorized === false && contract.representationNote
+    ? `<p><strong>Vertretung:</strong> ${escapeHtml(contract.representationNote)}</p>`
+    : "";
 
   const notes = contract.offer.notes
     ? `<p><strong>Besondere Vereinbarungen:</strong> ${escapeHtml(contract.offer.notes)}</p>`
@@ -601,7 +588,7 @@ function renderContractDocument(contract) {
           <h3>Reinigungsvertrag</h3>
           <p class="muted">Vertragsnummer ${escapeHtml(contract.number)}</p>
         </div>
-        <span class="badge ${contract.status === "Signiert" ? "success" : "warning"}">${escapeHtml(contract.status)}</span>
+        <span class="badge ${badgeClass}">${escapeHtml(statusLabel)}</span>
       </header>
 
       <section>
@@ -618,6 +605,7 @@ function renderContractDocument(contract) {
           <dt>Adresse</dt>
           <dd>${escapeHtml(customerAddress(contract.customer))}</dd>
         </dl>
+        ${representationBlock}
       </section>
 
       <section>
@@ -646,7 +634,7 @@ function renderContractDocument(contract) {
         </p>
       </section>
 
-      ${signedBlock}
+      ${statusBlock}
     </div>
   `;
 }
@@ -683,12 +671,11 @@ function fillCustomerForm(customer) {
   document.querySelector("#customer-name").focus();
 }
 
-function handleCustomerSubmit(event) {
+async function handleCustomerSubmit(event) {
   event.preventDefault();
 
   const id = els.customerId.value;
   const payload = {
-    id: id || createId("customer"),
     name: document.querySelector("#customer-name").value.trim(),
     email: document.querySelector("#customer-email").value.trim(),
     phone: document.querySelector("#customer-phone").value.trim(),
@@ -698,242 +685,182 @@ function handleCustomerSubmit(event) {
     houseNumber: document.querySelector("#customer-house-number").value.trim(),
     zip: document.querySelector("#customer-zip").value.trim(),
     city: document.querySelector("#customer-city").value.trim(),
-    createdAt: id && getCustomer(id) ? getCustomer(id).createdAt : new Date().toISOString(),
   };
 
-  if (id) {
-    state.data.customers = state.data.customers.map((customer) => (customer.id === id ? payload : customer));
-    showToast("Kunde wurde aktualisiert.");
-  } else {
-    state.data.customers.push(payload);
-    showToast("Kunde wurde angelegt.");
-  }
+  try {
+    if (id) {
+      await apiPut(`api/customers.php?id=${encodeURIComponent(id)}`, payload);
+      showToast("Kunde wurde aktualisiert.");
+    } else {
+      await apiPost("api/customers.php", payload);
+      showToast("Kunde wurde angelegt.");
+    }
 
-  saveData();
-  resetCustomerForm();
-  renderAll();
+    resetCustomerForm();
+    await loadAll();
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
-function handleOfferSubmit(event) {
+async function handleOfferSubmit(event) {
   event.preventDefault();
 
-  const customer = getCustomer(els.offerCustomer.value);
-  if (!customer) {
+  const customerId = els.offerCustomer.value;
+  if (!customerId) {
     showToast("Bitte zuerst einen Kunden anlegen.");
     switchView("customers");
     return;
   }
 
-  const price = calculateOfferPrice(
-    els.offerSquareMeters.value,
-    els.offerInterval.value,
-    els.offerService.value,
-  );
-
-  const offer = {
-    id: createId("offer"),
-    customerId: customer.id,
-    customer: customerSnapshot(customer),
+  const payload = {
+    customerId,
     squareMeters: Number(els.offerSquareMeters.value),
     interval: els.offerInterval.value,
     service: els.offerService.value,
     startDate: els.offerStartDate.value,
     notes: els.offerNotes.value.trim(),
-    price,
-    createdAt: new Date().toISOString(),
   };
 
-  state.data.offers.push(offer);
-  saveData();
-  els.offerForm.reset();
-  els.offerStartDate.value = todayAsInputValue();
-  updateOfferPreview();
-  renderAll();
-  showToast("Angebot wurde erstellt.");
+  try {
+    await apiPost("api/offers.php", payload);
+    els.offerForm.reset();
+    els.offerStartDate.value = todayAsInputValue();
+    updateOfferPreview();
+    await loadAll();
+    showToast("Angebot wurde erstellt.");
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
-function createContractFromOffer(offerId) {
-  const offer = getOffer(offerId);
+async function sendOffer(id) {
+  try {
+    await apiPost(`api/send-offer.php?id=${encodeURIComponent(id)}`);
+    await loadAll();
+    showToast("Angebot wurde per E-Mail versendet.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function copyOfferLink(id) {
+  const offer = getOffer(id);
   if (!offer) {
     return;
   }
 
-  const existing = state.data.contracts.find((contract) => contract.offerId === offerId);
-  if (existing) {
-    state.selectedContractId = existing.id;
-    switchView("contracts");
-    return;
+  try {
+    await navigator.clipboard.writeText(offer.publicUrl);
+    showToast("Link wurde kopiert.");
+  } catch (error) {
+    window.prompt("Link zum Kopieren:", offer.publicUrl);
   }
-
-  const contract = {
-    id: createId("contract"),
-    offerId: offer.id,
-    number: nextContractNumber(),
-    customer: deepClone(offer.customer),
-    offer: offerSnapshot(offer),
-    status: "Entwurf",
-    createdAt: new Date().toISOString(),
-    signedAt: null,
-    signatureDataUrl: "",
-  };
-
-  state.data.contracts.push(contract);
-  state.selectedContractId = contract.id;
-  saveData();
-  switchView("contracts");
-  showToast("Vertrag wurde aus dem Angebot erstellt.");
 }
 
-function nextContractNumber() {
-  const year = new Date().getFullYear();
-  const number = String(state.data.contracts.length + 1).padStart(3, "0");
-  return `CT-${year}-${number}`;
-}
-
-function deleteCustomer(id) {
+async function deleteCustomer(id) {
   const customer = getCustomer(id);
   if (!customer) {
     return;
   }
 
-  const confirmed = window.confirm(`Kunden "${customer.name}" löschen? Bereits erstellte Angebote behalten ihre Kundendaten.`);
+  const confirmed = window.confirm(`Kunden "${customer.name}" löschen?`);
   if (!confirmed) {
     return;
   }
 
-  state.data.customers = state.data.customers.filter((item) => item.id !== id);
-  saveData();
-  renderAll();
-  showToast("Kunde wurde gelöscht.");
+  try {
+    await apiDelete(`api/customers.php?id=${encodeURIComponent(id)}`);
+    await loadAll();
+    showToast("Kunde wurde gelöscht.");
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
-function deleteOffer(id) {
-  const confirmed = window.confirm("Angebot löschen? Zugehörige Verträge werden ebenfalls entfernt.");
+async function deleteOffer(id) {
+  const confirmed = window.confirm("Angebot löschen? Ein bereits gestarteter Vertrag wird ebenfalls entfernt.");
   if (!confirmed) {
     return;
   }
 
-  const contractIds = state.data.contracts
-    .filter((contract) => contract.offerId === id)
-    .map((contract) => contract.id);
-
-  state.data.offers = state.data.offers.filter((offer) => offer.id !== id);
-  state.data.contracts = state.data.contracts.filter((contract) => contract.offerId !== id);
-
-  if (contractIds.includes(state.selectedContractId)) {
-    state.selectedContractId = null;
+  try {
+    await apiDelete(`api/offers.php?id=${encodeURIComponent(id)}`);
+    if (state.selectedContractId && !state.data.contracts.some((contract) => contract.id === state.selectedContractId)) {
+      state.selectedContractId = null;
+    }
+    await loadAll();
+    showToast("Angebot wurde gelöscht.");
+  } catch (error) {
+    showToast(error.message);
   }
-
-  saveData();
-  renderAll();
-  showToast("Angebot wurde gelöscht.");
 }
 
-function deleteContract(id) {
+async function deleteContract(id) {
   const confirmed = window.confirm("Vertrag löschen?");
   if (!confirmed) {
     return;
   }
 
-  state.data.contracts = state.data.contracts.filter((contract) => contract.id !== id);
-
-  if (state.selectedContractId === id) {
-    state.selectedContractId = null;
+  try {
+    await apiDelete(`api/contracts.php?id=${encodeURIComponent(id)}`);
+    if (state.selectedContractId === id) {
+      state.selectedContractId = null;
+    }
+    await loadAll();
+    showToast("Vertrag wurde gelöscht.");
+  } catch (error) {
+    showToast(error.message);
   }
-
-  saveData();
-  renderAll();
-  showToast("Vertrag wurde gelöscht.");
 }
 
-function setupSignaturePad() {
-  const canvas = els.signaturePad;
-  const context = canvas.getContext("2d");
-  let drawing = false;
-
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.lineWidth = 3;
-  context.strokeStyle = "#102033";
-
-  function positionFromEvent(event) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
-    };
+async function loadSmtpSettings() {
+  try {
+    const settings = await apiGet("api/settings.php");
+    els.smtpHost.value = settings.host || "";
+    els.smtpPort.value = settings.port || 587;
+    els.smtpEncryption.value = settings.encryption || "tls";
+    els.smtpUsername.value = settings.username || "";
+    els.smtpPassword.value = "";
+    els.smtpPassword.placeholder = settings.hasPassword
+      ? "Unverändert lassen = altes Passwort behalten"
+      : "Noch kein Passwort hinterlegt";
+    els.smtpFromName.value = settings.fromName || "CleanTeam";
+    els.smtpFromEmail.value = settings.fromEmail || "";
+  } catch (error) {
+    showToast(error.message);
   }
-
-  canvas.addEventListener("pointerdown", (event) => {
-    const contract = getContract(state.selectedContractId);
-    if (!contract || contract.status === "Signiert") {
-      return;
-    }
-
-    drawing = true;
-    canvas.setPointerCapture(event.pointerId);
-    const point = positionFromEvent(event);
-    context.beginPath();
-    context.moveTo(point.x, point.y);
-    context.lineTo(point.x + 0.01, point.y + 0.01);
-    context.stroke();
-    state.signatureHasInk = true;
-  });
-
-  canvas.addEventListener("pointermove", (event) => {
-    if (!drawing) {
-      return;
-    }
-
-    const point = positionFromEvent(event);
-    context.lineTo(point.x, point.y);
-    context.stroke();
-    state.signatureHasInk = true;
-  });
-
-  function stopDrawing(event) {
-    if (!drawing) {
-      return;
-    }
-
-    drawing = false;
-    try {
-      canvas.releasePointerCapture(event.pointerId);
-    } catch (error) {
-      // Pointer capture can already be released by the browser.
-    }
-  }
-
-  canvas.addEventListener("pointerup", stopDrawing);
-  canvas.addEventListener("pointercancel", stopDrawing);
-  canvas.addEventListener("pointerleave", stopDrawing);
 }
 
-function clearSignaturePad() {
-  const canvas = els.signaturePad;
-  const context = canvas.getContext("2d");
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  state.signatureHasInk = false;
+async function handleSmtpSubmit(event) {
+  event.preventDefault();
+
+  const payload = {
+    host: els.smtpHost.value.trim(),
+    port: Number(els.smtpPort.value),
+    encryption: els.smtpEncryption.value,
+    username: els.smtpUsername.value.trim(),
+    password: els.smtpPassword.value,
+    fromName: els.smtpFromName.value.trim(),
+    fromEmail: els.smtpFromEmail.value.trim(),
+  };
+
+  try {
+    await apiPost("api/settings.php", payload);
+    showToast("Einstellungen wurden gespeichert.");
+    await loadSmtpSettings();
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
-function saveSignature() {
-  const contract = getContract(state.selectedContractId);
-  if (!contract) {
-    return;
+async function sendTestMail() {
+  try {
+    await apiPost("api/settings.php?action=test");
+    showToast("Test-E-Mail wurde an die Absenderadresse gesendet.");
+  } catch (error) {
+    showToast(error.message);
   }
-
-  if (!state.signatureHasInk) {
-    showToast("Bitte zuerst im Signaturfeld unterschreiben.");
-    return;
-  }
-
-  contract.status = "Signiert";
-  contract.signedAt = new Date().toISOString();
-  contract.signatureDataUrl = els.signaturePad.toDataURL("image/png");
-
-  saveData();
-  renderAll();
-  showToast("Vertrag wurde online signiert.");
 }
 
 function handleRecordAction(event) {
@@ -962,8 +889,12 @@ function handleRecordAction(event) {
     deleteCustomer(id);
   }
 
-  if (action === "create-contract") {
-    createContractFromOffer(id);
+  if (action === "send-offer") {
+    sendOffer(id);
+  }
+
+  if (action === "copy-offer-link") {
+    copyOfferLink(id);
   }
 
   if (action === "open-contract") {
@@ -986,23 +917,27 @@ function handleRecordAction(event) {
 }
 
 function bindEvents() {
-  els.loginForm.addEventListener("submit", (event) => {
+  els.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const email = els.loginEmail.value.trim();
     const password = els.loginPassword.value;
 
-    if (email === TEST_USER.email && password === TEST_USER.password) {
-      rememberSession();
+    try {
+      await apiPost("api/login.php", { email, password });
       els.loginError.hidden = true;
       showApp();
-      return;
+    } catch (error) {
+      els.loginError.textContent = error.message;
+      els.loginError.hidden = false;
     }
-
-    els.loginError.hidden = false;
   });
 
-  els.logoutButton.addEventListener("click", () => {
-    clearSession();
+  els.logoutButton.addEventListener("click", async () => {
+    try {
+      await apiPost("api/logout.php");
+    } catch (error) {
+      // Ignore network errors on logout, still return to the login screen.
+    }
     showLogin();
   });
 
@@ -1032,48 +967,42 @@ function bindEvents() {
   els.offerList.addEventListener("click", handleRecordAction);
   els.contractList.addEventListener("click", handleRecordAction);
 
-  els.clearSignature.addEventListener("click", clearSignaturePad);
-  els.saveSignature.addEventListener("click", saveSignature);
   els.printContract.addEventListener("click", () => {
     if (state.selectedContractId) {
       window.print();
     }
   });
+
+  els.smtpForm.addEventListener("submit", handleSmtpSubmit);
+  els.sendTestMail.addEventListener("click", sendTestMail);
+
+  window.setInterval(() => {
+    if (!els.appShell.hidden && state.currentView === "overview") {
+      renderMetrics();
+    }
+    if (!els.appShell.hidden && state.currentView === "offers") {
+      renderOffers();
+      refreshIcons();
+    }
+  }, 60000);
 }
 
-function bootstrapDemoOffer() {
-  if (state.data.offers.length || !state.data.customers.length) {
-    return;
-  }
-
-  const customer = state.data.customers[0];
-  state.data.offers.push({
-    id: "offer-1",
-    customerId: customer.id,
-    customer: customerSnapshot(customer),
-    squareMeters: 420,
-    interval: "Wöchentlich",
-    service: "Büroreinigung",
-    startDate: "2026-07-15",
-    notes: "Reinigung außerhalb der Bürozeiten, Schwerpunkt Sanitärbereiche und Eingangszone.",
-    price: calculateOfferPrice(420, "Wöchentlich", "Büroreinigung"),
-    createdAt: "2026-07-03T12:00:00.000Z",
-  });
-  saveData();
-}
-
-function init() {
-  bootstrapDemoOffer();
+async function init() {
   bindEvents();
-  setupSignaturePad();
   els.offerStartDate.value = todayAsInputValue();
 
-  if (hasSession()) {
-    showApp();
-  } else {
-    showLogin();
-    refreshIcons();
+  try {
+    const session = await apiGet("api/me.php");
+    if (session.loggedIn) {
+      showApp();
+      return;
+    }
+  } catch (error) {
+    // Fall through to the login screen if the session check fails.
   }
+
+  showLogin();
+  refreshIcons();
 }
 
 init();
