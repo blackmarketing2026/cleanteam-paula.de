@@ -21,8 +21,18 @@ function ensure_contracts_terms_accepted_at_column(PDO $pdo): void
     $pdo->exec('ALTER TABLE contracts ADD COLUMN terms_accepted_at DATETIME NULL AFTER representation_note');
 }
 
+function ensure_offers_site_visit_id_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'site_visit_id'");
+    if ($stmt->fetch()) {
+        return;
+    }
+
+    $pdo->exec('ALTER TABLE offers ADD COLUMN site_visit_id VARCHAR(64) NULL AFTER customer_id');
+}
+
 const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes,
-    o.price, o.created_at AS offer_created_at, o.token,
+    o.price, o.created_at AS offer_created_at, o.token, o.site_visit_id,
     c.name AS c_name, c.email AS c_email, c.phone AS c_phone, c.salutation AS c_salutation,
     c.contact_last_name AS c_contact_last_name, c.address AS c_address, c.house_number AS c_house_number,
     c.zip AS c_zip, c.city AS c_city
@@ -60,6 +70,7 @@ function contract_row_to_json(array $row): array
         ],
         'offer' => [
             'id' => $row['offer_id'],
+            'siteVisitId' => $row['site_visit_id'] ?? null,
             'squareMeters' => (int) $row['square_meters'],
             'interval' => $row['interval_label'],
             'service' => $row['service'],
@@ -72,6 +83,7 @@ function contract_row_to_json(array $row): array
 }
 
 ensure_contracts_terms_accepted_at_column($pdo);
+ensure_offers_site_visit_id_column($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(CONTRACT_SELECT . ' ORDER BY c.name ASC, ct.created_at DESC')->fetchAll();

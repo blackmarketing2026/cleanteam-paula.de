@@ -96,7 +96,7 @@ if (!$customer) {
 
 $documentAudience = $isPublicTokenAccess
     ? 'customer'
-    : (in_array($document, ['customer', 'cleanteam'], true) ? $document : 'cleanteam');
+    : (in_array($document, ['customer', 'cleanteam', 'site_visit'], true) ? $document : 'cleanteam');
 
 if ($format === 'pdf') {
     if ($contract === null) {
@@ -105,8 +105,14 @@ if ($format === 'pdf') {
         exit;
     }
 
-    $forceRefresh = ($contract['status'] ?? '') !== 'signiert';
-    $pdf = save_contract_pdf($pdo, $contract['id'], $documentAudience, $forceRefresh);
+    $forceRefresh = $documentAudience !== 'site_visit' && ($contract['status'] ?? '') !== 'signiert';
+    try {
+        $pdf = save_contract_pdf($pdo, $contract['id'], $documentAudience, $forceRefresh);
+    } catch (RuntimeException $exception) {
+        http_response_code(404);
+        echo $exception->getMessage();
+        exit;
+    }
     output_contract_pdf($pdf, $download);
 }
 

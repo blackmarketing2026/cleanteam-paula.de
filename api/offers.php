@@ -9,11 +9,22 @@ require_login();
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
 
+function ensure_offers_site_visit_id_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'site_visit_id'");
+    if ($stmt->fetch()) {
+        return;
+    }
+
+    $pdo->exec('ALTER TABLE offers ADD COLUMN site_visit_id VARCHAR(64) NULL AFTER customer_id');
+}
+
 function offer_row_to_json(array $row): array
 {
     return [
         'id' => $row['id'],
         'customerId' => $row['customer_id'],
+        'siteVisitId' => $row['site_visit_id'] ?? null,
         'customer' => [
             'id' => $row['customer_id'],
             'name' => $row['c_name'],
@@ -50,6 +61,8 @@ const OFFER_SELECT = 'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone 
     INNER JOIN customers c ON c.id = o.customer_id
     LEFT JOIN contracts ct ON ct.offer_id = o.id';
 
+ensure_offers_site_visit_id_column($pdo);
+
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();
     json_response(array_map('offer_row_to_json', $rows));
@@ -61,6 +74,7 @@ if ($method === 'POST') {
     $squareMeters = (float) ($body['squareMeters'] ?? 0);
     $interval = trim((string) ($body['interval'] ?? ''));
     $service = trim((string) ($body['service'] ?? ''));
+    $siteVisitId = trim((string) ($body['siteVisitId'] ?? ''));
 
     if ($customerId === '' || $squareMeters <= 0 || $interval === '' || $service === '') {
         json_error('Kunde, Quadratmeter, Intervall und Leistung sind erforderlich.', 422);
@@ -72,18 +86,27 @@ if ($method === 'POST') {
         json_error('Kunde wurde nicht gefunden.', 404);
     }
 
+    if ($siteVisitId !== '') {
+        $visitStmt = $pdo->prepare('SELECT id FROM site_visits WHERE id = :id');
+        $visitStmt->execute(['id' => $siteVisitId]);
+        if (!$visitStmt->fetch()) {
+            json_error('Begehung wurde nicht gefunden.', 404);
+        }
+    }
+
     $price = calculate_offer_price($squareMeters, $interval, $service);
     $id = generate_id('offer');
     $token = generate_token();
     $startDate = trim((string) ($body['startDate'] ?? ''));
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, price, token, created_at, expires_at)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
+        'INSERT INTO offers (id, customer_id, site_visit_id, square_meters, interval_label, service, start_date, notes, price, token, created_at, expires_at)
+         VALUES (:id, :customer_id, :site_visit_id, :square_meters, :interval_label, :service, :start_date, :notes, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
     );
     $stmt->execute([
         'id' => $id,
         'customer_id' => $customerId,
+        'site_visit_id' => $siteVisitId !== '' ? $siteVisitId : null,
         'square_meters' => (int) $squareMeters,
         'interval_label' => $interval,
         'service' => $service,

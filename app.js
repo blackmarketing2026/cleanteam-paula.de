@@ -25,6 +25,7 @@ const state = {
   data: { customers: [], siteVisits: [], offers: [], contracts: [] },
   currentView: "overview",
   selectedContractId: null,
+  pendingOfferSiteVisitId: null,
 };
 
 const els = {
@@ -1025,6 +1026,7 @@ async function startOfferFromSiteVisit(id) {
       return;
     }
 
+    state.pendingOfferSiteVisitId = visit.id;
     switchView("offers-new");
     els.offerCustomer.value = customer.id;
     els.offerSquareMeters.value = visit.squareMeters || "";
@@ -1155,6 +1157,14 @@ function renderContractCard(contract) {
   const termsLine = contract.termsAcceptedAt || contract.signedAt
     ? "AGB-Zustimmung dokumentiert"
     : "AGB-Zustimmung noch offen";
+  const siteVisitButton = contract.offer.siteVisitId
+    ? `
+        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=site_visit&format=pdf" target="_blank" rel="noopener">
+          <i data-lucide="clipboard-list" aria-hidden="true"></i>
+          Begehung
+        </a>
+      `
+    : "";
 
   return `
     <article class="record-item${selected}">
@@ -1178,6 +1188,7 @@ function renderContractCard(contract) {
           <i data-lucide="file-text" aria-hidden="true"></i>
           Vertrag für Kunden
         </a>
+        ${siteVisitButton}
         <button class="secondary-button" type="button" data-action="select-contract" data-id="${escapeHtml(contract.id)}">
           <i data-lucide="eye" aria-hidden="true"></i>
           Vorschau
@@ -1323,6 +1334,7 @@ async function handleOfferSubmit(event) {
 
   const payload = {
     customerId,
+    siteVisitId: state.pendingOfferSiteVisitId,
     squareMeters: Number(els.offerSquareMeters.value),
     interval: els.offerInterval.value,
     service: els.offerService.value,
@@ -1333,6 +1345,7 @@ async function handleOfferSubmit(event) {
   try {
     await apiPost("api/offers.php", payload);
     els.offerForm.reset();
+    state.pendingOfferSiteVisitId = null;
     els.offerStartDate.value = todayAsInputValue();
     updateOfferPreview();
     switchView("offers-saved");
@@ -1876,6 +1889,7 @@ function handleRecordAction(event) {
   }
 
   if (action === "offer-for-customer") {
+    state.pendingOfferSiteVisitId = null;
     els.offerCustomer.value = id;
     switchView("offers-new");
     els.offerSquareMeters.focus();
@@ -1954,7 +1968,12 @@ function bindEvents() {
   });
 
   els.navLinks.forEach((button) => {
-    button.addEventListener("click", () => switchView(button.dataset.view));
+    button.addEventListener("click", () => {
+      if (button.dataset.view === "offers-new") {
+        state.pendingOfferSiteVisitId = null;
+      }
+      switchView(button.dataset.view);
+    });
   });
 
   els.customersGroupToggle.addEventListener("click", () => {
@@ -1976,7 +1995,10 @@ function bindEvents() {
   els.menuButton.addEventListener("click", openMobileNav);
   els.mobileBackdrop.addEventListener("click", closeMobileNav);
   els.quickCustomer.addEventListener("click", () => switchView("customer-new"));
-  els.quickOffer.addEventListener("click", () => switchView("offers-new"));
+  els.quickOffer.addEventListener("click", () => {
+    state.pendingOfferSiteVisitId = null;
+    switchView("offers-new");
+  });
   els.newCustomerButton.addEventListener("click", () => {
     resetCustomerForm();
     switchView("customer-new");

@@ -521,21 +521,109 @@ function contract_pdf_context(PDO $pdo, string $contractId): ?array
         return null;
     }
 
-    return ['contract' => $contract, 'offer' => $offer, 'customer' => $customer];
+    $siteVisit = null;
+    $siteVisitId = trim((string) ($offer['site_visit_id'] ?? ''));
+    if ($siteVisitId !== '') {
+        $visitStmt = $pdo->prepare('SELECT * FROM site_visits WHERE id = :id');
+        $visitStmt->execute(['id' => $siteVisitId]);
+        $siteVisit = $visitStmt->fetch() ?: null;
+    }
+
+    return ['contract' => $contract, 'offer' => $offer, 'customer' => $customer, 'siteVisit' => $siteVisit];
 }
 
 function contract_pdf_filename(array $contract, string $audience): string
 {
     $number = (string) ($contract['number'] ?? 'Vertrag');
     $safeNumber = preg_replace('/[^A-Za-z0-9\-_]+/', '-', $number) ?: 'Vertrag';
-    $suffix = $audience === 'cleanteam' ? 'CleanTeam' : 'Kunde';
+    if ($audience === 'site_visit') {
+        return 'Begehung-' . trim($safeNumber, '-') . '.pdf';
+    }
 
+    $suffix = $audience === 'cleanteam' ? 'CleanTeam' : 'Kunde';
     return 'Vertrag-' . trim($safeNumber, '-') . '-' . $suffix . '.pdf';
+}
+
+function normalize_contract_pdf_audience(string $audience): string
+{
+    return in_array($audience, ['cleanteam', 'customer', 'site_visit'], true) ? $audience : 'customer';
+}
+
+function site_visit_floors_from_row(array $siteVisit): array
+{
+    $floors = json_decode((string) ($siteVisit['floors_json'] ?? '[]'), true);
+    return is_array($floors) ? $floors : [];
+}
+
+function render_site_visit_pdf(array $siteVisit, array $offer, array $customer, ?array $contract): string
+{
+    $pdf = new SimplePdfDocument();
+    $contractNumber = (string) ($contract['number'] ?? 'Entwurf');
+    $customerName = (string) ($siteVisit['customer_name'] ?? contract_customer_display_name($customer));
+    $createdAt = contract_format_datetime($siteVisit['created_at'] ?? null);
+    $floors = site_visit_floors_from_row($siteVisit);
+
+    $pdf->title('Begehungsprotokoll');
+    $pdf->label('Begehung zum Vertrag ' . $contractNumber);
+    $pdf->meta('Erfasst am: ' . $createdAt . ' | Kostenvoranschlag: ' . contract_format_date($offer['created_at'] ?? null));
+
+    $pdf->heading('Kundendaten');
+    $pdf->keyValue('Kunde', $customerName);
+    $pdf->keyValue('Telefon', (string) ($siteVisit['phone'] ?? ''));
+    $pdf->keyValue('E-Mail', (string) ($siteVisit['email'] ?? ''));
+    $pdf->keyValue('Adresse', (string) ($siteVisit['address'] ?? ''));
+    $pdf->keyValue('Ansprechpartner vor Ort', (string) ($siteVisit['onsite_contact'] ?? ''));
+    $pdf->keyValue('Objektgröße', (int) ($siteVisit['square_meters'] ?? 0) . ' m²');
+
+    $pdf->heading('Etagen und Bereiche');
+    if ($floors === []) {
+        $pdf->paragraph('Keine Etagenangaben vorhanden.');
+    }
+
+    foreach ($floors as $index => $floor) {
+        if (!is_array($floor)) {
+            continue;
+        }
+
+        $name = trim((string) ($floor['name'] ?? '')) ?: 'Etage ' . ($index + 1);
+        $areaNotes = trim((string) ($floor['areaNotes'] ?? ($floor['notes'] ?? '')));
+        $pdf->subheading($name);
+        if (trim((string) ($floor['areaName'] ?? '')) !== '') {
+            $pdf->keyValue('Bereich', (string) $floor['areaName']);
+        }
+        $pdf->keyValue('Sanitärräume', (string) ((int) ($floor['sanitaryRooms'] ?? 0)));
+        $pdf->keyValue('Waschbecken', (string) ((int) ($floor['sinks'] ?? 0)));
+        $pdf->keyValue('Spiegel', (string) ((int) ($floor['mirrors'] ?? 0)));
+        $pdf->keyValue('Toiletten', (string) ((int) ($floor['toilets'] ?? 0)));
+        $pdf->keyValue('Büroräume', (string) ((int) ($floor['officeRooms'] ?? 0)));
+        $pdf->keyValue('Schreibtische', (string) ((int) ($floor['desks'] ?? 0)));
+        $pdf->keyValue('Fenster', (string) ((int) ($floor['windows'] ?? 0)));
+        $pdf->keyValue('Bodenart', (string) ($floor['floorCondition'] ?? ''));
+        $pdf->keyValue('Bodenbehandlung', (string) ($floor['cleaningType'] ?? ''));
+        if (trim((string) ($floor['extraAgreements'] ?? '')) !== '') {
+            $pdf->keyValue('Extra Vereinbarungen', (string) $floor['extraAgreements']);
+        }
+        if ($areaNotes !== '') {
+            $pdf->keyValue('Notiz zum Bereich', $areaNotes);
+        }
+        $pdf->spacer(4.0);
+    }
+
+    $notes = trim((string) ($siteVisit['notes'] ?? ''));
+    if ($notes !== '') {
+        $pdf->heading('Allgemeine Notizen');
+        $pdf->paragraph($notes);
+    }
+
+    return $pdf->output();
 }
 
 function render_contract_pdf(array $offer, array $customer, ?array $contract, array $options = []): string
 {
-    $audience = ($options['audience'] ?? 'customer') === 'cleanteam' ? 'cleanteam' : 'customer';
+    $audience = normalize_contract_pdf_audience((string) ($options['audience'] ?? 'customer'));
+    if ($audience === 'site_visit') {
+        $audience = 'customer';
+    }
     $isCleanTeamCopy = $audience === 'cleanteam';
     $pdf = new SimplePdfDocument();
 
@@ -679,7 +767,7 @@ function load_contract_pdf(PDO $pdo, string $contractId, string $audience): ?arr
 
 function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool $force = false): array
 {
-    $audience = $audience === 'cleanteam' ? 'cleanteam' : 'customer';
+    $audience = normalize_contract_pdf_audience($audience);
     ensure_contract_documents_table($pdo);
 
     if (!$force) {
@@ -694,7 +782,14 @@ function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool 
         throw new RuntimeException('Vertrag konnte nicht geladen werden.');
     }
 
-    $content = render_contract_pdf($context['offer'], $context['customer'], $context['contract'], ['audience' => $audience]);
+    if ($audience === 'site_visit') {
+        if (($context['siteVisit'] ?? null) === null) {
+            throw new RuntimeException('Zu diesem Vertrag ist keine Begehung verknüpft.');
+        }
+        $content = render_site_visit_pdf($context['siteVisit'], $context['offer'], $context['customer'], $context['contract']);
+    } else {
+        $content = render_contract_pdf($context['offer'], $context['customer'], $context['contract'], ['audience' => $audience]);
+    }
     $filename = contract_pdf_filename($context['contract'], $audience);
     $sha256 = hash('sha256', $content);
     $id = generate_id('contract-document');
@@ -731,6 +826,11 @@ function save_contract_pdfs(PDO $pdo, string $contractId, bool $force = true): v
 {
     save_contract_pdf($pdo, $contractId, 'cleanteam', $force);
     save_contract_pdf($pdo, $contractId, 'customer', $force);
+
+    $context = contract_pdf_context($pdo, $contractId);
+    if ($context !== null && ($context['siteVisit'] ?? null) !== null) {
+        save_contract_pdf($pdo, $contractId, 'site_visit', $force);
+    }
 }
 
 function output_contract_pdf(array $document, bool $download = false): void
