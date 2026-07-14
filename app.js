@@ -40,6 +40,8 @@ const els = {
   customersSubgroup: document.querySelector("#customers-subgroup"),
   siteVisitsGroupToggle: document.querySelector("#site-visits-group-toggle"),
   siteVisitsSubgroup: document.querySelector("#site-visits-subgroup"),
+  offersGroupToggle: document.querySelector("#offers-group-toggle"),
+  offersSubgroup: document.querySelector("#offers-subgroup"),
   settingsGroupToggle: document.querySelector("#settings-group-toggle"),
   settingsSubgroup: document.querySelector("#settings-subgroup"),
   views: document.querySelectorAll(".view"),
@@ -134,7 +136,8 @@ const titles = {
   "customer-list": "Kundenliste",
   "site-visit-new": "Neue Begehung erstellen",
   "site-visit-saved": "Gespeicherte Begehungen",
-  offers: "Kostenvoranschlagserstellung",
+  "offers-new": "Neue Kostenvoranschläge",
+  "offers-saved": "Gespeicherte Kostenvoranschläge",
   contracts: "Verträge",
   mailbox: "Postfach",
   "settings-smtp": "SMTP-Server-Einstellungen",
@@ -312,6 +315,11 @@ function setSiteVisitsGroupExpanded(expanded) {
   els.siteVisitsGroupToggle.setAttribute("aria-expanded", String(expanded));
 }
 
+function setOffersGroupExpanded(expanded) {
+  els.offersSubgroup.hidden = !expanded;
+  els.offersGroupToggle.setAttribute("aria-expanded", String(expanded));
+}
+
 function switchView(view) {
   state.currentView = view;
   els.viewTitle.textContent = titles[view];
@@ -340,6 +348,12 @@ function switchView(view) {
   els.siteVisitsGroupToggle.classList.toggle("active", isSiteVisitView);
   if (isSiteVisitView) {
     setSiteVisitsGroupExpanded(true);
+  }
+
+  const isOfferView = view.startsWith("offers-");
+  els.offersGroupToggle.classList.toggle("active", isOfferView);
+  if (isOfferView) {
+    setOffersGroupExpanded(true);
   }
 
   closeMobileNav();
@@ -1011,7 +1025,7 @@ async function startOfferFromSiteVisit(id) {
       return;
     }
 
-    switchView("offers");
+    switchView("offers-new");
     els.offerCustomer.value = customer.id;
     els.offerSquareMeters.value = visit.squareMeters || "";
     els.offerNotes.value = siteVisitOfferNotes(visit);
@@ -1321,7 +1335,7 @@ async function handleOfferSubmit(event) {
     els.offerForm.reset();
     els.offerStartDate.value = todayAsInputValue();
     updateOfferPreview();
-    await loadAll();
+    switchView("offers-saved");
     showToast("Kostenvoranschlag wurde erstellt.");
   } catch (error) {
     showToast(error.message);
@@ -1863,7 +1877,7 @@ function handleRecordAction(event) {
 
   if (action === "offer-for-customer") {
     els.offerCustomer.value = id;
-    switchView("offers");
+    switchView("offers-new");
     els.offerSquareMeters.focus();
   }
 
@@ -1951,6 +1965,10 @@ function bindEvents() {
     setSiteVisitsGroupExpanded(els.siteVisitsSubgroup.hidden);
   });
 
+  els.offersGroupToggle.addEventListener("click", () => {
+    setOffersGroupExpanded(els.offersSubgroup.hidden);
+  });
+
   els.settingsGroupToggle.addEventListener("click", () => {
     setSettingsGroupExpanded(els.settingsSubgroup.hidden);
   });
@@ -1958,7 +1976,7 @@ function bindEvents() {
   els.menuButton.addEventListener("click", openMobileNav);
   els.mobileBackdrop.addEventListener("click", closeMobileNav);
   els.quickCustomer.addEventListener("click", () => switchView("customer-new"));
-  els.quickOffer.addEventListener("click", () => switchView("offers"));
+  els.quickOffer.addEventListener("click", () => switchView("offers-new"));
   els.newCustomerButton.addEventListener("click", () => {
     resetCustomerForm();
     switchView("customer-new");

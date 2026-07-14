@@ -84,10 +84,21 @@
               <span>Gespeicherte Begehungen</span>
             </button>
           </div>
-          <button class="nav-link" type="button" data-view="offers">
+          <button id="offers-group-toggle" class="nav-link nav-group-toggle" type="button" aria-expanded="false">
             <i data-lucide="file-text" aria-hidden="true"></i>
-            Kostenvoranschläge
+            <span>Kostenvoranschläge</span>
+            <i data-lucide="chevron-down" class="nav-group-chevron" aria-hidden="true"></i>
           </button>
+          <div id="offers-subgroup" class="nav-subgroup" hidden>
+            <button class="nav-link" type="button" data-view="offers-new">
+              <i data-lucide="file-plus-2" aria-hidden="true"></i>
+              <span>Neue Kostenvoranschläge</span>
+            </button>
+            <button class="nav-link" type="button" data-view="offers-saved">
+              <i data-lucide="archive" aria-hidden="true"></i>
+              <span>Gespeicherte Kostenvoranschläge</span>
+            </button>
+          </div>
           <button class="nav-link" type="button" data-view="contracts">
             <i data-lucide="signature" aria-hidden="true"></i>
             Verträge
@@ -404,82 +415,89 @@
           </section>
         </section>
 
-        <section id="offers-view" class="view" aria-labelledby="offers-heading">
+        <section id="offers-new-view" class="view" aria-labelledby="offers-new-heading">
           <div class="section-heading">
             <div>
-              <h3 id="offers-heading">Kostenvoranschlagserstellung</h3>
+              <h3 id="offers-new-heading">Neue Kostenvoranschläge</h3>
               <p class="muted">Fläche, Intervall und Kundendaten werden zu einem Kostenvoranschlag zusammengeführt.</p>
             </div>
           </div>
 
-          <div class="split-layout">
-            <section class="panel form-panel" aria-labelledby="offer-form-heading">
-              <div class="panel-header">
-                <div>
-                  <h4 id="offer-form-heading">Neuer Kostenvoranschlag</h4>
-                  <p class="muted">Der Preis wird automatisch berechnet.</p>
-                </div>
+          <section class="panel form-panel" aria-labelledby="offer-form-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="offer-form-heading">Neuer Kostenvoranschlag</h4>
+                <p class="muted">Der Preis wird automatisch berechnet.</p>
               </div>
-              <form id="offer-form" class="form-grid">
-                <label class="span-2">
-                  Kunde *
-                  <select id="offer-customer" required></select>
-                </label>
-                <label>
-                  Quadratmeter *
-                  <input id="offer-square-meters" type="number" min="1" step="1" required placeholder="250" />
-                </label>
-                <label>
-                  Intervall *
-                  <select id="offer-interval" required>
-                    <option value="Einmalig">Einmalig</option>
-                    <option value="Wöchentlich">Wöchentlich</option>
-                    <option value="14-tägig">14-tägig</option>
-                    <option value="Monatlich">Monatlich</option>
-                    <option value="Quartalsweise">Quartalsweise</option>
-                  </select>
-                </label>
-                <label>
-                  Startdatum
-                  <input id="offer-start-date" type="date" />
-                </label>
-                <label>
-                  Leistung
-                  <select id="offer-service">
-                    <option value="Unterhaltsreinigung">Unterhaltsreinigung</option>
-                    <option value="Büroreinigung">Büroreinigung</option>
-                    <option value="Treppenhausreinigung">Treppenhausreinigung</option>
-                    <option value="Grundreinigung">Grundreinigung</option>
-                    <option value="Glasreinigung">Glasreinigung</option>
-                  </select>
-                </label>
-                <label class="span-2">
-                  Notizen
-                  <textarea id="offer-notes" rows="4" placeholder="Besondere Wünsche, Schlüsselübergabe, Reinigungszeiten"></textarea>
-                </label>
-                <div class="price-preview span-2">
-                  <span>Geschätzter Nettowert</span>
-                  <strong id="offer-price-preview">0,00 €</strong>
-                </div>
-                <div class="form-actions span-2">
-                  <button class="primary-button" type="submit">
-                    <i data-lucide="file-plus-2" aria-hidden="true"></i>
-                    Kostenvoranschlag erstellen
-                  </button>
-                </div>
-              </form>
-            </section>
+            </div>
+            <form id="offer-form" class="form-grid">
+              <label class="span-2">
+                Kunde *
+                <select id="offer-customer" required></select>
+              </label>
+              <label>
+                Quadratmeter *
+                <input id="offer-square-meters" type="number" min="1" step="1" required placeholder="250" />
+              </label>
+              <label>
+                Intervall *
+                <select id="offer-interval" required>
+                  <option value="Einmalig">Einmalig</option>
+                  <option value="Wöchentlich">Wöchentlich</option>
+                  <option value="14-tägig">14-tägig</option>
+                  <option value="Monatlich">Monatlich</option>
+                  <option value="Quartalsweise">Quartalsweise</option>
+                </select>
+              </label>
+              <label>
+                Startdatum
+                <input id="offer-start-date" type="date" />
+              </label>
+              <label>
+                Leistung
+                <select id="offer-service">
+                  <option value="Unterhaltsreinigung">Unterhaltsreinigung</option>
+                  <option value="Büroreinigung">Büroreinigung</option>
+                  <option value="Treppenhausreinigung">Treppenhausreinigung</option>
+                  <option value="Grundreinigung">Grundreinigung</option>
+                  <option value="Glasreinigung">Glasreinigung</option>
+                </select>
+              </label>
+              <label class="span-2">
+                Notizen
+                <textarea id="offer-notes" rows="4" placeholder="Besondere Wünsche, Schlüsselübergabe, Reinigungszeiten"></textarea>
+              </label>
+              <div class="price-preview span-2">
+                <span>Geschätzter Nettowert</span>
+                <strong id="offer-price-preview">0,00 €</strong>
+              </div>
+              <div class="form-actions span-2">
+                <button class="primary-button" type="submit">
+                  <i data-lucide="file-plus-2" aria-hidden="true"></i>
+                  Kostenvoranschlag erstellen
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
 
-            <section class="panel" aria-labelledby="offer-list-heading">
-              <div class="panel-header">
-                <div>
-                  <h4 id="offer-list-heading">Kostenvoranschläge</h4>
-                  <p class="muted">Per E-Mail versenden – der Vertrag entsteht automatisch, sobald der Kunde den Link öffnet.</p>
-                </div>
-              </div>
-              <div id="offer-list" class="record-list"></div>
-            </section>
+        <section id="offers-saved-view" class="view" aria-labelledby="offers-saved-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="offers-saved-heading">Gespeicherte Kostenvoranschläge</h3>
+              <p class="muted">Per E-Mail versenden – der Vertrag entsteht automatisch, sobald der Kunde den Link öffnet.</p>
+            </div>
           </div>
+
+          <section class="panel" aria-labelledby="offer-list-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="offer-list-heading">Kostenvoranschläge</h4>
+                <p class="muted">Alle gespeicherten Kostenvoranschläge mit Vorschau, Versand und Vertragsdokumenten.</p>
+              </div>
+            </div>
+            <div id="offer-list" class="record-list"></div>
+          </section>
         </section>
 
         <section id="contracts-view" class="view" aria-labelledby="contracts-heading">
