@@ -381,15 +381,6 @@ button svg {
   gap: 8px;
 }
 
-.nav-group-label {
-  margin: 10px 4px 0;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .nav-link {
   display: flex;
   width: 100%;
@@ -401,9 +392,38 @@ button svg {
   border-radius: var(--radius);
   background: transparent;
   color: #38506b;
-  padding: 0 12px;
+  padding: 10px 12px;
   font-weight: 800;
   text-align: left;
+}
+
+.nav-link span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.nav-group-toggle .nav-group-chevron {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  transition: transform 0.15s ease;
+}
+
+.nav-group-toggle[aria-expanded="true"] .nav-group-chevron {
+  transform: rotate(180deg);
+}
+
+.nav-subgroup {
+  display: grid;
+  gap: 8px;
+  padding-left: 14px;
+  margin-top: 4px;
+}
+
+.nav-subgroup .nav-link {
+  min-height: 40px;
+  font-size: 13px;
 }
 
 .nav-link:hover,

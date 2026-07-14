@@ -35,7 +35,9 @@ const els = {
   loginPassword: document.querySelector("#login-password"),
   loginError: document.querySelector("#login-error"),
   logoutButton: document.querySelector("#logout-button"),
-  navLinks: document.querySelectorAll(".nav-link"),
+  navLinks: document.querySelectorAll(".nav-link[data-view]"),
+  settingsGroupToggle: document.querySelector("#settings-group-toggle"),
+  settingsSubgroup: document.querySelector("#settings-subgroup"),
   views: document.querySelectorAll(".view"),
   viewTitle: document.querySelector("#view-title"),
   sidebar: document.querySelector(".sidebar"),
@@ -278,6 +280,11 @@ function showApp() {
   loadAll();
 }
 
+function setSettingsGroupExpanded(expanded) {
+  els.settingsSubgroup.hidden = !expanded;
+  els.settingsGroupToggle.setAttribute("aria-expanded", String(expanded));
+}
+
 function switchView(view) {
   state.currentView = view;
   els.viewTitle.textContent = titles[view];
@@ -289,6 +296,12 @@ function switchView(view) {
   els.views.forEach((panel) => {
     panel.classList.toggle("active-view", panel.id === `${view}-view`);
   });
+
+  const isSettingsView = view.startsWith("settings-");
+  els.settingsGroupToggle.classList.toggle("active", isSettingsView);
+  if (isSettingsView) {
+    setSettingsGroupExpanded(true);
+  }
 
   closeMobileNav();
 
@@ -1265,6 +1278,10 @@ function bindEvents() {
 
   els.navLinks.forEach((button) => {
     button.addEventListener("click", () => switchView(button.dataset.view));
+  });
+
+  els.settingsGroupToggle.addEventListener("click", () => {
+    setSettingsGroupExpanded(els.settingsSubgroup.hidden);
   });
 
   els.menuButton.addEventListener("click", openMobileNav);

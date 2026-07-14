@@ -70,19 +70,25 @@
             <i data-lucide="mail" aria-hidden="true"></i>
             Postfach
           </button>
-          <p class="nav-group-label">Einstellungen</p>
-          <button class="nav-link" type="button" data-view="settings-smtp">
-            <i data-lucide="server" aria-hidden="true"></i>
-            SMTP-Server
+          <button id="settings-group-toggle" class="nav-link nav-group-toggle" type="button" aria-expanded="false">
+            <i data-lucide="settings" aria-hidden="true"></i>
+            <span>Einstellungen</span>
+            <i data-lucide="chevron-down" class="nav-group-chevron" aria-hidden="true"></i>
           </button>
-          <button class="nav-link" type="button" data-view="settings-notify">
-            <i data-lucide="bell" aria-hidden="true"></i>
-            Vertragsbenachrichtigungen
-          </button>
-          <button class="nav-link" type="button" data-view="settings-logo">
-            <i data-lucide="image" aria-hidden="true"></i>
-            Logo
-          </button>
+          <div id="settings-subgroup" class="nav-subgroup" hidden>
+            <button class="nav-link" type="button" data-view="settings-smtp">
+              <i data-lucide="server" aria-hidden="true"></i>
+              <span>SMTP-Server</span>
+            </button>
+            <button class="nav-link" type="button" data-view="settings-notify">
+              <i data-lucide="bell" aria-hidden="true"></i>
+              <span>Vertragsbenachrichtigungen</span>
+            </button>
+            <button class="nav-link" type="button" data-view="settings-logo">
+              <i data-lucide="image" aria-hidden="true"></i>
+              <span>Logo</span>
+            </button>
+          </div>
         </nav>
         <button id="logout-button" class="ghost-button sidebar-logout" type="button">
           <i data-lucide="log-out" aria-hidden="true"></i>
