@@ -100,6 +100,7 @@ const els = {
   contractNotifyEnabled: document.querySelector("#contract-notify-enabled"),
   contractNotifyEmails: document.querySelector("#contract-notify-emails"),
   contractNotifyAddEmail: document.querySelector("#contract-notify-add-email"),
+  contractNotifyTest: document.querySelector("#contract-notify-test"),
   linkModal: document.querySelector("#link-modal"),
   linkModalInput: document.querySelector("#link-modal-input"),
   linkModalCopy: document.querySelector("#link-modal-copy"),
@@ -1128,6 +1129,18 @@ async function handleContractNotifySubmit(event) {
   }
 }
 
+async function sendTestContractNotification() {
+  els.contractNotifyTest.disabled = true;
+  try {
+    const result = await apiPost("api/contract-notifications.php?action=test");
+    showToast(`Testvertrag wurde gesendet an: ${result.sentTo.join(", ")}`);
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    els.contractNotifyTest.disabled = false;
+  }
+}
+
 function applyBrandLogo(logoUrl) {
   currentLogoUrl = logoUrl || null;
 
@@ -1344,6 +1357,7 @@ function bindEvents() {
 
   els.contractNotifyForm.addEventListener("submit", handleContractNotifySubmit);
   els.contractNotifyAddEmail.addEventListener("click", () => addContractNotifyEmailRow(""));
+  els.contractNotifyTest.addEventListener("click", sendTestContractNotification);
   els.contractNotifyEmails.addEventListener("click", (event) => {
     const button = event.target.closest('[data-action="remove-email-row"]');
     if (!button) {

@@ -19,6 +19,49 @@ if ($method === 'GET') {
     ]);
 }
 
+if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
+    $notifySettings = load_contract_notification_settings($pdo);
+    $recipients = contract_notification_recipients((string) ($notifySettings['recipients'] ?? ''));
+    if ($recipients === []) {
+        json_error('Bitte zuerst mindestens eine E-Mail-Adresse speichern.', 422);
+    }
+
+    $contractRow = $pdo->query('SELECT id FROM contracts ORDER BY created_at DESC LIMIT 1')->fetch();
+    if (!$contractRow) {
+        json_error('Es existiert noch kein Vertrag zum Testen. Bitte zuerst ein Angebot mit Vertrag anlegen.', 422);
+    }
+
+    $context = load_contract_context($pdo, $contractRow['id']);
+    if ($context === null) {
+        json_error('Testvertrag konnte nicht geladen werden.', 500);
+    }
+
+    $smtp = load_mailbox_smtp($pdo);
+    if ($smtp === null) {
+        json_error('Bitte zuerst das Postfach unter "Postfach" einrichten.', 422);
+    }
+
+    $html = render_contract_document($context['offer'], $context['customer'], $context['contract']);
+    $subject = '[Test] Vertragsbenachrichtigung – ' . ($context['contract']['number'] ?? $context['customer']['name']);
+
+    try {
+        $mailer = new SmtpMailer(
+            $smtp['host'],
+            (int) $smtp['smtp_port'],
+            $smtp['smtp_encryption'],
+            $smtp['username'],
+            decrypt_secret($smtp['password_encrypted'])
+        );
+        foreach ($recipients as $recipient) {
+            $mailer->send($smtp['username'], $smtp['from_name'], $recipient, $recipient, $subject, $html, true);
+        }
+    } catch (Throwable $exception) {
+        json_error('Test-E-Mail fehlgeschlagen: ' . $exception->getMessage(), 502);
+    }
+
+    json_response(['ok' => true, 'sentTo' => $recipients]);
+}
+
 if ($method === 'POST') {
     $body = read_json_body();
     $enabled = (bool) ($body['enabled'] ?? false);
