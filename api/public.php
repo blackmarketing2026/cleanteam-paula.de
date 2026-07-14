@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/contract_notify.php';
+require_once __DIR__ . '/../includes/contract_pdf.php';
 
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -245,6 +246,7 @@ if ($method === 'POST' && $action === 'sign') {
         "UPDATE contracts SET status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, current_step = 'fertig' WHERE id = :id"
     );
     $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id']]);
+    save_contract_pdfs($pdo, $contract['id'], true);
     notify_contract_created($pdo, $contract['id']);
     notify_customer_contract_signed($pdo, $contract['id']);
 

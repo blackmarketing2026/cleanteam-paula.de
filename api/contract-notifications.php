@@ -41,7 +41,9 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
         json_error('Bitte zuerst das Postfach unter "Postfach" einrichten.', 422);
     }
 
-    $html = render_contract_document($context['offer'], $context['customer'], $context['contract'], ['audience' => 'cleanteam']);
+    $pdf = save_contract_pdf($pdo, $context['contract']['id'], 'cleanteam', false);
+    $message = '<p>Dies ist eine Test-E-Mail für Vertragsbenachrichtigungen.</p>'
+        . '<p>Im Anhang befindet sich die CleanTeam-Ausfertigung als PDF.</p>';
     $subject = '[Test] Vertragsbenachrichtigung – ' . ($context['contract']['number'] ?? $context['customer']['name']);
 
     try {
@@ -53,7 +55,17 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
             decrypt_secret($smtp['password_encrypted'])
         );
         foreach ($recipients as $recipient) {
-            $mailer->send($smtp['username'], $smtp['from_name'], $recipient, $recipient, $subject, $html, true);
+            $mailer->sendWithAttachment(
+                $smtp['username'],
+                $smtp['from_name'],
+                $recipient,
+                $recipient,
+                $subject,
+                $message,
+                (string) $pdf['filename'],
+                (string) $pdf['content'],
+                'application/pdf'
+            );
         }
     } catch (Throwable $exception) {
         json_error('Test-E-Mail fehlgeschlagen: ' . $exception->getMessage(), 502);

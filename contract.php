@@ -4,12 +4,15 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/contract_template.php';
+require_once __DIR__ . '/includes/contract_pdf.php';
 
 $pdo = db();
 $contractId = trim((string) ($_GET['contractId'] ?? ''));
 $offerId = trim((string) ($_GET['offerId'] ?? ''));
 $token = trim((string) ($_GET['token'] ?? ''));
 $document = trim((string) ($_GET['document'] ?? ''));
+$format = trim((string) ($_GET['format'] ?? 'html'));
+$download = (string) ($_GET['download'] ?? '') === '1';
 $isPublicTokenAccess = $token !== '';
 
 if ($isPublicTokenAccess) {
@@ -91,8 +94,20 @@ if (!$customer) {
     exit;
 }
 
-$documentAudience = in_array($document, ['customer', 'cleanteam'], true)
-    ? $document
-    : ($isPublicTokenAccess ? 'customer' : 'cleanteam');
+$documentAudience = $isPublicTokenAccess
+    ? 'customer'
+    : (in_array($document, ['customer', 'cleanteam'], true) ? $document : 'cleanteam');
+
+if ($format === 'pdf') {
+    if ($contract === null) {
+        http_response_code(404);
+        echo 'Vertrag nicht gefunden.';
+        exit;
+    }
+
+    $forceRefresh = ($contract['status'] ?? '') !== 'signiert';
+    $pdf = save_contract_pdf($pdo, $contract['id'], $documentAudience, $forceRefresh);
+    output_contract_pdf($pdf, $download);
+}
 
 echo render_contract_document($offer, $customer, $contract, ['audience' => $documentAudience]);

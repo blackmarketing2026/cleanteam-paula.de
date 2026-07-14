@@ -87,6 +87,21 @@ CREATE TABLE IF NOT EXISTS contracts (
   CONSTRAINT fk_contracts_customer FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS contract_documents (
+  id VARCHAR(64) NOT NULL,
+  contract_id VARCHAR(64) NOT NULL,
+  audience VARCHAR(20) NOT NULL,
+  filename VARCHAR(160) NOT NULL,
+  mime_type VARCHAR(80) NOT NULL DEFAULT 'application/pdf',
+  content LONGBLOB NOT NULL,
+  sha256 CHAR(64) NOT NULL,
+  generated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uniq_contract_documents_contract_audience (contract_id, audience),
+  KEY idx_contract_documents_contract (contract_id),
+  CONSTRAINT fk_contract_documents_contract FOREIGN KEY (contract_id) REFERENCES contracts (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS smtp_settings (
   id TINYINT UNSIGNED NOT NULL,
   host VARCHAR(190) NOT NULL DEFAULT '',

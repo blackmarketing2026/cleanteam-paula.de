@@ -3,7 +3,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/crypto.php';
 require_once __DIR__ . '/SmtpMailer.php';
-require_once __DIR__ . '/contract_template.php';
+require_once __DIR__ . '/contract_pdf.php';
 
 function load_contract_notification_settings(PDO $pdo): array
 {
@@ -95,7 +95,9 @@ function notify_contract_created(PDO $pdo, string $contractId): void
             return;
         }
 
-        $html = render_contract_document($context['offer'], $context['customer'], $context['contract'], ['audience' => 'cleanteam']);
+        $pdf = save_contract_pdf($pdo, $contractId, 'cleanteam', false);
+        $message = '<p>Ein Vertrag wurde angelegt oder aktualisiert.</p>'
+            . '<p>Im Anhang finden Sie die CleanTeam-Ausfertigung als PDF inklusive Signaturprotokoll.</p>';
 
         $mailer = new SmtpMailer(
             $smtp['host'],
@@ -109,7 +111,17 @@ function notify_contract_created(PDO $pdo, string $contractId): void
 
         foreach ($recipients as $recipient) {
             try {
-                $mailer->send($smtp['username'], $smtp['from_name'], $recipient, $recipient, $subject, $html, true);
+                $mailer->sendWithAttachment(
+                    $smtp['username'],
+                    $smtp['from_name'],
+                    $recipient,
+                    $recipient,
+                    $subject,
+                    $message,
+                    (string) $pdf['filename'],
+                    (string) $pdf['content'],
+                    'application/pdf'
+                );
             } catch (Throwable $exception) {
                 error_log('Vertragsbenachrichtigung fehlgeschlagen (' . $recipient . '): ' . $exception->getMessage());
             }
@@ -140,7 +152,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             return;
         }
 
-        $contractHtml = render_contract_document($context['offer'], $context['customer'], $context['contract'], ['audience' => 'customer']);
+        $pdf = save_contract_pdf($pdo, $contractId, 'customer', false);
         $number = (string) ($context['contract']['number'] ?? '');
 
         $message = '<p>Sehr geehrte Damen und Herren,</p>'
@@ -156,8 +168,6 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             decrypt_secret($smtp['password_encrypted'])
         );
 
-        $filename = 'Vertrag' . ($number !== '' ? '-' . preg_replace('/[^A-Za-z0-9\-_]/', '', $number) : '') . '.html';
-
         $mailer->sendWithAttachment(
             $smtp['username'],
             $smtp['from_name'],
@@ -165,9 +175,9 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             $context['customer']['name'],
             'Ihr Vertrag bei CleanTeam Group',
             $message,
-            $filename,
-            $contractHtml,
-            'text/html'
+            (string) $pdf['filename'],
+            (string) $pdf['content'],
+            'application/pdf'
         );
     } catch (Throwable $exception) {
         error_log('Kunden-Vertragsbestätigung fehlgeschlagen: ' . $exception->getMessage());

@@ -151,10 +151,8 @@ function renderServiceDetails() {
 }
 
 function renderFinalContract() {
-  // Zeigt dasselbe serverseitig generierte Vertragsdokument, das auch im Dashboard und in
-  // der Vertragsbenachrichtigung per E-Mail verwendet wird, statt einer eigenen (und leicht
-  // abweichenden) Zusammenfassung.
-  els.finalContractFrame.src = `contract.php?token=${encodeURIComponent(token)}`;
+  // Zeigt dasselbe serverseitig erzeugte Kunden-PDF, das auch per E-Mail verschickt wird.
+  els.finalContractFrame.src = `contract.php?token=${encodeURIComponent(token)}&format=pdf`;
 }
 
 function routeToState(data) {

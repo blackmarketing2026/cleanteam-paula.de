@@ -497,7 +497,7 @@ function renderCustomerCard(customer) {
   const contractBadge = contract ? `<span class="badge success">Vertrag vorhanden</span>` : "";
   const contractButton = contract
     ? `
-      <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}" target="_blank" rel="noopener">
+      <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
         <i data-lucide="file-text" aria-hidden="true"></i>
         Vertrag anzeigen
       </a>
@@ -1047,7 +1047,7 @@ function renderOfferCard(offer) {
         <i data-lucide="signature" aria-hidden="true"></i>
         Vertrag ansehen
       </button>
-      <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(offer.contractId)}" target="_blank" rel="noopener">
+      <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(offer.contractId)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
         <i data-lucide="file-text" aria-hidden="true"></i>
         Vertragsdokument
       </a>
@@ -1156,11 +1156,11 @@ function renderContractCard(contract) {
         <span class="badge ${badgeClass}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span>
       </div>
       <div class="record-actions">
-        <a class="primary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam" target="_blank" rel="noopener">
+        <a class="primary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
           <i data-lucide="file-check-2" aria-hidden="true"></i>
           Vertrag CleanTeam
         </a>
-        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=customer" target="_blank" rel="noopener">
+        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=customer&format=pdf" target="_blank" rel="noopener">
           <i data-lucide="file-text" aria-hidden="true"></i>
           Vertrag für Kunden
         </a>
@@ -1187,12 +1187,12 @@ function renderContractPreview() {
     return;
   }
 
-  // Zeigt exakt dasselbe serverseitig generierte Vertragsdokument wie der
+  // Zeigt exakt dasselbe serverseitig erzeugte PDF wie der
   // "Vertragsdokument"-Link bei den Kostenvoranschlägen, statt einer eigenen (und leicht
   // abweichenden) clientseitigen Zusammenfassung.
   els.contractPreview.className = "contract-preview";
   els.printContract.disabled = false;
-  els.contractPreview.innerHTML = `<iframe class="contract-frame" src="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam"></iframe>`;
+  els.contractPreview.innerHTML = `<iframe class="contract-frame" src="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf"></iframe>`;
 }
 
 function updateOfferPreview() {
@@ -1342,7 +1342,7 @@ async function createContractDocument(offerId) {
   try {
     const contract = await apiPost("api/contracts.php", { offerId });
     await loadAll();
-    window.open(`contract.php?contractId=${encodeURIComponent(contract.id)}`, "_blank");
+    window.open(`contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf`, "_blank");
   } catch (error) {
     showToast(error.message);
   }

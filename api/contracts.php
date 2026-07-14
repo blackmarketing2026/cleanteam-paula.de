@@ -4,6 +4,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/contract_notify.php';
+require_once __DIR__ . '/../includes/contract_pdf.php';
 
 require_login();
 
@@ -116,6 +117,7 @@ if ($method === 'POST') {
             'current_step' => 'daten',
         ]);
         $contractId = $id;
+        save_contract_pdfs($pdo, $contractId, true);
         notify_contract_created($pdo, $contractId);
     } else {
         $contractId = $existing['id'];
