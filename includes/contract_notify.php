@@ -54,11 +54,13 @@ function load_contract_context(PDO $pdo, string $contractId): ?array
     return ['contract' => $contract, 'offer' => $offer, 'customer' => $customer];
 }
 
-// Liefert die SMTP-Angebots-Kontoeinstellungen, sofern vollstaendig konfiguriert, sonst null.
-function load_active_smtp(PDO $pdo): ?array
+// Liefert das Kundenmanagement-Postfach (dasselbe Konto wie beim Angebotsversand und im
+// Postfach-Bereich), sofern vollstaendig konfiguriert, sonst null. Bewusst nicht die separaten
+// "SMTP-Server-Einstellungen" - die sind oft nie befuellt, das Postfach dagegen schon.
+function load_mailbox_smtp(PDO $pdo): ?array
 {
-    $smtp = $pdo->query('SELECT * FROM smtp_settings WHERE id = 1')->fetch();
-    if (!$smtp || $smtp['host'] === '' || $smtp['from_email'] === '') {
+    $smtp = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1')->fetch();
+    if (!$smtp || $smtp['host'] === '' || $smtp['username'] === '' || ($smtp['password_encrypted'] ?? '') === '') {
         return null;
     }
 
@@ -88,7 +90,7 @@ function notify_contract_created(PDO $pdo, string $contractId): void
             return;
         }
 
-        $smtp = load_active_smtp($pdo);
+        $smtp = load_mailbox_smtp($pdo);
         if ($smtp === null) {
             return;
         }
@@ -97,8 +99,8 @@ function notify_contract_created(PDO $pdo, string $contractId): void
 
         $mailer = new SmtpMailer(
             $smtp['host'],
-            (int) $smtp['port'],
-            $smtp['encryption'],
+            (int) $smtp['smtp_port'],
+            $smtp['smtp_encryption'],
             $smtp['username'],
             decrypt_secret($smtp['password_encrypted'])
         );
@@ -107,7 +109,7 @@ function notify_contract_created(PDO $pdo, string $contractId): void
 
         foreach ($recipients as $recipient) {
             try {
-                $mailer->send($smtp['from_email'], $smtp['from_name'], $recipient, $recipient, $subject, $html, true);
+                $mailer->send($smtp['username'], $smtp['from_name'], $recipient, $recipient, $subject, $html, true);
             } catch (Throwable $exception) {
                 error_log('Vertragsbenachrichtigung fehlgeschlagen (' . $recipient . '): ' . $exception->getMessage());
             }
@@ -133,7 +135,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             return;
         }
 
-        $smtp = load_active_smtp($pdo);
+        $smtp = load_mailbox_smtp($pdo);
         if ($smtp === null) {
             return;
         }
@@ -148,8 +150,8 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
 
         $mailer = new SmtpMailer(
             $smtp['host'],
-            (int) $smtp['port'],
-            $smtp['encryption'],
+            (int) $smtp['smtp_port'],
+            $smtp['smtp_encryption'],
             $smtp['username'],
             decrypt_secret($smtp['password_encrypted'])
         );
@@ -157,7 +159,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
         $filename = 'Vertrag' . ($number !== '' ? '-' . preg_replace('/[^A-Za-z0-9\-_]/', '', $number) : '') . '.html';
 
         $mailer->sendWithAttachment(
-            $smtp['from_email'],
+            $smtp['username'],
             $smtp['from_name'],
             $customerEmail,
             $context['customer']['name'],
