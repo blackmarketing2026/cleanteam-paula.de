@@ -656,6 +656,12 @@ button.compact-item.selected {
   border: 0;
 }
 
+.contract-frame {
+  width: 100%;
+  min-height: 70vh;
+  border: 0;
+}
+
 .mailbox-folder-tabs {
   display: flex;
   gap: 8px;

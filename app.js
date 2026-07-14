@@ -192,6 +192,14 @@ function getContract(id) {
   return state.data.contracts.find((contract) => contract.id === id);
 }
 
+function getLatestContractForCustomer(customerId) {
+  const matches = state.data.contracts
+    .filter((contract) => contract.customer.id === customerId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  return matches[0] || null;
+}
+
 function calculateOfferPrice(squareMeters, interval, service) {
   const sqm = Number(squareMeters) || 0;
   const factor = intervalFactors[interval] || 1;
@@ -409,6 +417,17 @@ function renderCustomers() {
 }
 
 function renderCustomerCard(customer) {
+  const contract = getLatestContractForCustomer(customer.id);
+  const contractBadge = contract ? `<span class="badge success">Vertrag vorhanden</span>` : "";
+  const contractButton = contract
+    ? `
+      <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}" target="_blank" rel="noopener">
+        <i data-lucide="file-text" aria-hidden="true"></i>
+        Vertrag anzeigen
+      </a>
+    `
+    : "";
+
   return `
     <article class="record-item">
       <div class="record-main">
@@ -419,7 +438,10 @@ function renderCustomerCard(customer) {
             <span>${escapeHtml(customer.email)} · ${escapeHtml(customer.phone)}</span>
           </div>
         </div>
-        <span class="badge">${escapeHtml(customer.city)}</span>
+        <div class="record-side">
+          <span class="badge">${escapeHtml(customer.city)}</span>
+          ${contractBadge}
+        </div>
       </div>
       <div class="record-lines">
         <span>${escapeHtml(customerAddress(customer))}</span>
@@ -433,6 +455,7 @@ function renderCustomerCard(customer) {
           <i data-lucide="file-plus-2" aria-hidden="true"></i>
           Angebot
         </button>
+        ${contractButton}
         <button class="ghost-button" type="button" data-action="delete-customer" data-id="${escapeHtml(customer.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
           Löschen
@@ -581,107 +604,12 @@ function renderContractPreview() {
     return;
   }
 
+  // Zeigt exakt dasselbe serverseitig generierte Vertragsdokument wie der
+  // "Vertragsdokument"-Link bei den Angeboten, statt einer eigenen (und leicht
+  // abweichenden) clientseitigen Zusammenfassung.
   els.contractPreview.className = "contract-preview";
   els.printContract.disabled = false;
-  els.contractPreview.innerHTML = renderContractDocument(contract);
-  refreshIcons();
-}
-
-function renderContractDocument(contract) {
-  const badgeClass = contractBadgeClass(contract.status);
-  const statusLabel = CONTRACT_STATUS_LABELS[contract.status] || contract.status;
-
-  let statusBlock;
-  if (contract.status === "signiert") {
-    statusBlock = `
-      <section class="signature-box">
-        <strong>Digitale Signatur des Kunden</strong>
-        <img src="${contract.signatureDataUrl}" alt="Digitale Signatur" />
-        <span>Signiert am ${formatDate(contract.signedAt)}</span>
-      </section>
-    `;
-  } else if (contract.status === "daten_abgelehnt" || contract.status === "intervall_abgelehnt") {
-    const reason = contract.status === "daten_abgelehnt" ? "die Angebotsdaten" : "das vereinbarte Intervall";
-    statusBlock = `
-      <section class="signature-box">
-        <strong>Rückfrage vom Kunden</strong>
-        <span>Der Kunde hat ${escapeHtml(reason)} beim Vertragsassistenten als nicht korrekt markiert. Bitte Kontakt aufnehmen und ein neues Angebot erstellen.</span>
-      </section>
-    `;
-  } else {
-    statusBlock = `
-      <section class="signature-box">
-        <strong>Digitale Signatur des Kunden</strong>
-        <span>Der Kunde durchläuft aktuell den Vertragsassistenten über den Angebots-Link.</span>
-      </section>
-    `;
-  }
-
-  const representationBlock = contract.authorized === false && contract.representationNote
-    ? `<p><strong>Vertretung:</strong> ${escapeHtml(contract.representationNote)}</p>`
-    : "";
-
-  const notes = contract.offer.notes
-    ? `<p><strong>Besondere Vereinbarungen:</strong> ${escapeHtml(contract.offer.notes)}</p>`
-    : "";
-
-  return `
-    <div class="contract-document">
-      <header>
-        <div>
-          <span class="doc-brand">CleanTeam</span>
-          <h3>Reinigungsvertrag</h3>
-          <p class="muted">Vertragsnummer ${escapeHtml(contract.number)}</p>
-        </div>
-        <span class="badge ${badgeClass}">${escapeHtml(statusLabel)}</span>
-      </header>
-
-      <section>
-        <h4>Vertragspartner</h4>
-        <dl>
-          <dt>Kunde</dt>
-          <dd>${escapeHtml(contract.customer.name)}</dd>
-          <dt>Ansprechpartner</dt>
-          <dd>${escapeHtml(contactName(contract.customer))}</dd>
-          <dt>E-Mail</dt>
-          <dd>${escapeHtml(contract.customer.email)}</dd>
-          <dt>Telefon</dt>
-          <dd>${escapeHtml(contract.customer.phone)}</dd>
-          <dt>Adresse</dt>
-          <dd>${escapeHtml(customerAddress(contract.customer))}</dd>
-        </dl>
-        ${representationBlock}
-      </section>
-
-      <section>
-        <h4>Leistungsumfang</h4>
-        <dl>
-          <dt>Leistung</dt>
-          <dd>${escapeHtml(contract.offer.service)}</dd>
-          <dt>Fläche</dt>
-          <dd>${contract.offer.squareMeters} m²</dd>
-          <dt>Intervall</dt>
-          <dd>${escapeHtml(contract.offer.interval)}</dd>
-          <dt>Startdatum</dt>
-          <dd>${formatDate(contract.offer.startDate)}</dd>
-          <dt>Netto-Betrag</dt>
-          <dd>${formatCurrency(contract.offer.price)}</dd>
-        </dl>
-        ${notes}
-      </section>
-
-      <section>
-        <h4>Vereinbarung</h4>
-        <p>
-          CleanTeam übernimmt die oben beschriebene Reinigungsleistung gemäß Angebot.
-          Leistungszeiten, Zugang und Objektbesonderheiten werden vor Leistungsbeginn abgestimmt.
-          Alle Preise verstehen sich netto zuzüglich gesetzlicher Umsatzsteuer.
-        </p>
-      </section>
-
-      ${statusBlock}
-    </div>
-  `;
+  els.contractPreview.innerHTML = `<iframe class="contract-frame" src="contract.php?contractId=${encodeURIComponent(contract.id)}"></iframe>`;
 }
 
 function updateOfferPreview() {
@@ -1207,8 +1135,9 @@ function bindEvents() {
   els.contractList.addEventListener("click", handleRecordAction);
 
   els.printContract.addEventListener("click", () => {
-    if (state.selectedContractId) {
-      window.print();
+    const frame = els.contractPreview.querySelector(".contract-frame");
+    if (frame) {
+      frame.contentWindow.print();
     }
   });
 
