@@ -560,6 +560,10 @@ button svg {
   top: 28px;
 }
 
+.site-visit-form-panel {
+  position: static;
+}
+
 .panel-header {
   display: flex;
   align-items: flex-start;

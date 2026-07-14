@@ -36,6 +36,8 @@ const els = {
   loginError: document.querySelector("#login-error"),
   logoutButton: document.querySelector("#logout-button"),
   navLinks: document.querySelectorAll(".nav-link[data-view]"),
+  siteVisitsGroupToggle: document.querySelector("#site-visits-group-toggle"),
+  siteVisitsSubgroup: document.querySelector("#site-visits-subgroup"),
   settingsGroupToggle: document.querySelector("#settings-group-toggle"),
   settingsSubgroup: document.querySelector("#settings-subgroup"),
   views: document.querySelectorAll(".view"),
@@ -127,7 +129,8 @@ const els = {
 const titles = {
   overview: "Übersicht",
   customers: "Kundenverwaltung",
-  "site-visits": "Begehung",
+  "site-visit-new": "Neue Begehung erstellen",
+  "site-visit-saved": "Gespeicherte Begehungen",
   offers: "Kostenvoranschlagserstellung",
   contracts: "Verträge & Signatur",
   mailbox: "Postfach",
@@ -296,6 +299,11 @@ function setSettingsGroupExpanded(expanded) {
   els.settingsGroupToggle.setAttribute("aria-expanded", String(expanded));
 }
 
+function setSiteVisitsGroupExpanded(expanded) {
+  els.siteVisitsSubgroup.hidden = !expanded;
+  els.siteVisitsGroupToggle.setAttribute("aria-expanded", String(expanded));
+}
+
 function switchView(view) {
   state.currentView = view;
   els.viewTitle.textContent = titles[view];
@@ -312,6 +320,12 @@ function switchView(view) {
   els.settingsGroupToggle.classList.toggle("active", isSettingsView);
   if (isSettingsView) {
     setSettingsGroupExpanded(true);
+  }
+
+  const isSiteVisitView = view.startsWith("site-visit-");
+  els.siteVisitsGroupToggle.classList.toggle("active", isSiteVisitView);
+  if (isSiteVisitView) {
+    setSiteVisitsGroupExpanded(true);
   }
 
   closeMobileNav();
@@ -1120,6 +1134,7 @@ async function handleSiteVisitSubmit(event) {
     await apiPost("api/site-visits.php", payload);
     resetSiteVisitForm();
     await loadAll();
+    switchView("site-visit-saved");
     showToast("Begehung wurde gespeichert.");
   } catch (error) {
     showToast(error.message);
@@ -1759,6 +1774,10 @@ function bindEvents() {
 
   els.navLinks.forEach((button) => {
     button.addEventListener("click", () => switchView(button.dataset.view));
+  });
+
+  els.siteVisitsGroupToggle.addEventListener("click", () => {
+    setSiteVisitsGroupExpanded(els.siteVisitsSubgroup.hidden);
   });
 
   els.settingsGroupToggle.addEventListener("click", () => {
