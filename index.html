@@ -530,33 +530,63 @@
             </div>
           </div>
 
-          <div class="contract-layout">
-            <section class="panel" aria-labelledby="contract-list-heading">
-              <div class="panel-header">
-                <div>
-                  <h4 id="contract-list-heading">Vertragsliste</h4>
-                  <p class="muted">Wählen Sie einen Vertrag zur Ansicht aus.</p>
-                </div>
+          <section class="panel" aria-labelledby="contract-list-heading">
+            <div class="panel-header wrap-header">
+              <div>
+                <h4 id="contract-list-heading">Vertragsliste</h4>
+                <p id="contract-count" class="muted">Alle Verträge werden untereinander gelistet.</p>
               </div>
-              <div id="contract-list" class="record-list"></div>
-            </section>
-
-            <section class="panel contract-panel" aria-labelledby="contract-preview-heading">
-              <div class="panel-header wrap-header">
-                <div>
-                  <h4 id="contract-preview-heading">Vertragsvorschau</h4>
-                  <p class="muted">Reinigungsvertrag mit Kundendaten und Kostenvoranschlagskonditionen.</p>
-                </div>
-                <button id="print-contract" class="secondary-button" type="button">
-                  <i data-lucide="printer" aria-hidden="true"></i>
-                  Drucken
-                </button>
+              <div class="table-toolbar">
+                <label class="search-field">
+                  <i data-lucide="search" aria-hidden="true"></i>
+                  <input id="contract-search" type="search" placeholder="Vertrag, Kunde, Ansprechpartner suchen" />
+                </label>
+                <label class="select-field">
+                  Zeitraum
+                  <select id="contract-period-filter">
+                    <option value="all">Alle</option>
+                    <option value="quarter">Dieses Quartal</option>
+                    <option value="half-year">Letzte 6 Monate</option>
+                    <option value="year">Letzte 12 Monate</option>
+                    <option value="last-year">Letztes Jahr</option>
+                  </select>
+                </label>
+                <label class="select-field">
+                  Sortieren nach
+                  <select id="contract-sort">
+                    <option value="customerName">Kundenname</option>
+                    <option value="contactName">Ansprechpartner</option>
+                    <option value="createdAt">Vertragsdatum</option>
+                    <option value="signedAt">Signaturdatum</option>
+                    <option value="number">Vertragsnummer</option>
+                  </select>
+                </label>
+                <label class="select-field compact-select">
+                  Richtung
+                  <select id="contract-sort-direction">
+                    <option value="asc">Aufsteigend</option>
+                    <option value="desc">Absteigend</option>
+                  </select>
+                </label>
               </div>
-              <article id="contract-preview" class="contract-preview empty-state">
-                Noch kein Vertrag ausgewählt.
-              </article>
-            </section>
-          </div>
+            </div>
+            <div class="table-wrap">
+              <table class="contract-table">
+                <thead>
+                  <tr>
+                    <th>Vertrag</th>
+                    <th>Name</th>
+                    <th>Ansprechpartner</th>
+                    <th>Datum</th>
+                    <th>Signatur</th>
+                    <th>Status</th>
+                    <th>Dokumente</th>
+                  </tr>
+                </thead>
+                <tbody id="contract-list"></tbody>
+              </table>
+            </div>
+          </section>
         </section>
 
         <section id="mailbox-view" class="view" aria-labelledby="mailbox-heading">

@@ -26,6 +26,12 @@ const state = {
   currentView: "overview",
   selectedContractId: null,
   pendingOfferSiteVisitId: null,
+  contractFilters: {
+    search: "",
+    period: "all",
+    sortKey: "customerName",
+    sortDirection: "asc",
+  },
 };
 
 const els = {
@@ -77,8 +83,11 @@ const els = {
   offerPricePreview: document.querySelector("#offer-price-preview"),
   offerList: document.querySelector("#offer-list"),
   contractList: document.querySelector("#contract-list"),
-  contractPreview: document.querySelector("#contract-preview"),
-  printContract: document.querySelector("#print-contract"),
+  contractSearch: document.querySelector("#contract-search"),
+  contractPeriodFilter: document.querySelector("#contract-period-filter"),
+  contractSort: document.querySelector("#contract-sort"),
+  contractSortDirection: document.querySelector("#contract-sort-direction"),
+  contractCount: document.querySelector("#contract-count"),
   smtpForm: document.querySelector("#smtp-form"),
   smtpHost: document.querySelector("#smtp-host"),
   smtpPort: document.querySelector("#smtp-port"),
@@ -1209,23 +1218,111 @@ function renderOfferCard(offer) {
 }
 
 function renderContracts() {
-  const contracts = [...state.data.contracts].sort((a, b) =>
-    a.customer.name.localeCompare(b.customer.name, "de", { sensitivity: "base" })
-  );
-
-  els.contractList.innerHTML = contracts.length
-    ? contracts.map(renderContractCard).join("")
-    : `<div class="empty-state">Noch keine Verträge vorhanden.</div>`;
-
   if (state.selectedContractId && !getContract(state.selectedContractId)) {
     state.selectedContractId = null;
   }
 
-  if (!state.selectedContractId && contracts.length) {
-    state.selectedContractId = contracts[0].id;
+  const contracts = filteredContracts();
+  els.contractCount.textContent = `${contracts.length} von ${state.data.contracts.length} Verträgen angezeigt.`;
+  els.contractSearch.value = state.contractFilters.search;
+  els.contractPeriodFilter.value = state.contractFilters.period;
+  els.contractSort.value = state.contractFilters.sortKey;
+  els.contractSortDirection.value = state.contractFilters.sortDirection;
+
+  els.contractList.innerHTML = contracts.length
+    ? contracts.map(renderContractRow).join("")
+    : `<tr><td colspan="7" class="table-empty">Keine Verträge für diese Auswahl gefunden.</td></tr>`;
+}
+
+function filteredContracts() {
+  const query = state.contractFilters.search.trim().toLowerCase();
+
+  return [...state.data.contracts]
+    .filter((contract) => contractMatchesPeriod(contract))
+    .filter((contract) => {
+      if (!query) {
+        return true;
+      }
+
+      return contractSearchText(contract).includes(query);
+    })
+    .sort(compareContracts);
+}
+
+function contractSearchText(contract) {
+  return [
+    contract.number,
+    contract.customer.name,
+    contactName(contract.customer),
+    contract.customer.email,
+    contract.customer.phone,
+    contract.offer.service,
+    contract.offer.interval,
+    CONTRACT_STATUS_LABELS[contract.status] || contract.status,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function contractMatchesPeriod(contract) {
+  const period = state.contractFilters.period;
+  if (period === "all") {
+    return true;
   }
 
-  renderContractPreview();
+  const date = new Date(contract.createdAt);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  const now = new Date();
+  let start;
+  let end = now;
+
+  if (period === "quarter") {
+    start = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  } else if (period === "half-year") {
+    start = new Date(now);
+    start.setMonth(start.getMonth() - 6);
+  } else if (period === "year") {
+    start = new Date(now);
+    start.setFullYear(start.getFullYear() - 1);
+  } else if (period === "last-year") {
+    start = new Date(now.getFullYear() - 1, 0, 1);
+    end = new Date(now.getFullYear(), 0, 1);
+  } else {
+    return true;
+  }
+
+  return date >= start && date < end;
+}
+
+function compareContracts(a, b) {
+  const direction = state.contractFilters.sortDirection === "desc" ? -1 : 1;
+  const key = state.contractFilters.sortKey;
+  const first = contractSortValue(a, key);
+  const second = contractSortValue(b, key);
+
+  if (typeof first === "number" || typeof second === "number") {
+    return ((first || 0) - (second || 0)) * direction;
+  }
+
+  return String(first).localeCompare(String(second), "de", { sensitivity: "base" }) * direction;
+}
+
+function contractSortValue(contract, key) {
+  if (key === "contactName") {
+    return contactName(contract.customer);
+  }
+  if (key === "createdAt" || key === "signedAt") {
+    const date = new Date(contract[key] || 0);
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+  }
+  if (key === "number") {
+    return contract.number;
+  }
+
+  return contract.customer.name;
 }
 
 function contractBadgeClass(status) {
@@ -1238,15 +1335,10 @@ function contractBadgeClass(status) {
   return "warning";
 }
 
-function renderContractCard(contract) {
+function renderContractRow(contract) {
   const selected = contract.id === state.selectedContractId ? " selected" : "";
   const badgeClass = contractBadgeClass(contract.status);
-  const signedLine = contract.signedAt
-    ? `Signiert am ${formatDate(contract.signedAt)}`
-    : "Noch nicht signiert";
-  const termsLine = contract.termsAcceptedAt || contract.signedAt
-    ? "AGB-Zustimmung dokumentiert"
-    : "AGB-Zustimmung noch offen";
+  const signedAt = contract.signedAt ? formatDate(contract.signedAt) : "Noch offen";
   const siteVisitButton = contract.offer.siteVisitId
     ? `
         <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=site_visit&format=pdf" target="_blank" rel="noopener">
@@ -1257,57 +1349,35 @@ function renderContractCard(contract) {
     : "";
 
   return `
-    <article class="record-item${selected}">
-      <div class="record-main">
-        <div>
-          <div class="record-title">${escapeHtml(contract.number)}</div>
-          <div class="record-meta">
-            <span>${escapeHtml(contract.customer.name)}</span>
-            <span>${escapeHtml(contract.offer.service)} · ${contract.offer.squareMeters} m²</span>
-            <span>${escapeHtml(signedLine)} · ${escapeHtml(termsLine)}</span>
-          </div>
+    <tr class="${selected}">
+      <td>
+        <strong>${escapeHtml(contract.number)}</strong>
+        <span>${escapeHtml(contract.offer.service)} · ${contract.offer.squareMeters} m²</span>
+      </td>
+      <td>${escapeHtml(contract.customer.name)}</td>
+      <td>${escapeHtml(contactName(contract.customer))}</td>
+      <td>${escapeHtml(formatDate(contract.createdAt))}</td>
+      <td>${escapeHtml(signedAt)}</td>
+      <td><span class="badge ${badgeClass}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span></td>
+      <td>
+        <div class="table-actions">
+          <a class="primary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
+            <i data-lucide="file-check-2" aria-hidden="true"></i>
+            CleanTeam
+          </a>
+          <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=customer&format=pdf" target="_blank" rel="noopener">
+            <i data-lucide="file-text" aria-hidden="true"></i>
+            Kunde
+          </a>
+          ${siteVisitButton}
+          <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
+            <i data-lucide="trash-2" aria-hidden="true"></i>
+            Löschen
+          </button>
         </div>
-        <span class="badge ${badgeClass}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span>
-      </div>
-      <div class="record-actions">
-        <a class="primary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
-          <i data-lucide="file-check-2" aria-hidden="true"></i>
-          Vertrag CleanTeam
-        </a>
-        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=customer&format=pdf" target="_blank" rel="noopener">
-          <i data-lucide="file-text" aria-hidden="true"></i>
-          Vertrag für Kunden
-        </a>
-        ${siteVisitButton}
-        <button class="secondary-button" type="button" data-action="select-contract" data-id="${escapeHtml(contract.id)}">
-          <i data-lucide="eye" aria-hidden="true"></i>
-          Vorschau
-        </button>
-        <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
-          <i data-lucide="trash-2" aria-hidden="true"></i>
-          Löschen
-        </button>
-      </div>
-    </article>
+      </td>
+    </tr>
   `;
-}
-
-function renderContractPreview() {
-  const contract = getContract(state.selectedContractId);
-
-  if (!contract) {
-    els.contractPreview.className = "contract-preview empty-state";
-    els.contractPreview.textContent = "Noch kein Vertrag ausgewählt.";
-    els.printContract.disabled = true;
-    return;
-  }
-
-  // Zeigt exakt dasselbe serverseitig erzeugte PDF wie der
-  // "Vertragsdokument"-Link bei den Kostenvoranschlägen, statt einer eigenen (und leicht
-  // abweichenden) clientseitigen Zusammenfassung.
-  els.contractPreview.className = "contract-preview";
-  els.printContract.disabled = false;
-  els.contractPreview.innerHTML = `<iframe class="contract-frame" src="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf"></iframe>`;
 }
 
 function updateOfferPreview() {
@@ -2027,6 +2097,8 @@ function handleRecordAction(event) {
 
   if (action === "open-contract") {
     state.selectedContractId = id;
+    state.contractFilters.search = "";
+    state.contractFilters.period = "all";
     switchView("contracts");
   }
 
@@ -2036,11 +2108,6 @@ function handleRecordAction(event) {
 
   if (action === "delete-offer") {
     deleteOffer(id);
-  }
-
-  if (action === "select-contract") {
-    state.selectedContractId = id;
-    renderAll();
   }
 
   if (action === "open-mailbox-message") {
@@ -2137,12 +2204,25 @@ function bindEvents() {
   els.siteVisitList.addEventListener("click", handleRecordAction);
   els.offerList.addEventListener("click", handleRecordAction);
   els.contractList.addEventListener("click", handleRecordAction);
-
-  els.printContract.addEventListener("click", () => {
-    const frame = els.contractPreview.querySelector(".contract-frame");
-    if (frame) {
-      frame.contentWindow.print();
-    }
+  els.contractSearch.addEventListener("input", () => {
+    state.contractFilters.search = els.contractSearch.value;
+    renderContracts();
+    refreshIcons();
+  });
+  els.contractPeriodFilter.addEventListener("change", () => {
+    state.contractFilters.period = els.contractPeriodFilter.value;
+    renderContracts();
+    refreshIcons();
+  });
+  els.contractSort.addEventListener("change", () => {
+    state.contractFilters.sortKey = els.contractSort.value;
+    renderContracts();
+    refreshIcons();
+  });
+  els.contractSortDirection.addEventListener("change", () => {
+    state.contractFilters.sortDirection = els.contractSortDirection.value;
+    renderContracts();
+    refreshIcons();
   });
 
   els.smtpForm.addEventListener("submit", handleSmtpSubmit);

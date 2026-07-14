@@ -597,6 +597,99 @@ button svg {
   padding-left: 38px;
 }
 
+.table-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.select-field {
+  display: grid;
+  gap: 5px;
+  min-width: 170px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.compact-select {
+  min-width: 140px;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.contract-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+.contract-table th,
+.contract-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 13px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.contract-table th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.contract-table td {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.contract-table td strong,
+.contract-table td span {
+  display: block;
+}
+
+.contract-table td strong {
+  margin-bottom: 3px;
+  color: var(--blue-950);
+}
+
+.contract-table td > span:not(.badge) {
+  color: var(--muted);
+}
+
+.contract-table tr.selected {
+  background: var(--blue-050);
+}
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 260px;
+}
+
+.table-actions .primary-button,
+.table-actions .secondary-button,
+.table-actions .ghost-button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.table-empty {
+  height: 140px;
+  color: var(--muted) !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
 .record-list,
 .compact-list,
 .status-stack {
@@ -1343,6 +1436,16 @@ button.compact-item.selected {
   .price-preview {
     grid-template-columns: 1fr;
     width: 100%;
+  }
+
+  .table-toolbar {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .table-toolbar .search-field,
+  .table-toolbar .select-field {
+    flex: 1 1 220px;
   }
 
   .contract-document dl {
