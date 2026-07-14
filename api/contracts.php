@@ -63,6 +63,54 @@ if ($method === 'GET') {
     json_response(array_map('contract_row_to_json', $rows));
 }
 
+if ($method === 'POST') {
+    $body = read_json_body();
+    $offerId = trim((string) ($body['offerId'] ?? ''));
+
+    if ($offerId === '') {
+        json_error('Angebots-ID fehlt.', 422);
+    }
+
+    $offerStmt = $pdo->prepare('SELECT id, customer_id FROM offers WHERE id = :id');
+    $offerStmt->execute(['id' => $offerId]);
+    $offer = $offerStmt->fetch();
+
+    if (!$offer) {
+        json_error('Angebot wurde nicht gefunden.', 404);
+    }
+
+    $existingStmt = $pdo->prepare('SELECT id FROM contracts WHERE offer_id = :offer_id');
+    $existingStmt->execute(['offer_id' => $offerId]);
+    $existing = $existingStmt->fetch();
+
+    if (!$existing) {
+        $year = gmdate('Y');
+        $count = (int) $pdo->query('SELECT COUNT(*) FROM contracts')->fetchColumn();
+        $number = sprintf('CT-%s-%03d', $year, $count + 1);
+
+        $id = generate_id('contract');
+        $stmt = $pdo->prepare(
+            'INSERT INTO contracts (id, offer_id, customer_id, number, status, current_step, created_at)
+             VALUES (:id, :offer_id, :customer_id, :number, :status, :current_step, UTC_TIMESTAMP())'
+        );
+        $stmt->execute([
+            'id' => $id,
+            'offer_id' => $offerId,
+            'customer_id' => $offer['customer_id'],
+            'number' => $number,
+            'status' => 'entwurf',
+            'current_step' => 'daten',
+        ]);
+        $contractId = $id;
+    } else {
+        $contractId = $existing['id'];
+    }
+
+    $stmt = $pdo->prepare(CONTRACT_SELECT . ' WHERE ct.id = :id');
+    $stmt->execute(['id' => $contractId]);
+    json_response(contract_row_to_json($stmt->fetch()), 201);
+}
+
 if ($method === 'DELETE') {
     $id = (string) ($_GET['id'] ?? '');
     if ($id === '') {

@@ -426,8 +426,17 @@ function renderOfferCard(offer) {
         <i data-lucide="signature" aria-hidden="true"></i>
         Vertrag ansehen
       </button>
+      <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(offer.contractId)}" target="_blank" rel="noopener">
+        <i data-lucide="file-text" aria-hidden="true"></i>
+        Vertragsdokument
+      </a>
     `
-    : "";
+    : `
+      <button class="secondary-button" type="button" data-action="create-contract-document" data-id="${escapeHtml(offer.id)}">
+        <i data-lucide="file-text" aria-hidden="true"></i>
+        Vertrag erstellen
+      </button>
+    `;
 
   return `
     <article class="record-item">
@@ -744,6 +753,16 @@ async function sendOffer(id) {
   }
 }
 
+async function createContractDocument(offerId) {
+  try {
+    const contract = await apiPost("api/contracts.php", { offerId });
+    await loadAll();
+    window.open(`contract.php?contractId=${encodeURIComponent(contract.id)}`, "_blank");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 async function copyOfferLink(id) {
   const offer = getOffer(id);
   if (!offer) {
@@ -900,6 +919,10 @@ function handleRecordAction(event) {
   if (action === "open-contract") {
     state.selectedContractId = id;
     switchView("contracts");
+  }
+
+  if (action === "create-contract-document") {
+    createContractDocument(id);
   }
 
   if (action === "delete-offer") {
