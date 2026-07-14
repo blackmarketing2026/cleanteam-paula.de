@@ -546,7 +546,9 @@ function renderOfferCard(offer) {
 }
 
 function renderContracts() {
-  const contracts = [...state.data.contracts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const contracts = [...state.data.contracts].sort((a, b) =>
+    a.customer.name.localeCompare(b.customer.name, "de", { sensitivity: "base" })
+  );
 
   els.contractList.innerHTML = contracts.length
     ? contracts.map(renderContractCard).join("")
