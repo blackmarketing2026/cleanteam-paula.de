@@ -696,6 +696,10 @@ function renderSiteVisitCard(visit) {
         </div>
       </details>
       <div class="record-actions">
+        <button class="primary-button" type="button" data-action="offer-from-site-visit" data-id="${escapeHtml(visit.id)}">
+          <i data-lucide="file-plus-2" aria-hidden="true"></i>
+          Kostenvoranschlag
+        </button>
         <button class="ghost-button" type="button" data-action="delete-site-visit" data-id="${escapeHtml(visit.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
           Löschen
@@ -720,6 +724,87 @@ function renderSiteVisitFloorSummary(floor, index) {
       </div>
     </article>
   `;
+}
+
+function siteVisitOfferNotes(visit) {
+  const floors = Array.isArray(visit.floors) ? visit.floors : [];
+  const floorLines = floors.map((floor, index) => {
+    const title = floor.name || `Etage ${index + 1}`;
+    return [
+      `- ${title}`,
+      `  Sanitär: ${Number(floor.sanitaryRooms) || 0} Räume, ${Number(floor.sinks) || 0} Waschbecken, ${Number(floor.mirrors) || 0} Spiegel, ${Number(floor.toilets) || 0} Toiletten`,
+      `  Büro: ${Number(floor.officeRooms) || 0} Räume, ${Number(floor.desks) || 0} Schreibtische, ${Number(floor.windows) || 0} Fenster`,
+      `  Boden: ${floor.cleaningType || "Gesaugt"} · ${floor.floorCondition || "Teppich"}`,
+      floor.notes ? `  Notiz: ${floor.notes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  });
+
+  return [
+    "Aus Begehung übernommen:",
+    `Ansprechpartner vor Ort: ${visit.onsiteContact}`,
+    `Adresse: ${visit.address}`,
+    `Objektgröße: ${visit.squareMeters} m²`,
+    "",
+    "Etagenaufnahme:",
+    floorLines.join("\n"),
+    visit.notes ? `\nAllgemeine Notizen:\n${visit.notes}` : "",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+}
+
+function findCustomerForSiteVisit(visit) {
+  const email = String(visit.email || "").trim().toLowerCase();
+  const phone = String(visit.phone || "").trim();
+  const name = String(visit.customerName || "").trim().toLowerCase();
+
+  return (
+    state.data.customers.find((customer) => String(customer.email || "").trim().toLowerCase() === email) ||
+    state.data.customers.find((customer) => phone && String(customer.phone || "").trim() === phone) ||
+    state.data.customers.find((customer) => String(customer.name || "").trim().toLowerCase() === name) ||
+    null
+  );
+}
+
+function prefillCustomerFromSiteVisit(visit) {
+  const contact = String(visit.onsiteContact || "").trim();
+  const salutation = contact.toLowerCase().startsWith("frau") ? "Frau" : "Herr";
+  const contactName = contact.replace(/^(herr|frau)\s+/i, "").trim();
+
+  resetCustomerForm();
+  document.querySelector("#customer-name").value = visit.customerName || "";
+  document.querySelector("#customer-email").value = visit.email || "";
+  document.querySelector("#customer-phone").value = visit.phone || "";
+  document.querySelector("#customer-salutation").value = salutation;
+  document.querySelector("#customer-contact-lastname").value = contactName || contact;
+  document.querySelector("#customer-address").value = visit.address || "";
+  document.querySelector("#customer-form-heading").textContent = "Kunde aus Begehung anlegen";
+}
+
+function startOfferFromSiteVisit(id) {
+  const visit = getSiteVisit(id);
+  if (!visit) {
+    return;
+  }
+
+  const customer = findCustomerForSiteVisit(visit);
+  if (!customer) {
+    prefillCustomerFromSiteVisit(visit);
+    switchView("customers");
+    document.querySelector("#customer-house-number").focus();
+    showToast("Bitte Kundendaten ergänzen und speichern. Danach kann der Kostenvoranschlag übernommen werden.");
+    return;
+  }
+
+  switchView("offers");
+  els.offerCustomer.value = customer.id;
+  els.offerSquareMeters.value = visit.squareMeters || "";
+  els.offerNotes.value = siteVisitOfferNotes(visit);
+  updateOfferPreview();
+  els.offerInterval.focus();
+  showToast("Begehung wurde in den Kostenvoranschlag übernommen.");
 }
 
 function renderOffers() {
@@ -1534,6 +1619,10 @@ function handleRecordAction(event) {
 
   if (action === "delete-site-visit") {
     deleteSiteVisit(id);
+  }
+
+  if (action === "offer-from-site-visit") {
+    startOfferFromSiteVisit(id);
   }
 
   if (action === "send-offer") {
