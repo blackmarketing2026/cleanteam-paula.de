@@ -127,7 +127,7 @@ const els = {
 const titles = {
   overview: "Übersicht",
   customers: "Kundenverwaltung",
-  "site-visits": "Neue Begehung",
+  "site-visits": "Begehung",
   offers: "Kostenvoranschlagserstellung",
   contracts: "Verträge & Signatur",
   mailbox: "Postfach",
