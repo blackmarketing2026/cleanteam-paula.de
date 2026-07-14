@@ -662,6 +662,29 @@ button.compact-item.selected {
   border: 0;
 }
 
+.settings-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.settings-toc a {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  background: #fff;
+  color: var(--blue-800);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.settings-toc a:hover {
+  border-color: var(--blue-600);
+  background: var(--blue-050);
+}
+
 .checkbox-row {
   display: flex !important;
   align-items: center;
