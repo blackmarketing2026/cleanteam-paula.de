@@ -70,9 +70,18 @@
             <i data-lucide="mail" aria-hidden="true"></i>
             Postfach
           </button>
-          <button class="nav-link" type="button" data-view="settings">
-            <i data-lucide="settings" aria-hidden="true"></i>
-            Einstellungen
+          <p class="nav-group-label">Einstellungen</p>
+          <button class="nav-link" type="button" data-view="settings-smtp">
+            <i data-lucide="server" aria-hidden="true"></i>
+            SMTP-Server
+          </button>
+          <button class="nav-link" type="button" data-view="settings-notify">
+            <i data-lucide="bell" aria-hidden="true"></i>
+            Vertragsbenachrichtigungen
+          </button>
+          <button class="nav-link" type="button" data-view="settings-logo">
+            <i data-lucide="image" aria-hidden="true"></i>
+            Logo
           </button>
         </nav>
         <button id="logout-button" class="ghost-button sidebar-logout" type="button">
@@ -510,25 +519,18 @@
           </section>
         </section>
 
-        <section id="settings-view" class="view" aria-labelledby="settings-heading">
+        <section id="settings-smtp-view" class="view" aria-labelledby="settings-smtp-heading">
           <div class="section-heading">
             <div>
-              <h3 id="settings-heading">Einstellungen</h3>
-              <p class="muted">Alle Einstellungen an einem Ort.</p>
+              <h3 id="settings-smtp-heading">SMTP-Server-Einstellungen</h3>
+              <p class="muted">Wird für den Versand der Angebots-E-Mails an Kunden verwendet.</p>
             </div>
           </div>
-
-          <nav class="settings-toc" aria-label="Einstellungsbereiche">
-            <a href="#smtp-form-heading">1. SMTP-Server-Einstellungen</a>
-            <a href="#contract-notify-heading">2. Vertragsbenachrichtigungen-Einstellungen</a>
-            <a href="#logo-heading">3. Logo-Einstellungen</a>
-          </nav>
 
           <section class="panel form-panel" aria-labelledby="smtp-form-heading">
             <div class="panel-header">
               <div>
-                <h4 id="smtp-form-heading">1. SMTP-Server-Einstellungen</h4>
-                <p class="muted">Wird für den Versand der Angebots-E-Mails an Kunden verwendet.</p>
+                <h4 id="smtp-form-heading">SMTP-Server</h4>
               </div>
             </div>
             <form id="smtp-form" class="form-grid">
@@ -576,12 +578,20 @@
               </div>
             </form>
           </section>
+        </section>
+
+        <section id="settings-notify-view" class="view" aria-labelledby="settings-notify-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="settings-notify-heading">Vertragsbenachrichtigungen-Einstellungen</h3>
+              <p class="muted">Sendet den fertigen Vertrag automatisch per E-Mail, sobald er erstellt wird.</p>
+            </div>
+          </div>
 
           <section class="panel form-panel" aria-labelledby="contract-notify-heading">
             <div class="panel-header">
               <div>
-                <h4 id="contract-notify-heading">2. Vertragsbenachrichtigungen-Einstellungen</h4>
-                <p class="muted">Sendet den fertigen Vertrag automatisch per E-Mail, sobald er erstellt wird.</p>
+                <h4 id="contract-notify-heading">Vertragsbenachrichtigungen</h4>
               </div>
             </div>
             <form id="contract-notify-form" class="form-grid">
@@ -604,12 +614,20 @@
               </div>
             </form>
           </section>
+        </section>
+
+        <section id="settings-logo-view" class="view" aria-labelledby="settings-logo-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="settings-logo-heading">Logo-Einstellungen</h3>
+              <p class="muted">Wird im Dashboard, in Angeboten und in Verträgen angezeigt.</p>
+            </div>
+          </div>
 
           <section class="panel form-panel" aria-labelledby="logo-heading">
             <div class="panel-header">
               <div>
-                <h4 id="logo-heading">3. Logo-Einstellungen</h4>
-                <p class="muted">Wird im Dashboard, in Angeboten und in Verträgen angezeigt.</p>
+                <h4 id="logo-heading">Logo</h4>
               </div>
             </div>
             <div class="logo-preview-row">

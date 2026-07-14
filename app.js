@@ -122,7 +122,9 @@ const titles = {
   offers: "Angebotserstellung",
   contracts: "Verträge & Signatur",
   mailbox: "Postfach",
-  settings: "Einstellungen",
+  "settings-smtp": "SMTP-Server-Einstellungen",
+  "settings-notify": "Vertragsbenachrichtigungen-Einstellungen",
+  "settings-logo": "Logo-Einstellungen",
 };
 
 let currentLogoUrl = null;
@@ -290,8 +292,11 @@ function switchView(view) {
 
   closeMobileNav();
 
-  if (view === "settings") {
+  if (view === "settings-smtp") {
     loadSmtpSettings();
+  }
+
+  if (view === "settings-notify") {
     loadContractNotifySettings();
   }
 
