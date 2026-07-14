@@ -419,7 +419,7 @@
           <div class="section-heading">
             <div>
               <h3 id="offers-new-heading">Neue Kostenvoranschläge</h3>
-              <p class="muted">Fläche, Intervall und Kundendaten werden zu einem Kostenvoranschlag zusammengeführt.</p>
+              <p class="muted">Offene Begehung auswählen, Preisdetails ergänzen und daraus den Kostenvoranschlag erstellen.</p>
             </div>
           </div>
 
@@ -427,17 +427,21 @@
             <div class="panel-header">
               <div>
                 <h4 id="offer-form-heading">Neuer Kostenvoranschlag</h4>
-                <p class="muted">Der Preis wird automatisch berechnet.</p>
+                <p class="muted">Kunde, Fläche und Notizen werden aus der Begehung übernommen.</p>
               </div>
             </div>
             <form id="offer-form" class="form-grid">
               <label class="span-2">
-                Kunde *
-                <select id="offer-customer" required></select>
+                Offene Begehung *
+                <select id="offer-site-visit" required></select>
+              </label>
+              <label class="span-2">
+                Kunde aus Begehung
+                <select id="offer-customer" disabled required></select>
               </label>
               <label>
-                Quadratmeter *
-                <input id="offer-square-meters" type="number" min="1" step="1" required placeholder="250" />
+                Quadratmeter aus Begehung
+                <input id="offer-square-meters" type="number" min="1" step="1" required readonly placeholder="250" />
               </label>
               <label>
                 Intervall *

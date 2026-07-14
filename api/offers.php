@@ -76,8 +76,12 @@ if ($method === 'POST') {
     $service = trim((string) ($body['service'] ?? ''));
     $siteVisitId = trim((string) ($body['siteVisitId'] ?? ''));
 
+    if ($siteVisitId === '') {
+        json_error('Bitte zuerst eine offene Begehung auswählen.', 422);
+    }
+
     if ($customerId === '' || $squareMeters <= 0 || $interval === '' || $service === '') {
-        json_error('Kunde, Quadratmeter, Intervall und Leistung sind erforderlich.', 422);
+        json_error('Begehung, Kunde, Quadratmeter, Intervall und Leistung sind erforderlich.', 422);
     }
 
     $customerStmt = $pdo->prepare('SELECT id FROM customers WHERE id = :id');
@@ -86,12 +90,16 @@ if ($method === 'POST') {
         json_error('Kunde wurde nicht gefunden.', 404);
     }
 
-    if ($siteVisitId !== '') {
-        $visitStmt = $pdo->prepare('SELECT id FROM site_visits WHERE id = :id');
-        $visitStmt->execute(['id' => $siteVisitId]);
-        if (!$visitStmt->fetch()) {
-            json_error('Begehung wurde nicht gefunden.', 404);
-        }
+    $visitStmt = $pdo->prepare('SELECT id FROM site_visits WHERE id = :id');
+    $visitStmt->execute(['id' => $siteVisitId]);
+    if (!$visitStmt->fetch()) {
+        json_error('Begehung wurde nicht gefunden.', 404);
+    }
+
+    $processedStmt = $pdo->prepare('SELECT id FROM offers WHERE site_visit_id = :site_visit_id LIMIT 1');
+    $processedStmt->execute(['site_visit_id' => $siteVisitId]);
+    if ($processedStmt->fetch()) {
+        json_error('Diese Begehung wurde bereits abgearbeitet.', 409);
     }
 
     $price = calculate_offer_price($squareMeters, $interval, $service);

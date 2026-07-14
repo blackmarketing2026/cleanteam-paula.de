@@ -63,6 +63,7 @@ const els = {
   siteVisitFloors: document.querySelector("#site-visit-floors"),
   siteVisitList: document.querySelector("#site-visit-list"),
   offerForm: document.querySelector("#offer-form"),
+  offerSiteVisit: document.querySelector("#offer-site-visit"),
   offerCustomer: document.querySelector("#offer-customer"),
   offerSquareMeters: document.querySelector("#offer-square-meters"),
   offerInterval: document.querySelector("#offer-interval"),
@@ -225,6 +226,18 @@ function getSiteVisit(id) {
 
 function getOffer(id) {
   return state.data.offers.find((offer) => offer.id === id);
+}
+
+function getOpenSiteVisits() {
+  const processedVisitIds = new Set(
+    state.data.offers
+      .map((offer) => offer.siteVisitId)
+      .filter(Boolean),
+  );
+
+  return [...state.data.siteVisits]
+    .filter((visit) => !processedVisitIds.has(visit.id))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 function getContract(id) {
@@ -406,6 +419,7 @@ async function loadAll() {
 function renderAll() {
   renderMetrics();
   renderCustomerOptions();
+  renderOfferSiteVisitOptions();
   renderCustomers();
   renderSiteVisits();
   renderOffers();
@@ -473,11 +487,45 @@ function renderCustomerOptions() {
   els.offerCustomer.innerHTML = state.data.customers.length
     ? options
     : `<option value="">Bitte zuerst Kunden anlegen</option>`;
-  els.offerCustomer.disabled = state.data.customers.length === 0;
+  els.offerCustomer.disabled = true;
 
   if (previousValue && getCustomer(previousValue)) {
     els.offerCustomer.value = previousValue;
   }
+}
+
+function clearOfferSiteVisitFields() {
+  els.offerCustomer.value = "";
+  els.offerSquareMeters.value = "";
+  els.offerNotes.value = "";
+  updateOfferPreview();
+}
+
+function renderOfferSiteVisitOptions() {
+  const openVisits = getOpenSiteVisits();
+  const selectedVisitId = state.pendingOfferSiteVisitId;
+  const selectedVisitIsOpen = selectedVisitId && openVisits.some((visit) => visit.id === selectedVisitId);
+  const submitButton = els.offerForm.querySelector('button[type="submit"]');
+
+  els.offerSiteVisit.innerHTML = openVisits.length
+    ? `<option value="">Offene Begehung auswählen</option>` + openVisits
+        .map((visit) => {
+          const label = `${visit.customerName} · ${formatDate(visit.createdAt)} · ${visit.squareMeters} m²`;
+          return `<option value="${escapeHtml(visit.id)}">${escapeHtml(label)}</option>`;
+        })
+        .join("")
+    : `<option value="">Keine offenen Begehungen verfügbar</option>`;
+  els.offerSiteVisit.disabled = openVisits.length === 0;
+
+  if (selectedVisitIsOpen) {
+    els.offerSiteVisit.value = selectedVisitId;
+  } else {
+    state.pendingOfferSiteVisitId = null;
+    els.offerSiteVisit.value = "";
+    clearOfferSiteVisitFields();
+  }
+
+  submitButton.disabled = !state.pendingOfferSiteVisitId;
 }
 
 function renderCustomers() {
@@ -1015,32 +1063,60 @@ async function ensureCustomerForSiteVisit(visit) {
 }
 
 async function startOfferFromSiteVisit(id) {
+  const prepared = await prepareOfferFromSiteVisit(id);
+  if (prepared) {
+    switchView("offers-new");
+    els.offerInterval.focus();
+  }
+}
+
+async function prepareOfferFromSiteVisit(id) {
   const visit = getSiteVisit(id);
   if (!visit) {
-    return;
+    return false;
+  }
+
+  if (!getOpenSiteVisits().some((openVisit) => openVisit.id === id)) {
+    state.pendingOfferSiteVisitId = null;
+    renderOfferSiteVisitOptions();
+    showToast("Diese Begehung wurde bereits abgearbeitet.");
+    return false;
   }
 
   try {
     const { customer, created } = await ensureCustomerForSiteVisit(visit);
     if (!customer) {
-      return;
+      return false;
     }
 
     state.pendingOfferSiteVisitId = visit.id;
-    switchView("offers-new");
+    renderOfferSiteVisitOptions();
     els.offerCustomer.value = customer.id;
     els.offerSquareMeters.value = visit.squareMeters || "";
     els.offerNotes.value = siteVisitOfferNotes(visit);
     updateOfferPreview();
-    els.offerInterval.focus();
     showToast(
       created
         ? "Kunde wurde aus der Begehung angelegt und in den Kostenvoranschlag übernommen."
         : "Begehung wurde in den Kostenvoranschlag übernommen.",
     );
+    return true;
   } catch (error) {
     showToast(error.message);
+    return false;
   }
+}
+
+async function handleOfferSiteVisitChange() {
+  const visitId = els.offerSiteVisit.value;
+  if (!visitId) {
+    state.pendingOfferSiteVisitId = null;
+    clearOfferSiteVisitFields();
+    renderOfferSiteVisitOptions();
+    return;
+  }
+
+  await prepareOfferFromSiteVisit(visitId);
 }
 
 function renderOffers() {
@@ -1325,10 +1401,23 @@ async function handleSiteVisitSubmit(event) {
 async function handleOfferSubmit(event) {
   event.preventDefault();
 
+  if (!state.pendingOfferSiteVisitId) {
+    showToast("Bitte zuerst eine offene Begehung auswählen.");
+    els.offerSiteVisit.focus();
+    return;
+  }
+
+  if (!getOpenSiteVisits().some((visit) => visit.id === state.pendingOfferSiteVisitId)) {
+    state.pendingOfferSiteVisitId = null;
+    renderOfferSiteVisitOptions();
+    showToast("Diese Begehung wurde bereits abgearbeitet.");
+    return;
+  }
+
   const customerId = els.offerCustomer.value;
   if (!customerId) {
-    showToast("Bitte zuerst einen Kunden anlegen.");
-    switchView("customer-new");
+    showToast("Bitte zuerst eine Begehung auswählen, damit der Kunde übernommen wird.");
+    els.offerSiteVisit.focus();
     return;
   }
 
@@ -1890,9 +1979,9 @@ function handleRecordAction(event) {
 
   if (action === "offer-for-customer") {
     state.pendingOfferSiteVisitId = null;
-    els.offerCustomer.value = id;
     switchView("offers-new");
-    els.offerSquareMeters.focus();
+    els.offerSiteVisit.focus();
+    showToast("Bitte zuerst eine offene Begehung auswählen.");
   }
 
   if (action === "delete-customer") {
@@ -1971,6 +2060,7 @@ function bindEvents() {
     button.addEventListener("click", () => {
       if (button.dataset.view === "offers-new") {
         state.pendingOfferSiteVisitId = null;
+        clearOfferSiteVisitFields();
       }
       switchView(button.dataset.view);
     });
@@ -1997,6 +2087,7 @@ function bindEvents() {
   els.quickCustomer.addEventListener("click", () => switchView("customer-new"));
   els.quickOffer.addEventListener("click", () => {
     state.pendingOfferSiteVisitId = null;
+    clearOfferSiteVisitFields();
     switchView("offers-new");
   });
   els.newCustomerButton.addEventListener("click", () => {
@@ -2015,6 +2106,7 @@ function bindEvents() {
   els.siteVisitFloors.addEventListener("input", handleSiteVisitFloorInput);
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
+  els.offerSiteVisit.addEventListener("change", handleOfferSiteVisitChange);
   els.offerSquareMeters.addEventListener("input", updateOfferPreview);
   els.offerInterval.addEventListener("change", updateOfferPreview);
   els.offerService.addEventListener("change", updateOfferPreview);
