@@ -230,6 +230,7 @@ if ($method === 'POST' && $action === 'sign') {
     );
     $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id']]);
     notify_contract_created($pdo, $contract['id']);
+    notify_customer_contract_signed($pdo, $contract['id']);
 
     json_response(public_state($offer, load_contract($pdo, $offer['id'])));
 }
