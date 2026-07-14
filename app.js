@@ -768,43 +768,115 @@ function findCustomerForSiteVisit(visit) {
   );
 }
 
-function prefillCustomerFromSiteVisit(visit) {
-  const contact = String(visit.onsiteContact || "").trim();
+function parseSiteVisitContact(contactValue) {
+  const contact = String(contactValue || "").trim();
   const salutation = contact.toLowerCase().startsWith("frau") ? "Frau" : "Herr";
-  const contactName = contact.replace(/^(herr|frau)\s+/i, "").trim();
+  const withoutSalutation = contact.replace(/^(herr|frau)\s+/i, "").trim();
+  const parts = withoutSalutation.split(/\s+/).filter(Boolean);
+
+  return {
+    salutation,
+    contactLastName: parts.length ? parts[parts.length - 1] : withoutSalutation || contact || "Ansprechpartner",
+  };
+}
+
+function parseSiteVisitAddress(addressValue) {
+  const address = String(addressValue || "").trim();
+  const [streetLine = "", cityLine = ""] = address.split(",").map((part) => part.trim());
+  const streetMatch = streetLine.match(/^(.+?)\s+(\d+\s*[a-zA-Z]?(?:[-/]\w+)?)$/);
+  const cityMatch = cityLine.match(/^(\d{4,5})\s+(.+)$/);
+
+  return {
+    address: streetMatch ? streetMatch[1].trim() : streetLine,
+    houseNumber: streetMatch ? streetMatch[2].trim() : "",
+    zip: cityMatch ? cityMatch[1].trim() : "",
+    city: cityMatch ? cityMatch[2].trim() : "",
+  };
+}
+
+function prefillCustomerFromSiteVisit(visit) {
+  const contact = parseSiteVisitContact(visit.onsiteContact);
+  const address = parseSiteVisitAddress(visit.address);
 
   resetCustomerForm();
   document.querySelector("#customer-name").value = visit.customerName || "";
   document.querySelector("#customer-email").value = visit.email || "";
   document.querySelector("#customer-phone").value = visit.phone || "";
-  document.querySelector("#customer-salutation").value = salutation;
-  document.querySelector("#customer-contact-lastname").value = contactName || contact;
-  document.querySelector("#customer-address").value = visit.address || "";
+  document.querySelector("#customer-salutation").value = contact.salutation;
+  document.querySelector("#customer-contact-lastname").value = contact.contactLastName;
+  document.querySelector("#customer-address").value = address.address || visit.address || "";
+  document.querySelector("#customer-house-number").value = address.houseNumber;
+  document.querySelector("#customer-zip").value = address.zip;
+  document.querySelector("#customer-city").value = address.city;
   document.querySelector("#customer-form-heading").textContent = "Kunde aus Begehung anlegen";
 }
 
-function startOfferFromSiteVisit(id) {
+function customerPayloadFromSiteVisit(visit) {
+  const contact = parseSiteVisitContact(visit.onsiteContact);
+  const address = parseSiteVisitAddress(visit.address);
+
+  return {
+    payload: {
+      name: String(visit.customerName || "").trim(),
+      email: String(visit.email || "").trim(),
+      phone: String(visit.phone || "").trim(),
+      salutation: contact.salutation,
+      contactLastName: contact.contactLastName,
+      address: address.address,
+      houseNumber: address.houseNumber,
+      zip: address.zip,
+      city: address.city,
+    },
+    complete: Boolean(address.address && address.houseNumber && address.zip && address.city),
+  };
+}
+
+async function ensureCustomerForSiteVisit(visit) {
+  const existingCustomer = findCustomerForSiteVisit(visit);
+  if (existingCustomer) {
+    return { customer: existingCustomer, created: false };
+  }
+
+  const { payload, complete } = customerPayloadFromSiteVisit(visit);
+  if (!complete) {
+    prefillCustomerFromSiteVisit(visit);
+    switchView("customers");
+    document.querySelector("#customer-house-number").focus();
+    showToast("Bitte Kundendaten kurz ergänzen. Danach kann der Kostenvoranschlag übernommen werden.");
+    return { customer: null, created: false };
+  }
+
+  const customer = await apiPost("api/customers.php", payload);
+  await loadAll();
+  return { customer, created: true };
+}
+
+async function startOfferFromSiteVisit(id) {
   const visit = getSiteVisit(id);
   if (!visit) {
     return;
   }
 
-  const customer = findCustomerForSiteVisit(visit);
-  if (!customer) {
-    prefillCustomerFromSiteVisit(visit);
-    switchView("customers");
-    document.querySelector("#customer-house-number").focus();
-    showToast("Bitte Kundendaten ergänzen und speichern. Danach kann der Kostenvoranschlag übernommen werden.");
-    return;
-  }
+  try {
+    const { customer, created } = await ensureCustomerForSiteVisit(visit);
+    if (!customer) {
+      return;
+    }
 
-  switchView("offers");
-  els.offerCustomer.value = customer.id;
-  els.offerSquareMeters.value = visit.squareMeters || "";
-  els.offerNotes.value = siteVisitOfferNotes(visit);
-  updateOfferPreview();
-  els.offerInterval.focus();
-  showToast("Begehung wurde in den Kostenvoranschlag übernommen.");
+    switchView("offers");
+    els.offerCustomer.value = customer.id;
+    els.offerSquareMeters.value = visit.squareMeters || "";
+    els.offerNotes.value = siteVisitOfferNotes(visit);
+    updateOfferPreview();
+    els.offerInterval.focus();
+    showToast(
+      created
+        ? "Kunde wurde aus der Begehung angelegt und in den Kostenvoranschlag übernommen."
+        : "Begehung wurde in den Kostenvoranschlag übernommen.",
+    );
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 function renderOffers() {
