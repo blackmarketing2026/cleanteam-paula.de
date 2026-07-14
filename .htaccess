@@ -1,4 +1,5 @@
 AuthType Basic
 AuthName "Restricted Area"
+AuthBasicProvider file
 AuthUserFile /www/htdocs/w019e94b/cleanteam-paula.de/.htpasswd
 Require valid-user
