@@ -77,6 +77,10 @@
             <i data-lucide="signature" aria-hidden="true"></i>
             Verträge
           </button>
+          <button class="nav-link" type="button" data-view="mailbox">
+            <i data-lucide="mail" aria-hidden="true"></i>
+            Postfach
+          </button>
           <button class="nav-link" type="button" data-view="settings">
             <i data-lucide="settings" aria-hidden="true"></i>
             Einstellungen
@@ -372,6 +376,134 @@
               </article>
             </section>
           </div>
+        </section>
+
+        <section id="mailbox-view" class="view" aria-labelledby="mailbox-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="mailbox-heading">Postfach</h3>
+              <p class="muted">E-Mails empfangen und senden über das CleanTeam-Postfach.</p>
+            </div>
+          </div>
+
+          <div id="mailbox-not-configured" class="panel empty-state" hidden>
+            Postfach ist noch nicht eingerichtet. Bitte unter
+            <button id="mailbox-goto-settings" class="ghost-button" type="button" style="display:inline-flex;">Postfach-Einstellungen</button>
+            Host, Benutzername und Passwort hinterlegen.
+          </div>
+
+          <div id="mailbox-configured" class="contract-layout" hidden>
+            <section class="panel" aria-labelledby="mailbox-list-heading">
+              <div class="panel-header wrap-header">
+                <div>
+                  <h4 id="mailbox-list-heading">Eingang</h4>
+                  <p class="muted" id="mailbox-account-label"></p>
+                </div>
+                <div class="form-actions">
+                  <button id="mailbox-refresh" class="ghost-button" type="button">
+                    <i data-lucide="refresh-cw" aria-hidden="true"></i>
+                    Aktualisieren
+                  </button>
+                  <button id="mailbox-compose-toggle" class="primary-button" type="button">
+                    <i data-lucide="pencil" aria-hidden="true"></i>
+                    Neue E-Mail
+                  </button>
+                </div>
+              </div>
+
+              <form id="mailbox-compose-form" class="form-grid" hidden>
+                <label class="span-2">
+                  An *
+                  <input id="mailbox-compose-to" type="email" required placeholder="empfaenger@beispiel.de" />
+                </label>
+                <label class="span-2">
+                  Betreff *
+                  <input id="mailbox-compose-subject" type="text" required />
+                </label>
+                <label class="span-2">
+                  Nachricht *
+                  <textarea id="mailbox-compose-body" rows="6" required></textarea>
+                </label>
+                <div class="form-actions span-2">
+                  <button id="mailbox-compose-cancel" class="ghost-button" type="button">Abbrechen</button>
+                  <button class="primary-button" type="submit">
+                    <i data-lucide="send" aria-hidden="true"></i>
+                    Senden
+                  </button>
+                </div>
+              </form>
+
+              <div id="mailbox-list" class="record-list"></div>
+            </section>
+
+            <section class="panel contract-panel" aria-labelledby="mailbox-message-heading">
+              <div class="panel-header">
+                <div>
+                  <h4 id="mailbox-message-heading">Nachricht</h4>
+                </div>
+              </div>
+              <article id="mailbox-message" class="contract-preview empty-state">
+                Noch keine Nachricht ausgewählt.
+              </article>
+            </section>
+          </div>
+
+          <section class="panel form-panel" aria-labelledby="mailbox-settings-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="mailbox-settings-heading">Postfach-Einstellungen</h4>
+                <p class="muted">IMAP (Empfang) und SMTP (Versand) für dasselbe Postfach.</p>
+              </div>
+            </div>
+            <form id="mailbox-settings-form" class="form-grid">
+              <label class="span-2">
+                Server-Host *
+                <input id="mailbox-host" type="text" required placeholder="w019e94b.kasserver.com" />
+              </label>
+              <label>
+                IMAP-Port *
+                <input id="mailbox-imap-port" type="number" min="1" max="65535" required placeholder="993" />
+              </label>
+              <label>
+                IMAP-Verschlüsselung *
+                <select id="mailbox-imap-encryption" required>
+                  <option value="ssl">SSL/TLS (meist Port 993)</option>
+                  <option value="tls">STARTTLS</option>
+                  <option value="none">Keine</option>
+                </select>
+              </label>
+              <label>
+                SMTP-Port *
+                <input id="mailbox-smtp-port" type="number" min="1" max="65535" required placeholder="587" />
+              </label>
+              <label>
+                SMTP-Verschlüsselung *
+                <select id="mailbox-smtp-encryption" required>
+                  <option value="tls">STARTTLS (meist Port 587)</option>
+                  <option value="ssl">SSL/TLS (meist Port 465)</option>
+                  <option value="none">Keine</option>
+                </select>
+              </label>
+              <label>
+                Benutzername / E-Mail-Adresse *
+                <input id="mailbox-username" type="text" required placeholder="postfach@cleanteam-group.com" />
+              </label>
+              <label>
+                Passwort
+                <input id="mailbox-password" type="password" placeholder="Unverändert lassen = altes Passwort behalten" autocomplete="new-password" />
+              </label>
+              <label>
+                Absendername
+                <input id="mailbox-from-name" type="text" placeholder="CleanTeam" />
+              </label>
+              <div class="form-actions span-2">
+                <button class="primary-button" type="submit">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Einstellungen speichern
+                </button>
+              </div>
+            </form>
+          </section>
         </section>
 
         <section id="settings-view" class="view" aria-labelledby="settings-heading">

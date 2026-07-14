@@ -88,6 +88,23 @@ CREATE TABLE IF NOT EXISTS smtp_settings (
 INSERT IGNORE INTO smtp_settings (id, host, port, encryption, username, from_name, from_email)
 VALUES (1, '', 587, 'tls', '', 'CleanTeam', '');
 
+CREATE TABLE IF NOT EXISTS mailbox_settings (
+  id TINYINT UNSIGNED NOT NULL,
+  host VARCHAR(190) NOT NULL DEFAULT '',
+  imap_port SMALLINT UNSIGNED NOT NULL DEFAULT 993,
+  imap_encryption VARCHAR(10) NOT NULL DEFAULT 'ssl',
+  smtp_port SMALLINT UNSIGNED NOT NULL DEFAULT 587,
+  smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls',
+  username VARCHAR(190) NOT NULL DEFAULT '',
+  password_encrypted TEXT NULL,
+  from_name VARCHAR(190) NOT NULL DEFAULT 'CleanTeam',
+  updated_at DATETIME NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO mailbox_settings (id, host, imap_port, imap_encryption, smtp_port, smtp_encryption, username, from_name)
+VALUES (1, '', 993, 'ssl', 587, 'tls', '', 'CleanTeam');
+
 -- Demo-Kunden, damit das Dashboard nach der Installation nicht leer ist.
 -- Koennen jederzeit im Dashboard geloescht werden.
 INSERT IGNORE INTO customers (id, name, email, phone, salutation, contact_last_name, address, house_number, zip, city, created_at)

@@ -640,6 +640,22 @@ button svg {
   padding: 13px;
 }
 
+button.compact-item {
+  width: 100%;
+  text-align: left;
+}
+
+button.compact-item.selected {
+  border-color: rgba(19, 121, 216, 0.42);
+  box-shadow: 0 0 0 4px rgba(19, 121, 216, 0.08);
+}
+
+.mailbox-frame {
+  width: 100%;
+  min-height: 360px;
+  border: 0;
+}
+
 .compact-item strong,
 .status-item strong {
   display: block;
