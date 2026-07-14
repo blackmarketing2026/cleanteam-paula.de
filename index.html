@@ -581,6 +581,34 @@
               </div>
             </form>
           </section>
+
+          <section class="panel form-panel" aria-labelledby="contract-notify-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="contract-notify-heading">Vertragsbenachrichtigung</h4>
+                <p class="muted">Sendet den fertigen Vertrag automatisch per E-Mail, sobald er erstellt wird.</p>
+              </div>
+            </div>
+            <form id="contract-notify-form" class="form-grid">
+              <label class="span-2 checkbox-row">
+                <input id="contract-notify-enabled" type="checkbox" />
+                Vertrag nach Erstellung per E-Mail senden
+              </label>
+              <div id="contract-notify-emails" class="span-2 email-list"></div>
+              <div class="span-2">
+                <button id="contract-notify-add-email" class="ghost-button" type="button">
+                  <i data-lucide="plus" aria-hidden="true"></i>
+                  Weitere E-Mail-Adresse
+                </button>
+              </div>
+              <div class="form-actions span-2">
+                <button class="primary-button" type="submit">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Einstellungen speichern
+                </button>
+              </div>
+            </form>
+          </section>
         </section>
       </section>
     </main>

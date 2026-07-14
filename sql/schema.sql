@@ -106,6 +106,17 @@ CREATE TABLE IF NOT EXISTS mailbox_settings (
 INSERT IGNORE INTO mailbox_settings (id, host, imap_port, imap_encryption, smtp_port, smtp_encryption, username, from_name)
 VALUES (1, '', 993, 'ssl', 587, 'tls', '', 'CleanTeam');
 
+CREATE TABLE IF NOT EXISTS contract_notifications (
+  id TINYINT UNSIGNED NOT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 0,
+  recipients TEXT NULL,
+  updated_at DATETIME NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO contract_notifications (id, enabled, recipients)
+VALUES (1, 0, '');
+
 -- Demo-Kunden, damit das Dashboard nach der Installation nicht leer ist.
 -- Koennen jederzeit im Dashboard geloescht werden.
 INSERT IGNORE INTO customers (id, name, email, phone, salutation, contact_last_name, address, house_number, zip, city, created_at)

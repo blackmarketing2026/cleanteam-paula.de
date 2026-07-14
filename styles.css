@@ -662,6 +662,38 @@ button.compact-item.selected {
   border: 0;
 }
 
+.checkbox-row {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  accent-color: var(--blue-800);
+}
+
+.email-list {
+  display: grid;
+  gap: 10px;
+}
+
+.email-row {
+  display: flex;
+  gap: 8px;
+}
+
+.email-row input {
+  flex: 1;
+}
+
 .mailbox-folder-tabs {
   display: flex;
   gap: 8px;

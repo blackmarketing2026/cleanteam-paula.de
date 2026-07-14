@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/contract_notify.php';
 
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -136,6 +137,7 @@ if ($method === 'POST' && $action === 'start') {
             'status' => 'entwurf',
             'current_step' => 'daten',
         ]);
+        notify_contract_created($pdo, $id);
         $contract = load_contract($pdo, $offer['id']);
     }
 

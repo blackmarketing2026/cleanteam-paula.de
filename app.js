@@ -94,6 +94,10 @@ const els = {
   mailboxFromName: document.querySelector("#mailbox-from-name"),
   mailboxSignature: document.querySelector("#mailbox-signature"),
   mailboxFolderTabs: document.querySelectorAll(".mailbox-folder-tabs [data-folder]"),
+  contractNotifyForm: document.querySelector("#contract-notify-form"),
+  contractNotifyEnabled: document.querySelector("#contract-notify-enabled"),
+  contractNotifyEmails: document.querySelector("#contract-notify-emails"),
+  contractNotifyAddEmail: document.querySelector("#contract-notify-add-email"),
   toast: document.querySelector("#toast"),
   metricCustomers: document.querySelector("#metric-customers"),
   metricOffers: document.querySelector("#metric-offers"),
@@ -278,6 +282,7 @@ function switchView(view) {
 
   if (view === "settings") {
     loadSmtpSettings();
+    loadContractNotifySettings();
   }
 
   if (view === "mailbox") {
@@ -1022,6 +1027,55 @@ async function sendTestMail() {
   }
 }
 
+function renderEmailRow(value) {
+  const row = document.createElement("div");
+  row.className = "email-row";
+  row.innerHTML = `
+    <input type="email" placeholder="name@beispiel.de" value="${escapeHtml(value)}" />
+    <button class="ghost-button" type="button" data-action="remove-email-row">
+      <i data-lucide="x" aria-hidden="true"></i>
+    </button>
+  `;
+  return row;
+}
+
+function addContractNotifyEmailRow(value = "") {
+  els.contractNotifyEmails.appendChild(renderEmailRow(value));
+  refreshIcons();
+}
+
+async function loadContractNotifySettings() {
+  try {
+    const settings = await apiGet("api/contract-notifications.php");
+    els.contractNotifyEnabled.checked = settings.enabled;
+    els.contractNotifyEmails.innerHTML = "";
+
+    const emails = settings.recipients.length ? settings.recipients : [""];
+    emails.forEach((email) => addContractNotifyEmailRow(email));
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleContractNotifySubmit(event) {
+  event.preventDefault();
+
+  const recipients = [...els.contractNotifyEmails.querySelectorAll("input")]
+    .map((input) => input.value.trim())
+    .filter((value) => value !== "");
+
+  try {
+    await apiPost("api/contract-notifications.php", {
+      enabled: els.contractNotifyEnabled.checked,
+      recipients,
+    });
+    showToast("Einstellungen wurden gespeichert.");
+    await loadContractNotifySettings();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function handleRecordAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) {
@@ -1166,6 +1220,20 @@ function bindEvents() {
   });
   els.mailboxComposeForm.addEventListener("submit", handleMailboxComposeSubmit);
   els.mailboxSettingsForm.addEventListener("submit", handleMailboxSettingsSubmit);
+
+  els.contractNotifyForm.addEventListener("submit", handleContractNotifySubmit);
+  els.contractNotifyAddEmail.addEventListener("click", () => addContractNotifyEmailRow(""));
+  els.contractNotifyEmails.addEventListener("click", (event) => {
+    const button = event.target.closest('[data-action="remove-email-row"]');
+    if (!button) {
+      return;
+    }
+    if (els.contractNotifyEmails.children.length > 1) {
+      button.closest(".email-row").remove();
+    } else {
+      button.closest(".email-row").querySelector("input").value = "";
+    }
+  });
 
   window.setInterval(() => {
     if (!els.appShell.hidden) {
