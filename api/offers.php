@@ -19,8 +19,29 @@ function ensure_offers_site_visit_id_column(PDO $pdo): void
     $pdo->exec('ALTER TABLE offers ADD COLUMN site_visit_id VARCHAR(64) NULL AFTER customer_id');
 }
 
+function ensure_offers_pricing_columns(PDO $pdo): void
+{
+    $columns = [
+        'base_price' => 'ALTER TABLE offers ADD COLUMN base_price DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER notes',
+        'price_adjustment' => 'ALTER TABLE offers ADD COLUMN price_adjustment DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER base_price',
+        'price_adjustment_note' => 'ALTER TABLE offers ADD COLUMN price_adjustment_note VARCHAR(255) NULL AFTER price_adjustment',
+    ];
+
+    foreach ($columns as $column => $sql) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
 function offer_row_to_json(array $row): array
 {
+    $price = (float) $row['price'];
+    $basePrice = isset($row['base_price']) && (float) $row['base_price'] > 0
+        ? (float) $row['base_price']
+        : $price;
+
     return [
         'id' => $row['id'],
         'customerId' => $row['customer_id'],
@@ -42,7 +63,10 @@ function offer_row_to_json(array $row): array
         'service' => $row['service'],
         'startDate' => $row['start_date'],
         'notes' => $row['notes'],
-        'price' => (float) $row['price'],
+        'basePrice' => $basePrice,
+        'priceAdjustment' => (float) ($row['price_adjustment'] ?? 0),
+        'priceAdjustmentNote' => $row['price_adjustment_note'] ?? null,
+        'price' => $price,
         'token' => $row['token'],
         'publicUrl' => base_url() . '/offer.php?token=' . $row['token'],
         'createdAt' => to_iso($row['created_at']),
@@ -62,6 +86,7 @@ const OFFER_SELECT = 'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone 
     LEFT JOIN contracts ct ON ct.offer_id = o.id';
 
 ensure_offers_site_visit_id_column($pdo);
+ensure_offers_pricing_columns($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();
@@ -75,6 +100,8 @@ if ($method === 'POST') {
     $interval = trim((string) ($body['interval'] ?? ''));
     $service = trim((string) ($body['service'] ?? ''));
     $siteVisitId = trim((string) ($body['siteVisitId'] ?? ''));
+    $priceAdjustment = round((float) ($body['priceAdjustment'] ?? 0), 2);
+    $priceAdjustmentNote = trim((string) ($body['priceAdjustmentNote'] ?? ''));
 
     if ($siteVisitId === '') {
         json_error('Bitte zuerst eine offene Begehung auswählen.', 422);
@@ -102,14 +129,15 @@ if ($method === 'POST') {
         json_error('Diese Begehung wurde bereits abgearbeitet.', 409);
     }
 
-    $price = calculate_offer_price($squareMeters, $interval, $service);
+    $basePrice = calculate_offer_price($squareMeters, $interval, $service);
+    $price = max(0, round($basePrice + $priceAdjustment, 2));
     $id = generate_id('offer');
     $token = generate_token();
     $startDate = trim((string) ($body['startDate'] ?? ''));
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, site_visit_id, square_meters, interval_label, service, start_date, notes, price, token, created_at, expires_at)
-         VALUES (:id, :customer_id, :site_visit_id, :square_meters, :interval_label, :service, :start_date, :notes, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
+        'INSERT INTO offers (id, customer_id, site_visit_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, token, created_at, expires_at)
+         VALUES (:id, :customer_id, :site_visit_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, :price_adjustment, :price_adjustment_note, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
     );
     $stmt->execute([
         'id' => $id,
@@ -120,6 +148,9 @@ if ($method === 'POST') {
         'service' => $service,
         'start_date' => $startDate !== '' ? $startDate : null,
         'notes' => trim((string) ($body['notes'] ?? '')),
+        'base_price' => $basePrice,
+        'price_adjustment' => $priceAdjustment,
+        'price_adjustment_note' => $priceAdjustmentNote !== '' ? $priceAdjustmentNote : null,
         'price' => $price,
         'token' => $token,
     ]);

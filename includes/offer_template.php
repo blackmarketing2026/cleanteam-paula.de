@@ -20,7 +20,21 @@ function render_offer_document(array $offer, array $customer): string
     $squareMeters = (int) $offer['square_meters'];
     $startDate = $offer['start_date'] !== null ? contract_format_date($offer['start_date']) : 'Nach Absprache';
     $validUntil = contract_format_date($offer['expires_at']);
-    $priceFormatted = contract_format_money((float) $offer['price']);
+    $price = (float) $offer['price'];
+    $basePrice = isset($offer['base_price']) && (float) $offer['base_price'] > 0
+        ? (float) $offer['base_price']
+        : $price;
+    $priceAdjustment = (float) ($offer['price_adjustment'] ?? 0);
+    $priceFormatted = contract_format_money($price);
+    $basePriceFormatted = contract_format_money($basePrice);
+    $priceAdjustmentFormatted = contract_format_money($priceAdjustment);
+    $priceAdjustmentNote = trim((string) ($offer['price_adjustment_note'] ?? ''));
+    $priceAdjustmentRows = abs($priceAdjustment) > 0.0001
+        ? '<dt>Berechneter Grundpreis</dt><dd>' . h($basePriceFormatted) . ' netto</dd>'
+            . '<dt>Preisanpassung</dt><dd>' . h($priceAdjustmentFormatted) . ' netto'
+            . ($priceAdjustmentNote !== '' ? '<br><span class="muted">' . h($priceAdjustmentNote) . '</span>' : '')
+            . '</dd>'
+        : '';
 
     $offerNotes = trim((string) ($offer['notes'] ?? ''));
     $notesBlock = $offerNotes !== '' ? '<p><strong>Besondere Vereinbarungen:</strong> ' . h($offerNotes) . '</p>' : '';
@@ -68,7 +82,8 @@ function render_offer_document(array $offer, array $customer): string
   <dt>Fläche</dt><dd>{$squareMeters} m²</dd>
   <dt>Intervall</dt><dd>{$interval}</dd>
   <dt>Startdatum</dt><dd>{$startDate}</dd>
-  <dt>Preis</dt><dd>{$priceFormatted} netto</dd>
+  {$priceAdjustmentRows}
+  <dt>Finaler Preis</dt><dd>{$priceFormatted} netto</dd>
   <dt>Gültig bis</dt><dd>{$validUntil}</dd>
 </dl>
 {$notesBlock}

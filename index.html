@@ -467,13 +467,31 @@
                   <option value="Glasreinigung">Glasreinigung</option>
                 </select>
               </label>
+              <label>
+                Preisanpassung netto
+                <input id="offer-price-adjustment" type="number" step="0.01" placeholder="z. B. -25 oder 40" />
+              </label>
+              <label>
+                Grund der Preisanpassung
+                <input id="offer-price-adjustment-note" type="text" maxlength="255" placeholder="z. B. Sonderrabatt, Zusatzaufwand" />
+              </label>
               <label class="span-2">
                 Notizen
                 <textarea id="offer-notes" rows="4" placeholder="Besondere Wünsche, Schlüsselübergabe, Reinigungszeiten"></textarea>
               </label>
               <div class="price-preview span-2">
-                <span>Geschätzter Nettowert</span>
-                <strong id="offer-price-preview">0,00 €</strong>
+                <div>
+                  <span>Berechneter Grundpreis</span>
+                  <strong id="offer-base-price-preview">0,00 €</strong>
+                </div>
+                <div>
+                  <span>Preisanpassung</span>
+                  <strong id="offer-adjustment-preview">0,00 €</strong>
+                </div>
+                <div>
+                  <span>Finaler Nettowert</span>
+                  <strong id="offer-price-preview">0,00 €</strong>
+                </div>
               </div>
               <div class="form-actions span-2">
                 <button class="primary-button" type="submit">

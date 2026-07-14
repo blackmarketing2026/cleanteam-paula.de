@@ -98,14 +98,22 @@ function renderDefinitionList(target, entries) {
 
 function renderOfferSummary() {
   const offer = state.offer;
-  renderDefinitionList(els.offerSummary, [
+  const entries = [
     ["Kunde", offer.customer.name],
     ["Ansprechpartner", contactName(offer.customer)],
     ["Leistung", offer.service],
     ["Fläche", `${offer.squareMeters} m²`],
     ["Intervall", offer.interval],
-    ["Geschätzter Nettowert", formatCurrency(offer.price)],
-  ]);
+  ];
+  if (Number(offer.priceAdjustment || 0) !== 0) {
+    entries.push(["Berechneter Grundpreis", formatCurrency(offer.basePrice || offer.price)]);
+    entries.push([
+      "Preisanpassung",
+      `${formatCurrency(offer.priceAdjustment)}${offer.priceAdjustmentNote ? ` (${offer.priceAdjustmentNote})` : ""}`,
+    ]);
+  }
+  entries.push(["Finaler Nettowert", formatCurrency(offer.price)]);
+  renderDefinitionList(els.offerSummary, entries);
   els.offerValidity.textContent = `Dieser Kostenvoranschlag ist gültig bis ${formatDate(offer.expiresAt)}.`;
 }
 
@@ -142,8 +150,15 @@ function renderServiceDetails() {
     ["Fläche", `${offer.squareMeters} m²`],
     ["Intervall", offer.interval],
     ["Startdatum", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
-    ["Netto-Betrag", formatCurrency(offer.price)],
   ];
+  if (Number(offer.priceAdjustment || 0) !== 0) {
+    entries.push(["Berechneter Grundpreis", formatCurrency(offer.basePrice || offer.price)]);
+    entries.push([
+      "Preisanpassung",
+      `${formatCurrency(offer.priceAdjustment)}${offer.priceAdjustmentNote ? ` (${offer.priceAdjustmentNote})` : ""}`,
+    ]);
+  }
+  entries.push(["Netto-Betrag", formatCurrency(offer.price)]);
   if (offer.notes) {
     entries.push(["Besondere Vereinbarungen", offer.notes]);
   }

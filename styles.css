@@ -990,14 +990,20 @@ button.compact-item.selected {
 }
 
 .price-preview {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
   border: 1px solid rgba(19, 121, 216, 0.18);
   border-radius: var(--radius);
   background: var(--surface-soft);
   padding: 14px;
+}
+
+.price-preview div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 .price-preview span {
@@ -1009,6 +1015,7 @@ button.compact-item.selected {
 .price-preview strong {
   color: var(--blue-900);
   font-size: 24px;
+  line-height: 1.1;
 }
 
 .empty-state {
@@ -1331,6 +1338,11 @@ button.compact-item.selected {
   .signature-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .price-preview {
+    grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .contract-document dl {

@@ -67,6 +67,11 @@ function public_state(array $offer, ?array $contract): array
             'service' => $offer['service'],
             'startDate' => $offer['start_date'],
             'notes' => $offer['notes'],
+            'basePrice' => isset($offer['base_price']) && (float) $offer['base_price'] > 0
+                ? (float) $offer['base_price']
+                : (float) $offer['price'],
+            'priceAdjustment' => (float) ($offer['price_adjustment'] ?? 0),
+            'priceAdjustmentNote' => $offer['price_adjustment_note'] ?? null,
             'price' => (float) $offer['price'],
             'expiresAt' => to_iso($offer['expires_at']),
             'expired' => offer_is_expired($offer),
