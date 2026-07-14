@@ -117,6 +117,15 @@ CREATE TABLE IF NOT EXISTS contract_notifications (
 INSERT IGNORE INTO contract_notifications (id, enabled, recipients)
 VALUES (1, 0, '');
 
+CREATE TABLE IF NOT EXISTS branding_settings (
+  id TINYINT UNSIGNED NOT NULL,
+  logo_filename VARCHAR(190) NULL,
+  updated_at DATETIME NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO branding_settings (id, logo_filename) VALUES (1, NULL);
+
 -- Demo-Kunden, damit das Dashboard nach der Installation nicht leer ist.
 -- Koennen jederzeit im Dashboard geloescht werden.
 INSERT IGNORE INTO customers (id, name, email, phone, salutation, contact_last_name, address, house_number, zip, city, created_at)

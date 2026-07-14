@@ -106,6 +106,10 @@ const els = {
   offerPreviewContent: document.querySelector("#offer-preview-content"),
   offerPreviewClose: document.querySelector("#offer-preview-close"),
   offerPreviewSend: document.querySelector("#offer-preview-send"),
+  logoPreview: document.querySelector("#logo-preview"),
+  logoFileInput: document.querySelector("#logo-file-input"),
+  logoRemove: document.querySelector("#logo-remove"),
+  brandMarks: document.querySelectorAll(".brand-mark"),
   toast: document.querySelector("#toast"),
   metricCustomers: document.querySelector("#metric-customers"),
   metricOffers: document.querySelector("#metric-offers"),
@@ -124,6 +128,8 @@ const titles = {
   mailbox: "Postfach",
   settings: "Einstellungen",
 };
+
+let currentLogoUrl = null;
 
 const mailboxState = {
   messages: [],
@@ -788,10 +794,14 @@ function openOfferPreview(id) {
     ? `<dt>Besondere Vereinbarungen</dt><dd>${escapeHtml(offer.notes)}</dd>`
     : "";
 
+  const brandBlock = currentLogoUrl
+    ? `<img src="${escapeHtml(currentLogoUrl)}" alt="Logo" style="max-height:48px;max-width:220px;display:block;margin-bottom:8px;">`
+    : `<span class="doc-brand">CleanTeam</span>`;
+
   els.offerPreviewContent.innerHTML = `
     <header>
       <div>
-        <span class="doc-brand">CleanTeam</span>
+        ${brandBlock}
         <h3>Ihr individuelles Reinigungsangebot</h3>
         <p class="muted">Für ${escapeHtml(offer.customer.name)}</p>
       </div>
@@ -1159,6 +1169,68 @@ async function handleContractNotifySubmit(event) {
   }
 }
 
+function applyBrandLogo(logoUrl) {
+  currentLogoUrl = logoUrl || null;
+
+  els.brandMarks.forEach((mark) => {
+    mark.classList.toggle("has-logo", Boolean(logoUrl));
+    mark.innerHTML = logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" />` : "<span>CT</span>";
+  });
+
+  if (logoUrl) {
+    els.logoPreview.className = "logo-preview";
+    els.logoPreview.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="Logo" />`;
+    els.logoRemove.hidden = false;
+  } else {
+    els.logoPreview.className = "logo-preview empty-state";
+    els.logoPreview.textContent = "Kein Logo hinterlegt.";
+    els.logoRemove.hidden = true;
+  }
+}
+
+async function loadBranding() {
+  try {
+    const branding = await apiGet("api/branding.php");
+    applyBrandLogo(branding.logoUrl);
+  } catch (error) {
+    // Kein Logo hinterlegt oder Ladefehler: Fallback-Initialen bleiben stehen.
+  }
+}
+
+async function handleLogoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("logo", file);
+
+  try {
+    const response = await fetch("api/branding.php", { method: "POST", body: formData, credentials: "same-origin" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Logo konnte nicht hochgeladen werden.");
+    }
+    applyBrandLogo(data.logoUrl);
+    showToast("Logo wurde hochgeladen.");
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    els.logoFileInput.value = "";
+  }
+}
+
+async function handleLogoRemove() {
+  try {
+    await apiDelete("api/branding.php");
+    applyBrandLogo(null);
+    showToast("Logo wurde entfernt.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function handleRecordAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) {
@@ -1308,6 +1380,9 @@ function bindEvents() {
   els.mailboxComposeForm.addEventListener("submit", handleMailboxComposeSubmit);
   els.mailboxSettingsForm.addEventListener("submit", handleMailboxSettingsSubmit);
 
+  els.logoFileInput.addEventListener("change", handleLogoUpload);
+  els.logoRemove.addEventListener("click", handleLogoRemove);
+
   els.contractNotifyForm.addEventListener("submit", handleContractNotifySubmit);
   els.contractNotifyAddEmail.addEventListener("click", () => addContractNotifyEmailRow(""));
   els.contractNotifyEmails.addEventListener("click", (event) => {
@@ -1364,6 +1439,7 @@ function bindEvents() {
 async function init() {
   bindEvents();
   els.offerStartDate.value = todayAsInputValue();
+  loadBranding();
 
   try {
     const session = await apiGet("api/me.php");

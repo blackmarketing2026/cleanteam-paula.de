@@ -125,6 +125,21 @@ function h(?string $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
+// Absolute URL, damit das Logo auch im per E-Mail verschickten HTML-Anhang lädt (dort gibt es
+// keinen Server-Kontext für einen relativen Pfad).
+function contract_logo_html(): string
+{
+    $row = db()->query('SELECT logo_filename FROM branding_settings WHERE id = 1')->fetch();
+    $filename = $row['logo_filename'] ?? null;
+    if ($filename === null || $filename === '') {
+        return '';
+    }
+
+    $url = h(base_url() . '/uploads/' . rawurlencode($filename));
+
+    return '<img src="' . $url . '" alt="Logo" class="doc-logo">';
+}
+
 function render_service_catalog_html(): string
 {
     $html = '';
@@ -209,6 +224,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $noticeMonths = PRICE_ADJUSTMENT_NOTICE_MONTHS;
     $wageMin = WAGE_INCREASE_MIN_PERCENT;
     $wageMax = WAGE_INCREASE_MAX_PERCENT;
+    $logoHtml = contract_logo_html();
 
     return <<<HTML
 <!doctype html>
@@ -221,6 +237,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
   h1 { font-size: 24px; margin-bottom: 4px; }
   h2 { font-size: 16px; margin-top: 32px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
   h4 { font-size: 14px; margin: 18px 0 4px; }
+  .doc-logo { max-height: 64px; max-width: 260px; margin-bottom: 16px; }
   .meta-bar { font-size: 13px; color: #555; margin-bottom: 24px; }
   .parties { display: flex; gap: 40px; margin: 24px 0; }
   .party { flex: 1; }
@@ -235,6 +252,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 </head>
 <body>
 
+{$logoHtml}
 <h1>Gebäudereinigungsvertrag</h1>
 <div class="meta-bar">
   Vertragsnummer: <strong>{$contractNumber}</strong> &nbsp;·&nbsp;

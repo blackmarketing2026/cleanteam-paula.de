@@ -532,6 +532,7 @@
           <nav class="settings-toc" aria-label="Einstellungsbereiche">
             <a href="#smtp-form-heading">1. SMTP-Server-Einstellungen</a>
             <a href="#contract-notify-heading">2. Vertragsbenachrichtigungen-Einstellungen</a>
+            <a href="#logo-heading">3. Logo-Einstellungen</a>
           </nav>
 
           <section class="panel form-panel" aria-labelledby="smtp-form-heading">
@@ -613,6 +614,30 @@
                 </button>
               </div>
             </form>
+          </section>
+
+          <section class="panel form-panel" aria-labelledby="logo-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="logo-heading">3. Logo-Einstellungen</h4>
+                <p class="muted">Wird im Dashboard, in Angeboten und in Verträgen angezeigt.</p>
+              </div>
+            </div>
+            <div class="logo-preview-row">
+              <div id="logo-preview" class="logo-preview empty-state">Kein Logo hinterlegt.</div>
+              <div class="form-actions">
+                <label class="ghost-button" for="logo-file-input" style="display:inline-flex;">
+                  <i data-lucide="upload" aria-hidden="true"></i>
+                  Logo auswählen
+                </label>
+                <input id="logo-file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+                <button id="logo-remove" class="ghost-button" type="button" hidden>
+                  <i data-lucide="trash-2" aria-hidden="true"></i>
+                  Logo entfernen
+                </button>
+              </div>
+            </div>
+            <p class="muted">PNG, JPG oder WEBP, maximal 2 MB.</p>
           </section>
         </section>
       </section>

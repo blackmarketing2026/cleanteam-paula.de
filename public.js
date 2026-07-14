@@ -344,6 +344,20 @@ function bindEvents() {
   });
 }
 
+async function loadBranding() {
+  try {
+    const response = await fetch("api/branding.php");
+    const data = await response.json();
+    if (data.logoUrl) {
+      const mark = document.querySelector(".brand-mark");
+      mark.classList.add("has-logo");
+      mark.innerHTML = `<img src="${escapeHtml(data.logoUrl)}" alt="Logo" />`;
+    }
+  } catch (error) {
+    // Kein Logo hinterlegt oder Ladefehler: Fallback-Initialen bleiben stehen.
+  }
+}
+
 function init() {
   if (!token) {
     els.errorMessage.textContent = "Dieser Link enthält kein gültiges Angebot.";
@@ -353,6 +367,7 @@ function init() {
 
   bindEvents();
   setupSignaturePad();
+  loadBranding();
   loadOffer();
 }
 
