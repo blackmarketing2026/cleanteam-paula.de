@@ -106,6 +106,7 @@ const els = {
   offerPreviewContent: document.querySelector("#offer-preview-content"),
   offerPreviewClose: document.querySelector("#offer-preview-close"),
   offerPreviewSend: document.querySelector("#offer-preview-send"),
+  offerPreviewOpenLink: document.querySelector("#offer-preview-open-link"),
   logoPreview: document.querySelector("#logo-preview"),
   logoFileInput: document.querySelector("#logo-file-input"),
   logoRemove: document.querySelector("#logo-remove"),
@@ -812,7 +813,8 @@ function openOfferPreview(id) {
         <dt>Kunde</dt><dd>${escapeHtml(offer.customer.name)}</dd>
         <dt>Ansprechpartner</dt><dd>${escapeHtml(contactName(offer.customer))}</dd>
         <dt>E-Mail</dt><dd>${escapeHtml(offer.customer.email)}</dd>
-        <dt>Adresse</dt><dd>${escapeHtml(customerAddress(offer.customer))}</dd>
+        <dt>Telefon</dt><dd>${escapeHtml(offer.customer.phone)}</dd>
+        <dt>Objekt / Anschrift</dt><dd>${escapeHtml(customerAddress(offer.customer))}</dd>
       </dl>
     </section>
     <section>
@@ -822,7 +824,7 @@ function openOfferPreview(id) {
         <dt>Fläche</dt><dd>${offer.squareMeters} m²</dd>
         <dt>Intervall</dt><dd>${escapeHtml(offer.interval)}</dd>
         <dt>Startdatum</dt><dd>${offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"}</dd>
-        <dt>Geschätzter Nettowert</dt><dd>${formatCurrency(offer.price)}</dd>
+        <dt>Preis</dt><dd>${formatCurrency(offer.price)}</dd>
         <dt>Gültig bis</dt><dd>${formatDate(offer.expiresAt)}</dd>
         ${notes}
       </dl>
@@ -831,6 +833,7 @@ function openOfferPreview(id) {
 
   els.offerPreviewSend.dataset.id = offer.id;
   els.offerPreviewSend.disabled = false;
+  els.offerPreviewOpenLink.dataset.url = offer.publicUrl;
   els.offerPreviewModal.hidden = false;
   refreshIcons();
 }
@@ -1427,6 +1430,12 @@ function bindEvents() {
     els.offerPreviewSend.disabled = true;
     await sendOffer(id);
     closeOfferPreview();
+  });
+  els.offerPreviewOpenLink.addEventListener("click", () => {
+    const url = els.offerPreviewOpenLink.dataset.url;
+    if (url) {
+      window.open(url, "_blank", "noopener");
+    }
   });
 
   window.setInterval(() => {

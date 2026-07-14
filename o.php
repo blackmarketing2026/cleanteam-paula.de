@@ -43,7 +43,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
           <p id="offer-validity" class="muted"></p>
           <div class="form-actions">
             <button id="start-contract" class="primary-button" type="button">
-              Jetzt zum Vertrag
+              Jetzt zum Vertrag abschließen
             </button>
           </div>
         </section>
