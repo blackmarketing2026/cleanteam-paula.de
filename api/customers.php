@@ -9,6 +9,16 @@ require_login();
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
 
+function ensure_customers_deleted_at_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM customers LIKE 'deleted_at'");
+    if ($stmt->fetch()) {
+        return;
+    }
+
+    $pdo->exec('ALTER TABLE customers ADD COLUMN deleted_at DATETIME NULL AFTER created_at');
+}
+
 function customer_to_json(array $row): array
 {
     return [
@@ -26,8 +36,10 @@ function customer_to_json(array $row): array
     ];
 }
 
+ensure_customers_deleted_at_column($pdo);
+
 if ($method === 'GET') {
-    $rows = $pdo->query('SELECT * FROM customers ORDER BY name ASC')->fetchAll();
+    $rows = $pdo->query('SELECT * FROM customers WHERE deleted_at IS NULL ORDER BY name ASC')->fetchAll();
     json_response(array_map('customer_to_json', $rows));
 }
 
@@ -69,7 +81,7 @@ if ($method === 'PUT') {
         json_error('Kunden-ID fehlt.', 422);
     }
 
-    $exists = $pdo->prepare('SELECT id FROM customers WHERE id = :id');
+    $exists = $pdo->prepare('SELECT id FROM customers WHERE id = :id AND deleted_at IS NULL');
     $exists->execute(['id' => $id]);
     if (!$exists->fetch()) {
         json_error('Kunde wurde nicht gefunden.', 404);
@@ -101,7 +113,7 @@ if ($method === 'PUT') {
         'city' => trim($body['city']),
     ]);
 
-    $stmt = $pdo->prepare('SELECT * FROM customers WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT * FROM customers WHERE id = :id AND deleted_at IS NULL');
     $stmt->execute(['id' => $id]);
     json_response(customer_to_json($stmt->fetch()));
 }
@@ -112,14 +124,11 @@ if ($method === 'DELETE') {
         json_error('Kunden-ID fehlt.', 422);
     }
 
-    try {
-        $stmt = $pdo->prepare('DELETE FROM customers WHERE id = :id');
-        $stmt->execute(['id' => $id]);
-    } catch (PDOException $exception) {
-        if ($exception->getCode() === '23000') {
-            json_error('Kunde kann nicht gelöscht werden, solange noch Kostenvoranschläge oder Verträge vorhanden sind.', 409);
-        }
-        throw $exception;
+    $stmt = $pdo->prepare('UPDATE customers SET deleted_at = UTC_TIMESTAMP() WHERE id = :id AND deleted_at IS NULL');
+    $stmt->execute(['id' => $id]);
+
+    if ($stmt->rowCount() === 0) {
+        json_error('Kunde wurde nicht gefunden oder ist bereits gelöscht.', 404);
     }
 
     json_response(['ok' => true]);
