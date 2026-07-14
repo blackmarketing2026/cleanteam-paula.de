@@ -693,10 +693,6 @@ button.compact-item.selected {
   box-shadow: var(--shadow);
 }
 
-.modal-box.modal-wide {
-  max-width: 640px;
-}
-
 .link-copy-row {
   display: flex;
   gap: 8px;

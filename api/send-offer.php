@@ -33,7 +33,7 @@ if (!$settings || $settings['host'] === '' || $settings['username'] === '' || ($
     json_error('Bitte zuerst das Postfach unter "Postfach" einrichten.', 422);
 }
 
-$publicUrl = base_url() . '/o.php?token=' . $offer['token'];
+$publicUrl = base_url() . '/offer.php?token=' . $offer['token'];
 $validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))->format('d.m.Y');
 $contactName = $offer['c_salutation'] . ' ' . $offer['c_contact_last_name'];
 

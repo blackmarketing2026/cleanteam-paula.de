@@ -102,11 +102,6 @@ const els = {
   linkModalInput: document.querySelector("#link-modal-input"),
   linkModalCopy: document.querySelector("#link-modal-copy"),
   linkModalClose: document.querySelector("#link-modal-close"),
-  offerPreviewModal: document.querySelector("#offer-preview-modal"),
-  offerPreviewContent: document.querySelector("#offer-preview-content"),
-  offerPreviewClose: document.querySelector("#offer-preview-close"),
-  offerPreviewSend: document.querySelector("#offer-preview-send"),
-  offerPreviewOpenLink: document.querySelector("#offer-preview-open-link"),
   logoPreview: document.querySelector("#logo-preview"),
   logoFileInput: document.querySelector("#logo-file-input"),
   logoRemove: document.querySelector("#logo-remove"),
@@ -538,10 +533,10 @@ function renderOfferCard(offer) {
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
-        <button class="secondary-button" type="button" data-action="preview-offer" data-id="${escapeHtml(offer.id)}">
+        <a class="secondary-button" href="offer.php?offerId=${encodeURIComponent(offer.id)}" target="_blank" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
           Angebot Vorschau
-        </button>
+        </a>
         <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
           Angebot senden
@@ -783,63 +778,6 @@ function copyOfferLink(id) {
   }
 
   openLinkModal(offer.publicUrl);
-}
-
-function openOfferPreview(id) {
-  const offer = getOffer(id);
-  if (!offer) {
-    return;
-  }
-
-  const notes = offer.notes
-    ? `<dt>Besondere Vereinbarungen</dt><dd>${escapeHtml(offer.notes)}</dd>`
-    : "";
-
-  const brandBlock = currentLogoUrl
-    ? `<img src="${escapeHtml(currentLogoUrl)}" alt="Logo" style="max-height:48px;max-width:220px;display:block;margin-bottom:8px;">`
-    : `<span class="doc-brand">CleanTeam</span>`;
-
-  els.offerPreviewContent.innerHTML = `
-    <header>
-      <div>
-        ${brandBlock}
-        <h3>Ihr individuelles Reinigungsangebot</h3>
-        <p class="muted">Für ${escapeHtml(offer.customer.name)}</p>
-      </div>
-    </header>
-    <section>
-      <h4>Vertragspartner</h4>
-      <dl>
-        <dt>Kunde</dt><dd>${escapeHtml(offer.customer.name)}</dd>
-        <dt>Ansprechpartner</dt><dd>${escapeHtml(contactName(offer.customer))}</dd>
-        <dt>E-Mail</dt><dd>${escapeHtml(offer.customer.email)}</dd>
-        <dt>Telefon</dt><dd>${escapeHtml(offer.customer.phone)}</dd>
-        <dt>Objekt / Anschrift</dt><dd>${escapeHtml(customerAddress(offer.customer))}</dd>
-      </dl>
-    </section>
-    <section>
-      <h4>Angebotsdetails</h4>
-      <dl>
-        <dt>Leistung</dt><dd>${escapeHtml(offer.service)}</dd>
-        <dt>Fläche</dt><dd>${offer.squareMeters} m²</dd>
-        <dt>Intervall</dt><dd>${escapeHtml(offer.interval)}</dd>
-        <dt>Startdatum</dt><dd>${offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"}</dd>
-        <dt>Preis</dt><dd>${formatCurrency(offer.price)}</dd>
-        <dt>Gültig bis</dt><dd>${formatDate(offer.expiresAt)}</dd>
-        ${notes}
-      </dl>
-    </section>
-  `;
-
-  els.offerPreviewSend.dataset.id = offer.id;
-  els.offerPreviewSend.disabled = false;
-  els.offerPreviewOpenLink.dataset.url = offer.publicUrl;
-  els.offerPreviewModal.hidden = false;
-  refreshIcons();
-}
-
-function closeOfferPreview() {
-  els.offerPreviewModal.hidden = true;
 }
 
 async function deleteCustomer(id) {
@@ -1268,10 +1206,6 @@ function handleRecordAction(event) {
     copyOfferLink(id);
   }
 
-  if (action === "preview-offer") {
-    openOfferPreview(id);
-  }
-
   if (action === "open-contract") {
     state.selectedContractId = id;
     switchView("contracts");
@@ -1410,31 +1344,6 @@ function bindEvents() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !els.linkModal.hidden) {
       closeLinkModal();
-    }
-    if (event.key === "Escape" && !els.offerPreviewModal.hidden) {
-      closeOfferPreview();
-    }
-  });
-
-  els.offerPreviewClose.addEventListener("click", closeOfferPreview);
-  els.offerPreviewModal.addEventListener("click", (event) => {
-    if (event.target === els.offerPreviewModal) {
-      closeOfferPreview();
-    }
-  });
-  els.offerPreviewSend.addEventListener("click", async () => {
-    const id = els.offerPreviewSend.dataset.id;
-    if (!id) {
-      return;
-    }
-    els.offerPreviewSend.disabled = true;
-    await sendOffer(id);
-    closeOfferPreview();
-  });
-  els.offerPreviewOpenLink.addEventListener("click", () => {
-    const url = els.offerPreviewOpenLink.dataset.url;
-    if (url) {
-      window.open(url, "_blank", "noopener");
     }
   });
 

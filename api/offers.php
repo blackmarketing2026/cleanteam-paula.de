@@ -33,7 +33,7 @@ function offer_row_to_json(array $row): array
         'notes' => $row['notes'],
         'price' => (float) $row['price'],
         'token' => $row['token'],
-        'publicUrl' => base_url() . '/o.php?token=' . $row['token'],
+        'publicUrl' => base_url() . '/offer.php?token=' . $row['token'],
         'createdAt' => to_iso($row['created_at']),
         'expiresAt' => to_iso($row['expires_at']),
         'sentAt' => to_iso($row['sent_at']),
