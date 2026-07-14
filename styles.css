@@ -662,6 +662,36 @@ button.compact-item.selected {
   border: 0;
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 20, 35, 0.55);
+}
+
+.modal-box {
+  width: 100%;
+  max-width: 480px;
+  padding: 24px;
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.link-copy-row {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 4px;
+}
+
+.link-copy-row input {
+  flex: 1;
+  min-width: 0;
+}
+
 .settings-toc {
   display: flex;
   flex-wrap: wrap;

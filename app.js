@@ -98,6 +98,10 @@ const els = {
   contractNotifyEnabled: document.querySelector("#contract-notify-enabled"),
   contractNotifyEmails: document.querySelector("#contract-notify-emails"),
   contractNotifyAddEmail: document.querySelector("#contract-notify-add-email"),
+  linkModal: document.querySelector("#link-modal"),
+  linkModalInput: document.querySelector("#link-modal-input"),
+  linkModalCopy: document.querySelector("#link-modal-copy"),
+  linkModalClose: document.querySelector("#link-modal-close"),
   toast: document.querySelector("#toast"),
   metricCustomers: document.querySelector("#metric-customers"),
   metricOffers: document.querySelector("#metric-offers"),
@@ -732,18 +736,36 @@ async function createContractDocument(offerId) {
   }
 }
 
-async function copyOfferLink(id) {
+function openLinkModal(url) {
+  els.linkModalInput.value = url;
+  els.linkModal.hidden = false;
+  els.linkModalInput.focus();
+  els.linkModalInput.select();
+}
+
+function closeLinkModal() {
+  els.linkModal.hidden = true;
+}
+
+async function copyLinkModalValue() {
+  const url = els.linkModalInput.value;
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast("Link wurde kopiert.");
+  } catch (error) {
+    els.linkModalInput.select();
+    document.execCommand("copy");
+    showToast("Link wurde kopiert.");
+  }
+}
+
+function copyOfferLink(id) {
   const offer = getOffer(id);
   if (!offer) {
     return;
   }
 
-  try {
-    await navigator.clipboard.writeText(offer.publicUrl);
-    showToast("Link wurde kopiert.");
-  } catch (error) {
-    window.prompt("Link zum Kopieren:", offer.publicUrl);
-  }
+  openLinkModal(offer.publicUrl);
 }
 
 async function deleteCustomer(id) {
@@ -1232,6 +1254,19 @@ function bindEvents() {
       button.closest(".email-row").remove();
     } else {
       button.closest(".email-row").querySelector("input").value = "";
+    }
+  });
+
+  els.linkModalCopy.addEventListener("click", copyLinkModalValue);
+  els.linkModalClose.addEventListener("click", closeLinkModal);
+  els.linkModal.addEventListener("click", (event) => {
+    if (event.target === els.linkModal) {
+      closeLinkModal();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !els.linkModal.hidden) {
+      closeLinkModal();
     }
   });
 

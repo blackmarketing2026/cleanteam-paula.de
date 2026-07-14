@@ -620,6 +620,23 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
+    <div id="link-modal" class="modal-overlay" hidden>
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="link-modal-heading">
+        <h4 id="link-modal-heading">Angebots-Link</h4>
+        <p class="muted">Diesen Link können Sie dem Kunden schicken, z. B. per WhatsApp oder E-Mail.</p>
+        <div class="link-copy-row">
+          <input id="link-modal-input" type="text" readonly />
+          <button id="link-modal-copy" class="primary-button" type="button">
+            <i data-lucide="copy" aria-hidden="true"></i>
+            Kopieren
+          </button>
+        </div>
+        <div class="form-actions">
+          <button id="link-modal-close" class="ghost-button" type="button">Schließen</button>
+        </div>
+      </div>
+    </div>
+
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="app.js"></script>
   </body>
