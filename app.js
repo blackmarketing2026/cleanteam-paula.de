@@ -36,6 +36,8 @@ const els = {
   loginError: document.querySelector("#login-error"),
   logoutButton: document.querySelector("#logout-button"),
   navLinks: document.querySelectorAll(".nav-link[data-view]"),
+  customersGroupToggle: document.querySelector("#customers-group-toggle"),
+  customersSubgroup: document.querySelector("#customers-subgroup"),
   siteVisitsGroupToggle: document.querySelector("#site-visits-group-toggle"),
   siteVisitsSubgroup: document.querySelector("#site-visits-subgroup"),
   settingsGroupToggle: document.querySelector("#settings-group-toggle"),
@@ -128,7 +130,8 @@ const els = {
 
 const titles = {
   overview: "Übersicht",
-  customers: "Kundenverwaltung",
+  "customer-new": "Kunden anlegen",
+  "customer-list": "Kundenliste",
   "site-visit-new": "Neue Begehung erstellen",
   "site-visit-saved": "Gespeicherte Begehungen",
   offers: "Kostenvoranschlagserstellung",
@@ -299,6 +302,11 @@ function setSettingsGroupExpanded(expanded) {
   els.settingsGroupToggle.setAttribute("aria-expanded", String(expanded));
 }
 
+function setCustomersGroupExpanded(expanded) {
+  els.customersSubgroup.hidden = !expanded;
+  els.customersGroupToggle.setAttribute("aria-expanded", String(expanded));
+}
+
 function setSiteVisitsGroupExpanded(expanded) {
   els.siteVisitsSubgroup.hidden = !expanded;
   els.siteVisitsGroupToggle.setAttribute("aria-expanded", String(expanded));
@@ -320,6 +328,12 @@ function switchView(view) {
   els.settingsGroupToggle.classList.toggle("active", isSettingsView);
   if (isSettingsView) {
     setSettingsGroupExpanded(true);
+  }
+
+  const isCustomerView = view.startsWith("customer-");
+  els.customersGroupToggle.classList.toggle("active", isCustomerView);
+  if (isCustomerView) {
+    setCustomersGroupExpanded(true);
   }
 
   const isSiteVisitView = view.startsWith("site-visit-");
@@ -854,7 +868,7 @@ async function ensureCustomerForSiteVisit(visit) {
   const { payload, complete } = customerPayloadFromSiteVisit(visit);
   if (!complete) {
     prefillCustomerFromSiteVisit(visit);
-    switchView("customers");
+    switchView("customer-new");
     document.querySelector("#customer-house-number").focus();
     showToast("Bitte Kundendaten kurz ergänzen. Danach kann der Kostenvoranschlag übernommen werden.");
     return { customer: null, created: false };
@@ -1105,6 +1119,7 @@ async function handleCustomerSubmit(event) {
 
     resetCustomerForm();
     await loadAll();
+    switchView("customer-list");
   } catch (error) {
     showToast(error.message);
   }
@@ -1147,7 +1162,7 @@ async function handleOfferSubmit(event) {
   const customerId = els.offerCustomer.value;
   if (!customerId) {
     showToast("Bitte zuerst einen Kunden anlegen.");
-    switchView("customers");
+    switchView("customer-new");
     return;
   }
 
@@ -1690,7 +1705,8 @@ function handleRecordAction(event) {
     const customer = getCustomer(id);
     if (customer) {
       fillCustomerForm(customer);
-      document.querySelector("#customers-view").scrollIntoView({ behavior: "smooth", block: "start" });
+      switchView("customer-new");
+      document.querySelector("#customer-new-view").scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
@@ -1776,6 +1792,10 @@ function bindEvents() {
     button.addEventListener("click", () => switchView(button.dataset.view));
   });
 
+  els.customersGroupToggle.addEventListener("click", () => {
+    setCustomersGroupExpanded(els.customersSubgroup.hidden);
+  });
+
   els.siteVisitsGroupToggle.addEventListener("click", () => {
     setSiteVisitsGroupExpanded(els.siteVisitsSubgroup.hidden);
   });
@@ -1786,10 +1806,11 @@ function bindEvents() {
 
   els.menuButton.addEventListener("click", openMobileNav);
   els.mobileBackdrop.addEventListener("click", closeMobileNav);
-  els.quickCustomer.addEventListener("click", () => switchView("customers"));
+  els.quickCustomer.addEventListener("click", () => switchView("customer-new"));
   els.quickOffer.addEventListener("click", () => switchView("offers"));
   els.newCustomerButton.addEventListener("click", () => {
     resetCustomerForm();
+    switchView("customer-new");
     document.querySelector("#customer-name").focus();
   });
   els.cancelCustomerEdit.addEventListener("click", resetCustomerForm);

@@ -54,10 +54,21 @@
             <i data-lucide="layout-dashboard" aria-hidden="true"></i>
             Übersicht
           </button>
-          <button class="nav-link" type="button" data-view="customers">
+          <button id="customers-group-toggle" class="nav-link nav-group-toggle" type="button" aria-expanded="false">
             <i data-lucide="users-round" aria-hidden="true"></i>
-            Kunden
+            <span>Kunden</span>
+            <i data-lucide="chevron-down" class="nav-group-chevron" aria-hidden="true"></i>
           </button>
+          <div id="customers-subgroup" class="nav-subgroup" hidden>
+            <button class="nav-link" type="button" data-view="customer-new">
+              <i data-lucide="user-plus" aria-hidden="true"></i>
+              <span>Kunden anlegen</span>
+            </button>
+            <button class="nav-link" type="button" data-view="customer-list">
+              <i data-lucide="list" aria-hidden="true"></i>
+              <span>Kundenliste</span>
+            </button>
+          </div>
           <button id="site-visits-group-toggle" class="nav-link nav-group-toggle" type="button" aria-expanded="false">
             <i data-lucide="clipboard-list" aria-hidden="true"></i>
             <span>Begehung</span>
@@ -197,11 +208,81 @@
           </div>
         </section>
 
-        <section id="customers-view" class="view" aria-labelledby="customers-heading">
+        <section id="customer-new-view" class="view" aria-labelledby="customer-new-heading">
           <div class="section-heading">
             <div>
-              <h3 id="customers-heading">Kundenverwaltung</h3>
+              <h3 id="customer-new-heading">Kunden anlegen</h3>
               <p class="muted">Stammdaten, Ansprechpartner und Adresse pflegen.</p>
+            </div>
+          </div>
+
+          <section class="panel customer-form-panel" aria-labelledby="customer-form-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="customer-form-heading">Kunde anlegen</h4>
+                <p class="muted">Pflichtfelder sind markiert.</p>
+              </div>
+            </div>
+            <form id="customer-form" class="form-grid">
+              <input id="customer-id" type="hidden" />
+              <label class="span-2">
+                Firmen- oder Kundenname *
+                <input id="customer-name" type="text" required placeholder="z. B. Beispiel GmbH" />
+              </label>
+              <label>
+                E-Mail-Adresse *
+                <input id="customer-email" type="email" required placeholder="kontakt@firma.de" />
+              </label>
+              <label>
+                Telefonnummer *
+                <input id="customer-phone" type="tel" required placeholder="+49 711 123456" />
+              </label>
+              <label>
+                Ansprechpartner *
+                <select id="customer-salutation" required>
+                  <option value="Herr">Herr</option>
+                  <option value="Frau">Frau</option>
+                </select>
+              </label>
+              <label>
+                Nachname *
+                <input id="customer-contact-lastname" type="text" required placeholder="Schneider" />
+              </label>
+              <label class="span-2">
+                Adresse *
+                <input id="customer-address" type="text" required placeholder="Musterstraße" />
+              </label>
+              <label>
+                Hausnummer *
+                <input id="customer-house-number" type="text" required placeholder="12a" />
+              </label>
+              <label>
+                Postleitzahl *
+                <input id="customer-zip" type="text" inputmode="numeric" required placeholder="70173" />
+              </label>
+              <label class="span-2">
+                Stadt *
+                <input id="customer-city" type="text" required placeholder="Stuttgart" />
+              </label>
+              <div class="form-actions span-2">
+                <button id="cancel-customer-edit" class="ghost-button" type="button" hidden>
+                  <i data-lucide="x" aria-hidden="true"></i>
+                  Abbrechen
+                </button>
+                <button class="primary-button" type="submit">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Kunde speichern
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+
+        <section id="customer-list-view" class="view" aria-labelledby="customer-list-page-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="customer-list-page-heading">Kundenliste</h3>
+              <p class="muted">Suchen, bearbeiten oder Kostenvoranschlag erstellen.</p>
             </div>
             <button id="new-customer-button" class="primary-button" type="button">
               <i data-lucide="user-plus" aria-hidden="true"></i>
@@ -209,82 +290,19 @@
             </button>
           </div>
 
-          <div class="split-layout">
-            <section class="panel form-panel" aria-labelledby="customer-form-heading">
-              <div class="panel-header">
-                <div>
-                  <h4 id="customer-form-heading">Kunde anlegen</h4>
-                  <p class="muted">Pflichtfelder sind markiert.</p>
-                </div>
+          <section class="panel" aria-labelledby="customer-list-heading">
+            <div class="panel-header wrap-header">
+              <div>
+                <h4 id="customer-list-heading">Kunden</h4>
+                <p class="muted">Alle gespeicherten Kundendatensätze.</p>
               </div>
-              <form id="customer-form" class="form-grid">
-                <input id="customer-id" type="hidden" />
-                <label class="span-2">
-                  Firmen- oder Kundenname *
-                  <input id="customer-name" type="text" required placeholder="z. B. Beispiel GmbH" />
-                </label>
-                <label>
-                  E-Mail-Adresse *
-                  <input id="customer-email" type="email" required placeholder="kontakt@firma.de" />
-                </label>
-                <label>
-                  Telefonnummer *
-                  <input id="customer-phone" type="tel" required placeholder="+49 711 123456" />
-                </label>
-                <label>
-                  Ansprechpartner *
-                  <select id="customer-salutation" required>
-                    <option value="Herr">Herr</option>
-                    <option value="Frau">Frau</option>
-                  </select>
-                </label>
-                <label>
-                  Nachname *
-                  <input id="customer-contact-lastname" type="text" required placeholder="Schneider" />
-                </label>
-                <label class="span-2">
-                  Adresse *
-                  <input id="customer-address" type="text" required placeholder="Musterstraße" />
-                </label>
-                <label>
-                  Hausnummer *
-                  <input id="customer-house-number" type="text" required placeholder="12a" />
-                </label>
-                <label>
-                  Postleitzahl *
-                  <input id="customer-zip" type="text" inputmode="numeric" required placeholder="70173" />
-                </label>
-                <label class="span-2">
-                  Stadt *
-                  <input id="customer-city" type="text" required placeholder="Stuttgart" />
-                </label>
-                <div class="form-actions span-2">
-                  <button id="cancel-customer-edit" class="ghost-button" type="button" hidden>
-                    <i data-lucide="x" aria-hidden="true"></i>
-                    Abbrechen
-                  </button>
-                  <button class="primary-button" type="submit">
-                    <i data-lucide="save" aria-hidden="true"></i>
-                    Kunde speichern
-                  </button>
-                </div>
-              </form>
-            </section>
-
-            <section class="panel" aria-labelledby="customer-list-heading">
-              <div class="panel-header wrap-header">
-                <div>
-                  <h4 id="customer-list-heading">Kundenliste</h4>
-                  <p class="muted">Suchen, bearbeiten oder Kostenvoranschlag erstellen.</p>
-                </div>
-                <label class="search-field">
-                  <i data-lucide="search" aria-hidden="true"></i>
-                  <input id="customer-search" type="search" placeholder="Kunden suchen" />
-                </label>
-              </div>
-              <div id="customer-list" class="record-list"></div>
-            </section>
-          </div>
+              <label class="search-field">
+                <i data-lucide="search" aria-hidden="true"></i>
+                <input id="customer-search" type="search" placeholder="Kunden suchen" />
+              </label>
+            </div>
+            <div id="customer-list" class="record-list"></div>
+          </section>
         </section>
 
         <section id="site-visit-new-view" class="view" aria-labelledby="site-visit-new-heading">
@@ -789,6 +807,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=site-visits-20260714-5"></script>
+    <script src="app.js?v=customers-menu-20260714-1"></script>
   </body>
 </html>

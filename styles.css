@@ -560,6 +560,7 @@ button svg {
   top: 28px;
 }
 
+.customer-form-panel,
 .site-visit-form-panel {
   position: static;
 }
