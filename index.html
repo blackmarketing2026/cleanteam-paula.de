@@ -637,6 +637,21 @@
       </div>
     </div>
 
+    <div id="offer-preview-modal" class="modal-overlay" hidden>
+      <div class="modal-box modal-wide" role="dialog" aria-modal="true" aria-labelledby="offer-preview-heading">
+        <h4 id="offer-preview-heading">Angebotsvorschau</h4>
+        <p class="muted">So sieht das Angebot aus, das der Kunde per Link erhält.</p>
+        <article id="offer-preview-content" class="contract-document"></article>
+        <div class="form-actions">
+          <button id="offer-preview-close" class="ghost-button" type="button">Schließen</button>
+          <button id="offer-preview-send" class="primary-button" type="button">
+            <i data-lucide="send" aria-hidden="true"></i>
+            Angebot senden
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="app.js"></script>
   </body>

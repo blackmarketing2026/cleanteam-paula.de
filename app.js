@@ -102,6 +102,10 @@ const els = {
   linkModalInput: document.querySelector("#link-modal-input"),
   linkModalCopy: document.querySelector("#link-modal-copy"),
   linkModalClose: document.querySelector("#link-modal-close"),
+  offerPreviewModal: document.querySelector("#offer-preview-modal"),
+  offerPreviewContent: document.querySelector("#offer-preview-content"),
+  offerPreviewClose: document.querySelector("#offer-preview-close"),
+  offerPreviewSend: document.querySelector("#offer-preview-send"),
   toast: document.querySelector("#toast"),
   metricCustomers: document.querySelector("#metric-customers"),
   metricOffers: document.querySelector("#metric-offers"),
@@ -527,6 +531,10 @@ function renderOfferCard(offer) {
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
+        <button class="secondary-button" type="button" data-action="preview-offer" data-id="${escapeHtml(offer.id)}">
+          <i data-lucide="eye" aria-hidden="true"></i>
+          Angebot Vorschau
+        </button>
         <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
           Angebot senden
@@ -768,6 +776,57 @@ function copyOfferLink(id) {
   }
 
   openLinkModal(offer.publicUrl);
+}
+
+function openOfferPreview(id) {
+  const offer = getOffer(id);
+  if (!offer) {
+    return;
+  }
+
+  const notes = offer.notes
+    ? `<dt>Besondere Vereinbarungen</dt><dd>${escapeHtml(offer.notes)}</dd>`
+    : "";
+
+  els.offerPreviewContent.innerHTML = `
+    <header>
+      <div>
+        <span class="doc-brand">CleanTeam</span>
+        <h3>Ihr individuelles Reinigungsangebot</h3>
+        <p class="muted">Für ${escapeHtml(offer.customer.name)}</p>
+      </div>
+    </header>
+    <section>
+      <h4>Vertragspartner</h4>
+      <dl>
+        <dt>Kunde</dt><dd>${escapeHtml(offer.customer.name)}</dd>
+        <dt>Ansprechpartner</dt><dd>${escapeHtml(contactName(offer.customer))}</dd>
+        <dt>E-Mail</dt><dd>${escapeHtml(offer.customer.email)}</dd>
+        <dt>Adresse</dt><dd>${escapeHtml(customerAddress(offer.customer))}</dd>
+      </dl>
+    </section>
+    <section>
+      <h4>Angebotsdetails</h4>
+      <dl>
+        <dt>Leistung</dt><dd>${escapeHtml(offer.service)}</dd>
+        <dt>Fläche</dt><dd>${offer.squareMeters} m²</dd>
+        <dt>Intervall</dt><dd>${escapeHtml(offer.interval)}</dd>
+        <dt>Startdatum</dt><dd>${offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"}</dd>
+        <dt>Geschätzter Nettowert</dt><dd>${formatCurrency(offer.price)}</dd>
+        <dt>Gültig bis</dt><dd>${formatDate(offer.expiresAt)}</dd>
+        ${notes}
+      </dl>
+    </section>
+  `;
+
+  els.offerPreviewSend.dataset.id = offer.id;
+  els.offerPreviewSend.disabled = false;
+  els.offerPreviewModal.hidden = false;
+  refreshIcons();
+}
+
+function closeOfferPreview() {
+  els.offerPreviewModal.hidden = true;
 }
 
 async function deleteCustomer(id) {
@@ -1134,6 +1193,10 @@ function handleRecordAction(event) {
     copyOfferLink(id);
   }
 
+  if (action === "preview-offer") {
+    openOfferPreview(id);
+  }
+
   if (action === "open-contract") {
     state.selectedContractId = id;
     switchView("contracts");
@@ -1270,6 +1333,25 @@ function bindEvents() {
     if (event.key === "Escape" && !els.linkModal.hidden) {
       closeLinkModal();
     }
+    if (event.key === "Escape" && !els.offerPreviewModal.hidden) {
+      closeOfferPreview();
+    }
+  });
+
+  els.offerPreviewClose.addEventListener("click", closeOfferPreview);
+  els.offerPreviewModal.addEventListener("click", (event) => {
+    if (event.target === els.offerPreviewModal) {
+      closeOfferPreview();
+    }
+  });
+  els.offerPreviewSend.addEventListener("click", async () => {
+    const id = els.offerPreviewSend.dataset.id;
+    if (!id) {
+      return;
+    }
+    els.offerPreviewSend.disabled = true;
+    await sendOffer(id);
+    closeOfferPreview();
   });
 
   window.setInterval(() => {

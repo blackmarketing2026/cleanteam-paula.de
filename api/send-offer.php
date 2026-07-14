@@ -26,11 +26,11 @@ if (!$offer) {
     json_error('Angebot wurde nicht gefunden.', 404);
 }
 
-$settingsStmt = $pdo->query('SELECT * FROM smtp_settings WHERE id = 1');
+$settingsStmt = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1');
 $settings = $settingsStmt->fetch();
 
-if (!$settings || $settings['host'] === '' || $settings['from_email'] === '') {
-    json_error('Bitte zuerst die SMTP-Einstellungen unter "Einstellungen" konfigurieren.', 422);
+if (!$settings || $settings['host'] === '' || $settings['username'] === '' || ($settings['password_encrypted'] ?? '') === '') {
+    json_error('Bitte zuerst das Postfach unter "Postfach" einrichten.', 422);
 }
 
 $publicUrl = base_url() . '/o.php?token=' . $offer['token'];
@@ -48,14 +48,14 @@ $body = '<div style="font-family: Arial, sans-serif; color: #1c2733; line-height
 try {
     $mailer = new SmtpMailer(
         $settings['host'],
-        (int) $settings['port'],
-        $settings['encryption'],
+        (int) $settings['smtp_port'],
+        $settings['smtp_encryption'],
         $settings['username'],
         decrypt_secret($settings['password_encrypted'])
     );
 
     $mailer->send(
-        $settings['from_email'],
+        $settings['username'],
         $settings['from_name'],
         $offer['c_email'],
         $offer['c_name'],
