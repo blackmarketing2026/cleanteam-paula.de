@@ -656,6 +656,18 @@ button.compact-item.selected {
   border: 0;
 }
 
+.mailbox-folder-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.mailbox-folder-tabs .secondary-button.active {
+  border-color: var(--blue-600);
+  background: var(--blue-050);
+  color: var(--blue-900);
+}
+
 .compact-item strong,
 .status-item strong {
   display: block;

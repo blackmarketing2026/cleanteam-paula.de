@@ -396,7 +396,7 @@
             <section class="panel" aria-labelledby="mailbox-list-heading">
               <div class="panel-header wrap-header">
                 <div>
-                  <h4 id="mailbox-list-heading">Eingang</h4>
+                  <h4 id="mailbox-list-heading">Postfach</h4>
                   <p class="muted" id="mailbox-account-label"></p>
                 </div>
                 <div class="form-actions">
@@ -409,6 +409,17 @@
                     Neue E-Mail
                   </button>
                 </div>
+              </div>
+
+              <div class="mailbox-folder-tabs">
+                <button class="secondary-button active" type="button" data-folder="inbox">
+                  <i data-lucide="inbox" aria-hidden="true"></i>
+                  Posteingang
+                </button>
+                <button class="secondary-button" type="button" data-folder="sent">
+                  <i data-lucide="send" aria-hidden="true"></i>
+                  Postausgang
+                </button>
               </div>
 
               <form id="mailbox-compose-form" class="form-grid" hidden>
@@ -495,6 +506,10 @@
               <label>
                 Absendername
                 <input id="mailbox-from-name" type="text" placeholder="CleanTeam" />
+              </label>
+              <label class="span-2">
+                Signatur
+                <textarea id="mailbox-signature" rows="4" placeholder="Mit freundlichen Grüßen&#10;Ihr CleanTeam"></textarea>
               </label>
               <div class="form-actions span-2">
                 <button class="primary-button" type="submit">

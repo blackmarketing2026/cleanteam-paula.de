@@ -20,15 +20,15 @@ function load_mailbox_settings(PDO $pdo): array
     return $row ?: [
         'host' => '', 'imap_port' => 993, 'imap_encryption' => 'ssl',
         'smtp_port' => 587, 'smtp_encryption' => 'tls', 'username' => '',
-        'password_encrypted' => '', 'from_name' => 'CleanTeam', 'updated_at' => null,
+        'password_encrypted' => '', 'from_name' => 'CleanTeam', 'signature' => '', 'updated_at' => null,
     ];
 }
 
-function mailbox_imap_string(array $settings): string
+function mailbox_base_string(array $settings): string
 {
     $flag = $settings['imap_encryption'] === 'ssl' ? '/ssl/novalidate-cert' : ($settings['imap_encryption'] === 'tls' ? '/tls/novalidate-cert' : '/notls');
 
-    return '{' . $settings['host'] . ':' . $settings['imap_port'] . '/imap' . $flag . '}INBOX';
+    return '{' . $settings['host'] . ':' . $settings['imap_port'] . '/imap' . $flag . '}';
 }
 
 function mailbox_connect(array $settings)
@@ -38,10 +38,51 @@ function mailbox_connect(array $settings)
     }
 
     $password = decrypt_secret($settings['password_encrypted']);
-    $conn = @imap_open(mailbox_imap_string($settings), $settings['username'], $password);
+    $conn = @imap_open(mailbox_base_string($settings) . 'INBOX', $settings['username'], $password);
 
     if ($conn === false) {
         json_error('IMAP-Verbindung fehlgeschlagen: ' . imap_last_error(), 502);
+    }
+
+    return $conn;
+}
+
+// Sucht den tatsächlichen Namen des Postausgang-Ordners (Server-abhängig, z. B. "Sent",
+// "Sent Items" oder "Gesendet") und legt ihn beim ersten Senden an, falls er noch fehlt.
+function mailbox_resolve_sent_folder($conn, string $base): string
+{
+    $candidates = ['sent', 'gesendet'];
+    $list = @imap_list($conn, $base, '*');
+
+    if ($list !== false) {
+        foreach ($list as $full) {
+            $short = substr($full, strlen($base));
+            $decoded = @imap_utf7_decode($short);
+            $decoded = $decoded !== false ? $decoded : $short;
+            foreach ($candidates as $needle) {
+                if (stripos($decoded, $needle) !== false) {
+                    return $short;
+                }
+            }
+        }
+    }
+
+    @imap_createmailbox($conn, $base . 'Sent');
+
+    return 'Sent';
+}
+
+function mailbox_open_folder(array $settings, string $folder)
+{
+    $conn = mailbox_connect($settings);
+
+    if ($folder === 'sent') {
+        $base = mailbox_base_string($settings);
+        $sentFolder = mailbox_resolve_sent_folder($conn, $base);
+        if (!@imap_reopen($conn, $base . $sentFolder)) {
+            imap_close($conn);
+            json_error('Postausgang-Ordner konnte nicht geöffnet werden.', 502);
+        }
     }
 
     return $conn;
@@ -147,6 +188,7 @@ if ($method === 'GET' && $action === 'settings') {
         'username' => $settings['username'],
         'hasPassword' => ($settings['password_encrypted'] ?? '') !== '',
         'fromName' => $settings['from_name'],
+        'signature' => $settings['signature'] ?? '',
         'configured' => $settings['host'] !== '' && $settings['username'] !== '' && ($settings['password_encrypted'] ?? '') !== '',
         'updatedAt' => to_iso($settings['updated_at']),
     ]);
@@ -162,6 +204,7 @@ if ($method === 'POST' && $action === 'settings') {
     $username = trim((string) ($body['username'] ?? ''));
     $password = (string) ($body['password'] ?? '');
     $fromName = trim((string) ($body['fromName'] ?? 'CleanTeam'));
+    $signature = (string) ($body['signature'] ?? '');
 
     if (!in_array($imapEncryption, ['none', 'ssl', 'tls'], true) || !in_array($smtpEncryption, ['none', 'ssl', 'tls'], true)) {
         json_error('Ungültige Verschlüsselung.', 422);
@@ -179,27 +222,28 @@ if ($method === 'POST' && $action === 'settings') {
     }
 
     $stmt = $pdo->prepare(
-        'INSERT INTO mailbox_settings (id, host, imap_port, imap_encryption, smtp_port, smtp_encryption, username, password_encrypted, from_name, updated_at)
-         VALUES (1, :host, :imap_port, :imap_encryption, :smtp_port, :smtp_encryption, :username, :password_encrypted, :from_name, UTC_TIMESTAMP())
+        'INSERT INTO mailbox_settings (id, host, imap_port, imap_encryption, smtp_port, smtp_encryption, username, password_encrypted, from_name, signature, updated_at)
+         VALUES (1, :host, :imap_port, :imap_encryption, :smtp_port, :smtp_encryption, :username, :password_encrypted, :from_name, :signature, UTC_TIMESTAMP())
          ON DUPLICATE KEY UPDATE host = :host2, imap_port = :imap_port2, imap_encryption = :imap_encryption2,
             smtp_port = :smtp_port2, smtp_encryption = :smtp_encryption2, username = :username2,
-            password_encrypted = :password_encrypted2, from_name = :from_name2, updated_at = UTC_TIMESTAMP()'
+            password_encrypted = :password_encrypted2, from_name = :from_name2, signature = :signature2, updated_at = UTC_TIMESTAMP()'
     );
     $stmt->execute([
         'host' => $host, 'imap_port' => $imapPort, 'imap_encryption' => $imapEncryption,
         'smtp_port' => $smtpPort, 'smtp_encryption' => $smtpEncryption, 'username' => $username,
-        'password_encrypted' => $passwordEncrypted, 'from_name' => $fromName,
+        'password_encrypted' => $passwordEncrypted, 'from_name' => $fromName, 'signature' => $signature,
         'host2' => $host, 'imap_port2' => $imapPort, 'imap_encryption2' => $imapEncryption,
         'smtp_port2' => $smtpPort, 'smtp_encryption2' => $smtpEncryption, 'username2' => $username,
-        'password_encrypted2' => $passwordEncrypted, 'from_name2' => $fromName,
+        'password_encrypted2' => $passwordEncrypted, 'from_name2' => $fromName, 'signature2' => $signature,
     ]);
 
     json_response(['ok' => true]);
 }
 
 if ($method === 'GET' && $action === 'inbox') {
+    $folder = (string) ($_GET['folder'] ?? 'inbox') === 'sent' ? 'sent' : 'inbox';
     $settings = load_mailbox_settings($pdo);
-    $conn = mailbox_connect($settings);
+    $conn = mailbox_open_folder($settings, $folder);
 
     $total = imap_num_msg($conn);
     if ($total === 0) {
@@ -232,8 +276,9 @@ if ($method === 'GET' && $action === 'message') {
         json_error('Nachrichten-ID fehlt.', 422);
     }
 
+    $folder = (string) ($_GET['folder'] ?? 'inbox') === 'sent' ? 'sent' : 'inbox';
     $settings = load_mailbox_settings($pdo);
-    $conn = mailbox_connect($settings);
+    $conn = mailbox_open_folder($settings, $folder);
 
     $msgNo = @imap_msgno($conn, $uid);
     if (!$msgNo) {
@@ -258,6 +303,32 @@ if ($method === 'GET' && $action === 'message') {
     json_response($result);
 }
 
+function mailbox_save_to_sent(array $settings, string $fromEmail, string $fromName, string $to, string $subject, string $htmlBody): void
+{
+    $password = decrypt_secret($settings['password_encrypted']);
+    $base = mailbox_base_string($settings);
+    $conn = @imap_open($base . 'INBOX', $settings['username'], $password);
+
+    if ($conn === false) {
+        return;
+    }
+
+    $sentFolder = mailbox_resolve_sent_folder($conn, $base);
+    $headers = implode("\r\n", [
+        'Date: ' . date('r'),
+        'From: ' . $fromName . ' <' . $fromEmail . '>',
+        'To: ' . $to,
+        'Subject: ' . $subject,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'Content-Transfer-Encoding: 8bit',
+    ]);
+    $raw = $headers . "\r\n\r\n" . $htmlBody;
+
+    @imap_append($conn, $base . $sentFolder, $raw, '\\Seen');
+    imap_close($conn);
+}
+
 if ($method === 'POST' && $action === 'send') {
     $settings = load_mailbox_settings($pdo);
     if ($settings['host'] === '' || ($settings['password_encrypted'] ?? '') === '') {
@@ -273,6 +344,8 @@ if ($method === 'POST' && $action === 'send') {
         json_error('Empfänger, Betreff und Text sind erforderlich.', 422);
     }
 
+    $htmlBody = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
+
     try {
         $mailer = new SmtpMailer(
             $settings['host'],
@@ -287,12 +360,17 @@ if ($method === 'POST' && $action === 'send') {
             $to,
             $to,
             $subject,
-            nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8')),
+            $htmlBody,
             true
         );
     } catch (Throwable $exception) {
         json_error('E-Mail konnte nicht gesendet werden: ' . $exception->getMessage(), 502);
     }
+
+    // Best-effort: Kopie im Postausgang ablegen. Ueber die reine SMTP-Submission legt der
+    // Server sonst keine Kopie an, ein Fehlschlag hier soll den erfolgreichen Versand aber
+    // nicht als Fehler an den Nutzer melden.
+    mailbox_save_to_sent($settings, $settings['username'], $settings['from_name'], $to, $subject, $htmlBody);
 
     json_response(['ok' => true]);
 }

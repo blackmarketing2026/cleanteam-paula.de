@@ -92,6 +92,8 @@ const els = {
   mailboxUsername: document.querySelector("#mailbox-username"),
   mailboxPassword: document.querySelector("#mailbox-password"),
   mailboxFromName: document.querySelector("#mailbox-from-name"),
+  mailboxSignature: document.querySelector("#mailbox-signature"),
+  mailboxFolderTabs: document.querySelectorAll(".mailbox-folder-tabs [data-folder]"),
   toast: document.querySelector("#toast"),
   metricCustomers: document.querySelector("#metric-customers"),
   metricOffers: document.querySelector("#metric-offers"),
@@ -114,6 +116,8 @@ const titles = {
 const mailboxState = {
   messages: [],
   selectedUid: null,
+  folder: "inbox",
+  signature: "",
 };
 
 async function apiFetch(path, options = {}) {
@@ -920,6 +924,8 @@ async function loadMailbox() {
       ? "Unverändert lassen = altes Passwort behalten"
       : "Noch kein Passwort hinterlegt";
     els.mailboxFromName.value = settings.fromName || "CleanTeam";
+    els.mailboxSignature.value = settings.signature || "";
+    mailboxState.signature = settings.signature || "";
 
     els.mailboxNotConfigured.hidden = settings.configured;
     els.mailboxConfigured.hidden = !settings.configured;
@@ -933,11 +939,22 @@ async function loadMailbox() {
   }
 }
 
+function switchMailboxFolder(folder) {
+  mailboxState.folder = folder;
+  mailboxState.selectedUid = null;
+  els.mailboxFolderTabs.forEach((button) => {
+    button.classList.toggle("active", button.dataset.folder === folder);
+  });
+  els.mailboxMessage.innerHTML = "Noch keine Nachricht ausgewählt.";
+  loadMailboxInbox();
+}
+
 async function loadMailboxInbox() {
-  els.mailboxList.innerHTML = `<div class="empty-state">Lade Posteingang…</div>`;
+  const folderLabel = mailboxState.folder === "sent" ? "Postausgang" : "Posteingang";
+  els.mailboxList.innerHTML = `<div class="empty-state">Lade ${folderLabel}…</div>`;
 
   try {
-    const result = await apiGet("api/mailbox.php?action=inbox");
+    const result = await apiGet(`api/mailbox.php?action=inbox&folder=${mailboxState.folder}`);
     mailboxState.messages = result.messages;
     renderMailboxList();
   } catch (error) {
@@ -981,7 +998,9 @@ async function openMailboxMessage(uid) {
   els.mailboxMessage.innerHTML = `<div class="empty-state">Lade Nachricht…</div>`;
 
   try {
-    const message = await apiGet(`api/mailbox.php?action=message&uid=${encodeURIComponent(uid)}`);
+    const message = await apiGet(
+      `api/mailbox.php?action=message&uid=${encodeURIComponent(uid)}&folder=${mailboxState.folder}`
+    );
 
     els.mailboxMessage.innerHTML = `
       <div class="record-lines" style="margin-bottom:16px;">
@@ -1034,6 +1053,9 @@ async function handleMailboxComposeSubmit(event) {
     showToast("E-Mail wurde gesendet.");
     els.mailboxComposeForm.reset();
     els.mailboxComposeForm.hidden = true;
+    if (mailboxState.folder === "sent") {
+      await loadMailboxInbox();
+    }
   } catch (error) {
     showToast(error.message);
   }
@@ -1051,6 +1073,7 @@ async function handleMailboxSettingsSubmit(event) {
     username: els.mailboxUsername.value.trim(),
     password: els.mailboxPassword.value,
     fromName: els.mailboxFromName.value.trim(),
+    signature: els.mailboxSignature.value,
   };
 
   try {
@@ -1198,7 +1221,15 @@ function bindEvents() {
     document.querySelector("#mailbox-settings-heading").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   els.mailboxComposeToggle.addEventListener("click", () => {
-    els.mailboxComposeForm.hidden = !els.mailboxComposeForm.hidden;
+    const wasHidden = els.mailboxComposeForm.hidden;
+    els.mailboxComposeForm.hidden = !wasHidden;
+    if (wasHidden && !els.mailboxComposeBody.value && mailboxState.signature) {
+      els.mailboxComposeBody.value = `\n\n-- \n${mailboxState.signature}`;
+      els.mailboxComposeBody.setSelectionRange(0, 0);
+    }
+  });
+  els.mailboxFolderTabs.forEach((button) => {
+    button.addEventListener("click", () => switchMailboxFolder(button.dataset.folder));
   });
   els.mailboxComposeCancel.addEventListener("click", () => {
     els.mailboxComposeForm.reset();

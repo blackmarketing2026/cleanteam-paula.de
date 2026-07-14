@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS mailbox_settings (
   username VARCHAR(190) NOT NULL DEFAULT '',
   password_encrypted TEXT NULL,
   from_name VARCHAR(190) NOT NULL DEFAULT 'CleanTeam',
+  signature TEXT NULL,
   updated_at DATETIME NULL,
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
