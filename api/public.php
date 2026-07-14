@@ -229,6 +229,7 @@ if ($method === 'POST' && $action === 'sign') {
         "UPDATE contracts SET status = 'signiert', signed_at = UTC_TIMESTAMP(), signature_data = :signature, current_step = 'fertig' WHERE id = :id"
     );
     $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id']]);
+    notify_contract_created($pdo, $contract['id']);
 
     json_response(public_state($offer, load_contract($pdo, $offer['id'])));
 }

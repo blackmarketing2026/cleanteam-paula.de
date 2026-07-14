@@ -159,7 +159,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
               Drucken / Als PDF speichern
             </button>
           </div>
-          <article id="final-contract-document" class="contract-preview"></article>
+          <iframe id="final-contract-frame" class="contract-frame"></iframe>
         </section>
       </div>
     </main>

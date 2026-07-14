@@ -24,7 +24,7 @@ const els = {
   signaturePad: document.querySelector("#signature-pad"),
   clearSignature: document.querySelector("#clear-signature"),
   saveSignature: document.querySelector("#save-signature"),
-  finalContractDocument: document.querySelector("#final-contract-document"),
+  finalContractFrame: document.querySelector("#final-contract-frame"),
   printFinalContract: document.querySelector("#print-final-contract"),
   toast: document.querySelector("#toast"),
 };
@@ -151,66 +151,10 @@ function renderServiceDetails() {
 }
 
 function renderFinalContract() {
-  const offer = state.offer;
-  const contract = state.contract;
-
-  const representationBlock = contract.authorized === false && contract.representationNote
-    ? `<p><strong>Vertretung:</strong> ${escapeHtml(contract.representationNote)}</p>`
-    : "";
-
-  const notes = offer.notes ? `<p><strong>Besondere Vereinbarungen:</strong> ${escapeHtml(offer.notes)}</p>` : "";
-
-  els.finalContractDocument.innerHTML = `
-    <div class="contract-document">
-      <header>
-        <div>
-          <span class="doc-brand">CleanTeam</span>
-          <h3>Reinigungsvertrag</h3>
-          <p class="muted">Vertragsnummer ${escapeHtml(contract.number)}</p>
-        </div>
-        <span class="badge success">Signiert</span>
-      </header>
-
-      <section>
-        <h4>Vertragspartner</h4>
-        <dl>
-          <dt>Kunde</dt><dd>${escapeHtml(offer.customer.name)}</dd>
-          <dt>Ansprechpartner</dt><dd>${escapeHtml(contactName(offer.customer))}</dd>
-          <dt>E-Mail</dt><dd>${escapeHtml(offer.customer.email)}</dd>
-          <dt>Telefon</dt><dd>${escapeHtml(offer.customer.phone)}</dd>
-          <dt>Adresse</dt><dd>${escapeHtml(customerAddress(offer.customer))}</dd>
-        </dl>
-        ${representationBlock}
-      </section>
-
-      <section>
-        <h4>Leistungsumfang</h4>
-        <dl>
-          <dt>Leistung</dt><dd>${escapeHtml(offer.service)}</dd>
-          <dt>Fläche</dt><dd>${offer.squareMeters} m²</dd>
-          <dt>Intervall</dt><dd>${escapeHtml(offer.interval)}</dd>
-          <dt>Startdatum</dt><dd>${offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"}</dd>
-          <dt>Netto-Betrag</dt><dd>${formatCurrency(offer.price)}</dd>
-        </dl>
-        ${notes}
-      </section>
-
-      <section>
-        <h4>Vertragsbedingungen</h4>
-        <p>
-          CleanTeam übernimmt die oben beschriebene Reinigungsleistung gemäß Angebot.
-          Leistungszeiten, Zugang und Objektbesonderheiten werden vor Leistungsbeginn abgestimmt.
-          Alle Preise verstehen sich netto zuzüglich gesetzlicher Umsatzsteuer.
-        </p>
-      </section>
-
-      <section class="signature-box">
-        <strong>Digitale Signatur des Kunden</strong>
-        <img src="${contract.signatureDataUrl}" alt="Digitale Signatur" />
-        <span>Signiert am ${formatDate(contract.signedAt)}</span>
-      </section>
-    </div>
-  `;
+  // Zeigt dasselbe serverseitig generierte Vertragsdokument, das auch im Dashboard und in
+  // der Vertragsbenachrichtigung per E-Mail verwendet wird, statt einer eigenen (und leicht
+  // abweichenden) Zusammenfassung.
+  els.finalContractFrame.src = `contract.php?token=${encodeURIComponent(token)}`;
 }
 
 function routeToState(data) {
@@ -395,7 +339,9 @@ function bindEvents() {
     handleAction("sign", { signatureDataUrl: els.signaturePad.toDataURL("image/png") });
   });
 
-  els.printFinalContract.addEventListener("click", () => window.print());
+  els.printFinalContract.addEventListener("click", () => {
+    els.finalContractFrame.contentWindow.print();
+  });
 }
 
 function init() {
