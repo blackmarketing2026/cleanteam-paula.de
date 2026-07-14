@@ -130,6 +130,10 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
               Mit der Signatur im nächsten Schritt bestätigen Sie den Abschluss dieses Vertrags zu
               den genannten Konditionen.
             </p>
+            <p>
+              Mit Klick auf „Weiter zur Unterschrift“ bestätigen Sie außerdem, dass Sie die
+              Vertragsbedingungen und die Allgemeinen Geschäftsbedingungen akzeptieren.
+            </p>
           </div>
           <div class="form-actions">
             <button class="primary-button" data-next="signatur" type="button">Weiter zur Unterschrift</button>

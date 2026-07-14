@@ -10,6 +10,16 @@ require_login();
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
 
+function ensure_contracts_terms_accepted_at_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM contracts LIKE 'terms_accepted_at'");
+    if ($stmt->fetch()) {
+        return;
+    }
+
+    $pdo->exec('ALTER TABLE contracts ADD COLUMN terms_accepted_at DATETIME NULL AFTER representation_note');
+}
+
 const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes,
     o.price, o.created_at AS offer_created_at, o.token,
     c.name AS c_name, c.email AS c_email, c.phone AS c_phone, c.salutation AS c_salutation,
@@ -31,6 +41,7 @@ function contract_row_to_json(array $row): array
         'intervalConfirmed' => (bool) $row['interval_confirmed'],
         'authorized' => $row['authorized'] === null ? null : (bool) $row['authorized'],
         'representationNote' => $row['representation_note'],
+        'termsAcceptedAt' => to_iso($row['terms_accepted_at'] ?? null),
         'signedAt' => to_iso($row['signed_at']),
         'signatureDataUrl' => $row['signature_data'],
         'createdAt' => to_iso($row['created_at']),
@@ -59,8 +70,10 @@ function contract_row_to_json(array $row): array
     ];
 }
 
+ensure_contracts_terms_accepted_at_column($pdo);
+
 if ($method === 'GET') {
-    $rows = $pdo->query(CONTRACT_SELECT . ' ORDER BY ct.created_at DESC')->fetchAll();
+    $rows = $pdo->query(CONTRACT_SELECT . ' ORDER BY c.name ASC, ct.created_at DESC')->fetchAll();
     json_response(array_map('contract_row_to_json', $rows));
 }
 

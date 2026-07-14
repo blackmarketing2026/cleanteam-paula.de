@@ -41,7 +41,7 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
         json_error('Bitte zuerst das Postfach unter "Postfach" einrichten.', 422);
     }
 
-    $html = render_contract_document($context['offer'], $context['customer'], $context['contract']);
+    $html = render_contract_document($context['offer'], $context['customer'], $context['contract'], ['audience' => 'cleanteam']);
     $subject = '[Test] Vertragsbenachrichtigung – ' . ($context['contract']['number'] ?? $context['customer']['name']);
 
     try {

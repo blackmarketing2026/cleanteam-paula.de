@@ -135,7 +135,7 @@ const titles = {
   "site-visit-new": "Neue Begehung erstellen",
   "site-visit-saved": "Gespeicherte Begehungen",
   offers: "Kostenvoranschlagserstellung",
-  contracts: "Verträge & Signatur",
+  contracts: "Verträge",
   mailbox: "Postfach",
   "settings-smtp": "SMTP-Server-Einstellungen",
   "settings-notify": "Vertragsbenachrichtigungen-Einstellungen",
@@ -1135,6 +1135,12 @@ function contractBadgeClass(status) {
 function renderContractCard(contract) {
   const selected = contract.id === state.selectedContractId ? " selected" : "";
   const badgeClass = contractBadgeClass(contract.status);
+  const signedLine = contract.signedAt
+    ? `Signiert am ${formatDate(contract.signedAt)}`
+    : "Noch nicht signiert";
+  const termsLine = contract.termsAcceptedAt || contract.signedAt
+    ? "AGB-Zustimmung dokumentiert"
+    : "AGB-Zustimmung noch offen";
 
   return `
     <article class="record-item${selected}">
@@ -1144,14 +1150,23 @@ function renderContractCard(contract) {
           <div class="record-meta">
             <span>${escapeHtml(contract.customer.name)}</span>
             <span>${escapeHtml(contract.offer.service)} · ${contract.offer.squareMeters} m²</span>
+            <span>${escapeHtml(signedLine)} · ${escapeHtml(termsLine)}</span>
           </div>
         </div>
         <span class="badge ${badgeClass}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span>
       </div>
       <div class="record-actions">
+        <a class="primary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam" target="_blank" rel="noopener">
+          <i data-lucide="file-check-2" aria-hidden="true"></i>
+          Vertrag CleanTeam
+        </a>
+        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=customer" target="_blank" rel="noopener">
+          <i data-lucide="file-text" aria-hidden="true"></i>
+          Vertrag für Kunden
+        </a>
         <button class="secondary-button" type="button" data-action="select-contract" data-id="${escapeHtml(contract.id)}">
           <i data-lucide="eye" aria-hidden="true"></i>
-          Anzeigen
+          Vorschau
         </button>
         <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
@@ -1177,7 +1192,7 @@ function renderContractPreview() {
   // abweichenden) clientseitigen Zusammenfassung.
   els.contractPreview.className = "contract-preview";
   els.printContract.disabled = false;
-  els.contractPreview.innerHTML = `<iframe class="contract-frame" src="contract.php?contractId=${encodeURIComponent(contract.id)}"></iframe>`;
+  els.contractPreview.innerHTML = `<iframe class="contract-frame" src="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam"></iframe>`;
 }
 
 function updateOfferPreview() {

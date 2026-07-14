@@ -1347,7 +1347,8 @@ button.compact-item.selected {
   }
 
   .form-actions button,
-  .record-actions button {
+  .record-actions button,
+  .record-actions a {
     flex: 1 1 auto;
   }
 }

@@ -42,6 +42,16 @@ function load_contract(PDO $pdo, string $offerId): ?array
     return $row ?: null;
 }
 
+function ensure_contracts_terms_accepted_at_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM contracts LIKE 'terms_accepted_at'");
+    if ($stmt->fetch()) {
+        return;
+    }
+
+    $pdo->exec('ALTER TABLE contracts ADD COLUMN terms_accepted_at DATETIME NULL AFTER representation_note');
+}
+
 function offer_is_expired(array $offer): bool
 {
     return strtotime($offer['expires_at'] . ' UTC') < time();
@@ -110,6 +120,7 @@ function require_active_contract(?array $contract): array
 }
 
 $offer = load_offer($pdo, $token);
+ensure_contracts_terms_accepted_at_column($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
     $contract = load_contract($pdo, $offer['id']);
@@ -210,8 +221,13 @@ if ($method === 'POST' && $action === 'advance') {
         json_error('Ungültiger Schrittwechsel.', 422);
     }
 
-    $pdo->prepare('UPDATE contracts SET current_step = :step WHERE id = :id')
-        ->execute(['step' => $targetStep, 'id' => $contract['id']]);
+    if ($contract['current_step'] === 'bedingungen' && $targetStep === 'signatur') {
+        $pdo->prepare('UPDATE contracts SET current_step = :step, terms_accepted_at = UTC_TIMESTAMP() WHERE id = :id')
+            ->execute(['step' => $targetStep, 'id' => $contract['id']]);
+    } else {
+        $pdo->prepare('UPDATE contracts SET current_step = :step WHERE id = :id')
+            ->execute(['step' => $targetStep, 'id' => $contract['id']]);
+    }
 
     json_response(public_state($offer, load_contract($pdo, $offer['id'])));
 }
@@ -226,7 +242,7 @@ if ($method === 'POST' && $action === 'sign') {
     }
 
     $stmt = $pdo->prepare(
-        "UPDATE contracts SET status = 'signiert', signed_at = UTC_TIMESTAMP(), signature_data = :signature, current_step = 'fertig' WHERE id = :id"
+        "UPDATE contracts SET status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, current_step = 'fertig' WHERE id = :id"
     );
     $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id']]);
     notify_contract_created($pdo, $contract['id']);

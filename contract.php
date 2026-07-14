@@ -9,8 +9,10 @@ $pdo = db();
 $contractId = trim((string) ($_GET['contractId'] ?? ''));
 $offerId = trim((string) ($_GET['offerId'] ?? ''));
 $token = trim((string) ($_GET['token'] ?? ''));
+$document = trim((string) ($_GET['document'] ?? ''));
+$isPublicTokenAccess = $token !== '';
 
-if ($token !== '') {
+if ($isPublicTokenAccess) {
     // Oeffentlicher Zugriff ueber den Kostenvoranschlags-Token (z. B. von der "fertig"-Seite des
     // Kunden-Vertragswizards). Der Token beweist bereits den Zugriff auf genau diesen Kostenvoranschlag,
     // dieselbe Berechtigung wie api/public.php verwendet, daher keine zusaetzliche Admin-Session
@@ -89,4 +91,8 @@ if (!$customer) {
     exit;
 }
 
-echo render_contract_document($offer, $customer, $contract);
+$documentAudience = in_array($document, ['customer', 'cleanteam'], true)
+    ? $document
+    : ($isPublicTokenAccess ? 'customer' : 'cleanteam');
+
+echo render_contract_document($offer, $customer, $contract, ['audience' => $documentAudience]);

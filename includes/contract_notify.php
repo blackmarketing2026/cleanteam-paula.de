@@ -95,7 +95,7 @@ function notify_contract_created(PDO $pdo, string $contractId): void
             return;
         }
 
-        $html = render_contract_document($context['offer'], $context['customer'], $context['contract']);
+        $html = render_contract_document($context['offer'], $context['customer'], $context['contract'], ['audience' => 'cleanteam']);
 
         $mailer = new SmtpMailer(
             $smtp['host'],
@@ -140,7 +140,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             return;
         }
 
-        $contractHtml = render_contract_document($context['offer'], $context['customer'], $context['contract']);
+        $contractHtml = render_contract_document($context['offer'], $context['customer'], $context['contract'], ['audience' => 'customer']);
         $number = (string) ($context['contract']['number'] ?? '');
 
         $message = '<p>Sehr geehrte Damen und Herren,</p>'

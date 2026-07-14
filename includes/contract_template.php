@@ -115,6 +115,24 @@ function contract_format_date(?string $isoOrMysqlDate): string
     return gmdate('d.m.Y', $timestamp);
 }
 
+function contract_format_datetime(?string $isoOrMysqlDate): string
+{
+    if ($isoOrMysqlDate === null || $isoOrMysqlDate === '') {
+        return '–';
+    }
+
+    $endsWithZulu = substr($isoOrMysqlDate, -1) === 'Z';
+    $timestamp = strtotime($isoOrMysqlDate . ($endsWithZulu ? '' : ' UTC'));
+    if ($timestamp === false) {
+        return '–';
+    }
+
+    $date = new DateTimeImmutable('@' . $timestamp);
+    $date = $date->setTimezone(new DateTimeZone('Europe/Berlin'));
+
+    return $date->format('d.m.Y H:i') . ' Uhr';
+}
+
 function contract_format_money(float $amount): string
 {
     return number_format($amount, 2, ',', '.') . ' €';
@@ -165,8 +183,50 @@ function render_obligations_html(): string
     return $html;
 }
 
-function render_contract_document(array $offer, array $customer, ?array $contract): string
+function render_signature_protocol_html(array $offer, array $customer, ?array $contract): string
 {
+    $isSigned = $contract !== null && $contract['status'] === 'signiert';
+    $signedAt = $contract['signed_at'] ?? null;
+    $termsAcceptedAt = $contract['terms_accepted_at'] ?? null;
+    $termsAccepted = $termsAcceptedAt !== null || $isSigned;
+    $termsAcceptedDisplay = $termsAccepted ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt';
+    $termsAcceptedTime = contract_format_datetime($termsAcceptedAt ?: ($isSigned ? $signedAt : null));
+    $signedAtDisplay = contract_format_datetime($signedAt);
+    $contractNumber = h($contract['number'] ?? 'Entwurf');
+    $customerName = h(contract_customer_display_name($customer));
+    $signatoryName = h(contract_signatory_display($customer));
+    $offerCreatedAt = contract_format_datetime($offer['created_at'] ?? null);
+    $contractCreatedAt = contract_format_datetime($contract['created_at'] ?? null);
+    $agbVersion = h(LEGAL['agb_version']);
+    $agbUrl = h(LEGAL['agb_url']);
+
+    return <<<HTML
+<section class="signature-protocol">
+  <h2>Signaturprotokoll / Nachweis für CleanTeam</h2>
+  <p>
+    Dieses Protokoll dokumentiert die elektronische Unterzeichnung der CleanTeam-Ausfertigung
+    sowie die Zustimmung zu den Vertragsbedingungen und Allgemeinen Geschäftsbedingungen.
+  </p>
+  <dl class="protocol-grid">
+    <dt>Vertragsnummer</dt><dd>{$contractNumber}</dd>
+    <dt>Kunde</dt><dd>{$customerName}</dd>
+    <dt>Unterzeichner</dt><dd>{$signatoryName}</dd>
+    <dt>Kostenvoranschlag erstellt</dt><dd>{$offerCreatedAt}</dd>
+    <dt>Vertrag erstellt</dt><dd>{$contractCreatedAt}</dd>
+    <dt>Vertrag elektronisch signiert</dt><dd>{$signedAtDisplay}</dd>
+    <dt>AGB / Vertragsbedingungen zugestimmt</dt><dd>{$termsAcceptedDisplay}</dd>
+    <dt>Zeitpunkt der Zustimmung</dt><dd>{$termsAcceptedTime}</dd>
+    <dt>AGB-Fassung</dt><dd>{$agbVersion}</dd>
+    <dt>AGB-Quelle</dt><dd>{$agbUrl}</dd>
+  </dl>
+</section>
+HTML;
+}
+
+function render_contract_document(array $offer, array $customer, ?array $contract, array $options = []): string
+{
+    $audience = ($options['audience'] ?? 'customer') === 'cleanteam' ? 'cleanteam' : 'customer';
+    $isCleanTeamCopy = $audience === 'cleanteam';
     $netPrice = (float) $offer['price'];
     $vatAmount = round($netPrice * VAT_RATE / 100, 2);
     $grossPrice = round($netPrice + $vatAmount, 2);
@@ -218,6 +278,8 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $statusLabel = $contract === null
         ? 'Entwurf (noch nicht gestartet)'
         : h(ucfirst(str_replace('_', ' ', (string) $contract['status'])));
+    $documentLabel = $isCleanTeamCopy ? 'CleanTeam-Ausfertigung' : 'Kundenausfertigung';
+    $protocolHtml = $isCleanTeamCopy ? render_signature_protocol_html($offer, $customer, $contract) : '';
 
     $paymentDueDays = PAYMENT_DUE_DAYS;
     $defaultAfterDays = DEFAULT_AFTER_DAYS;
@@ -239,6 +301,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
   h4 { font-size: 14px; margin: 18px 0 4px; }
   .doc-logo { max-height: 64px; max-width: 260px; margin-bottom: 16px; }
   .meta-bar { font-size: 13px; color: #555; margin-bottom: 24px; }
+  .doc-label { display: inline-block; margin: 8px 0 0; padding: 3px 8px; border: 1px solid #bbb; border-radius: 4px; color: #444; font-size: 12px; font-family: Arial, sans-serif; }
   .parties { display: flex; gap: 40px; margin: 24px 0; }
   .party { flex: 1; }
   .party small { color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -247,6 +310,10 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
   .sign-block { display: flex; gap: 40px; margin-top: 40px; }
   .sign-col { flex: 1; border-top: 1px solid #333; padding-top: 8px; }
   .sign-placeholder { color: #999; font-style: italic; }
+  .signature-protocol { page-break-before: always; margin-top: 48px; padding-top: 20px; border-top: 2px solid #333; }
+  .protocol-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 18px; margin-top: 16px; font-family: Arial, sans-serif; font-size: 13px; }
+  .protocol-grid dt { font-weight: 700; color: #333; }
+  .protocol-grid dd { margin: 0; }
   @media print { body { margin: 0; } }
 </style>
 </head>
@@ -254,6 +321,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 
 {$logoHtml}
 <h1>Gebäudereinigungsvertrag</h1>
+<div class="doc-label">{$documentLabel}</div>
 <div class="meta-bar">
   Vertragsnummer: <strong>{$contractNumber}</strong> &nbsp;·&nbsp;
   Status: <strong>{$statusLabel}</strong> &nbsp;·&nbsp;
@@ -372,6 +440,8 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     {$signatureImage}
   </div>
 </div>
+
+{$protocolHtml}
 
 </body>
 </html>

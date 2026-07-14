@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS contracts (
   interval_confirmed TINYINT(1) NOT NULL DEFAULT 0,
   authorized TINYINT(1) NULL,
   representation_note TEXT NULL,
+  terms_accepted_at DATETIME NULL,
   signed_at DATETIME NULL,
   signature_data LONGTEXT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
