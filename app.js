@@ -22,7 +22,7 @@ const CONTRACT_STATUS_LABELS = {
 };
 
 const state = {
-  data: { customers: [], offers: [], contracts: [] },
+  data: { customers: [], siteVisits: [], offers: [], contracts: [] },
   currentView: "overview",
   selectedContractId: null,
 };
@@ -51,6 +51,10 @@ const els = {
   customerList: document.querySelector("#customer-list"),
   customerId: document.querySelector("#customer-id"),
   cancelCustomerEdit: document.querySelector("#cancel-customer-edit"),
+  siteVisitForm: document.querySelector("#site-visit-form"),
+  addSiteVisitFloor: document.querySelector("#add-site-visit-floor"),
+  siteVisitFloors: document.querySelector("#site-visit-floors"),
+  siteVisitList: document.querySelector("#site-visit-list"),
   offerForm: document.querySelector("#offer-form"),
   offerCustomer: document.querySelector("#offer-customer"),
   offerSquareMeters: document.querySelector("#offer-square-meters"),
@@ -111,6 +115,7 @@ const els = {
   brandMarks: document.querySelectorAll(".brand-mark"),
   toast: document.querySelector("#toast"),
   metricCustomers: document.querySelector("#metric-customers"),
+  metricSiteVisits: document.querySelector("#metric-site-visits"),
   metricOffers: document.querySelector("#metric-offers"),
   metricContracts: document.querySelector("#metric-contracts"),
   metricSigned: document.querySelector("#metric-signed"),
@@ -122,6 +127,7 @@ const els = {
 const titles = {
   overview: "Übersicht",
   customers: "Kundenverwaltung",
+  "site-visits": "Neue Begehung",
   offers: "Kostenvoranschlagserstellung",
   contracts: "Verträge & Signatur",
   mailbox: "Postfach",
@@ -201,6 +207,10 @@ function todayAsInputValue() {
 
 function getCustomer(id) {
   return state.data.customers.find((customer) => customer.id === id);
+}
+
+function getSiteVisit(id) {
+  return state.data.siteVisits.find((visit) => visit.id === id);
 }
 
 function getOffer(id) {
@@ -333,13 +343,15 @@ function closeMobileNav() {
 
 async function loadAll() {
   try {
-    const [customers, offers, contracts] = await Promise.all([
+    const [customers, siteVisits, offers, contracts] = await Promise.all([
       apiGet("api/customers.php"),
+      apiGet("api/site-visits.php"),
       apiGet("api/offers.php"),
       apiGet("api/contracts.php"),
     ]);
 
     state.data.customers = customers;
+    state.data.siteVisits = siteVisits;
     state.data.offers = offers;
     state.data.contracts = contracts;
     renderAll();
@@ -352,6 +364,7 @@ function renderAll() {
   renderMetrics();
   renderCustomerOptions();
   renderCustomers();
+  renderSiteVisits();
   renderOffers();
   renderContracts();
   updateOfferPreview();
@@ -360,6 +373,7 @@ function renderAll() {
 
 function renderMetrics() {
   els.metricCustomers.textContent = state.data.customers.length;
+  els.metricSiteVisits.textContent = state.data.siteVisits.length;
   els.metricOffers.textContent = state.data.offers.length;
   els.metricContracts.textContent = state.data.contracts.length;
   els.metricSigned.textContent = state.data.contracts.filter((contract) => contract.status === "signiert").length;
@@ -494,6 +508,215 @@ function renderCustomerCard(customer) {
           <i data-lucide="trash-2" aria-hidden="true"></i>
           Löschen
         </button>
+      </div>
+    </article>
+  `;
+}
+
+function optionSelected(value, currentValue) {
+  return value === currentValue ? " selected" : "";
+}
+
+function ensureSiteVisitFloorEmptyState() {
+  if (els.siteVisitFloors.querySelector(".floor-section")) {
+    return;
+  }
+
+  els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage geöffnet.</div>`;
+}
+
+function renumberSiteVisitFloors() {
+  els.siteVisitFloors.querySelectorAll(".floor-section").forEach((section, index) => {
+    const name = section.querySelector('[name="floorName"]').value.trim();
+    section.querySelector("legend").textContent = name || `Etage ${index + 1}`;
+  });
+}
+
+function addSiteVisitFloor(values = {}) {
+  const emptyState = els.siteVisitFloors.querySelector(".floor-empty-state");
+  if (emptyState) {
+    emptyState.remove();
+  }
+
+  const floor = {
+    name: values.name || "",
+    sanitaryRooms: Number(values.sanitaryRooms) || 0,
+    sinks: Number(values.sinks) || 0,
+    mirrors: Number(values.mirrors) || 0,
+    toilets: Number(values.toilets) || 0,
+    officeRooms: Number(values.officeRooms) || 0,
+    desks: Number(values.desks) || 0,
+    windows: Number(values.windows) || 0,
+    cleaningType: values.cleaningType || "Gesaugt",
+    floorCondition: values.floorCondition || "Teppich",
+    notes: values.notes || "",
+  };
+
+  const section = document.createElement("fieldset");
+  section.className = "floor-section";
+  section.innerHTML = `
+    <legend>Etage</legend>
+    <div class="floor-section-toolbar">
+      <button class="ghost-button" type="button" data-action="remove-site-visit-floor">
+        <i data-lucide="x" aria-hidden="true"></i>
+        Etage entfernen
+      </button>
+    </div>
+    <div class="form-grid">
+      <label class="span-2">
+        Etagenname
+        <input name="floorName" type="text" placeholder="z. B. Erdgeschoss, 1. OG" value="${escapeHtml(floor.name)}" />
+      </label>
+      <label>
+        Sanitärräume
+        <input name="sanitaryRooms" type="number" min="0" step="1" value="${floor.sanitaryRooms}" />
+      </label>
+      <label>
+        Waschbecken
+        <input name="sinks" type="number" min="0" step="1" value="${floor.sinks}" />
+      </label>
+      <label>
+        Spiegel
+        <input name="mirrors" type="number" min="0" step="1" value="${floor.mirrors}" />
+      </label>
+      <label>
+        Toiletten
+        <input name="toilets" type="number" min="0" step="1" value="${floor.toilets}" />
+      </label>
+      <label>
+        Büro-Räume
+        <input name="officeRooms" type="number" min="0" step="1" value="${floor.officeRooms}" />
+      </label>
+      <label>
+        Schreibtische
+        <input name="desks" type="number" min="0" step="1" value="${floor.desks}" />
+      </label>
+      <label>
+        Fenster
+        <input name="windows" type="number" min="0" step="1" value="${floor.windows}" />
+      </label>
+      <label>
+        Bodenreinigung
+        <select name="cleaningType">
+          <option value="Gesaugt"${optionSelected("Gesaugt", floor.cleaningType)}>Gesaugt</option>
+          <option value="Gewischt"${optionSelected("Gewischt", floor.cleaningType)}>Gewischt</option>
+          <option value="Gesaugt und gewischt"${optionSelected("Gesaugt und gewischt", floor.cleaningType)}>Gesaugt und gewischt</option>
+        </select>
+      </label>
+      <label>
+        Bodenbelag / Zustand
+        <select name="floorCondition">
+          <option value="Teppich"${optionSelected("Teppich", floor.floorCondition)}>Teppich</option>
+          <option value="Fliesen"${optionSelected("Fliesen", floor.floorCondition)}>Fliesen</option>
+          <option value="Laminat"${optionSelected("Laminat", floor.floorCondition)}>Laminat</option>
+          <option value="Parkett"${optionSelected("Parkett", floor.floorCondition)}>Parkett</option>
+          <option value="Anderer Boden"${optionSelected("Anderer Boden", floor.floorCondition)}>Anderer Boden</option>
+        </select>
+      </label>
+      <label class="span-2">
+        Notizen zur Etage
+        <textarea name="floorNotes" rows="3" placeholder="Besonderheiten je Etage">${escapeHtml(floor.notes)}</textarea>
+      </label>
+    </div>
+  `;
+
+  els.siteVisitFloors.appendChild(section);
+  renumberSiteVisitFloors();
+  refreshIcons();
+  section.querySelector('[name="floorName"]').focus();
+}
+
+function collectSiteVisitFloors() {
+  return [...els.siteVisitFloors.querySelectorAll(".floor-section")].map((section, index) => {
+    const field = (name) => section.querySelector(`[name="${name}"]`);
+    return {
+      name: field("floorName").value.trim() || `Etage ${index + 1}`,
+      sanitaryRooms: Number(field("sanitaryRooms").value) || 0,
+      sinks: Number(field("sinks").value) || 0,
+      mirrors: Number(field("mirrors").value) || 0,
+      toilets: Number(field("toilets").value) || 0,
+      officeRooms: Number(field("officeRooms").value) || 0,
+      desks: Number(field("desks").value) || 0,
+      windows: Number(field("windows").value) || 0,
+      cleaningType: field("cleaningType").value,
+      floorCondition: field("floorCondition").value,
+      notes: field("floorNotes").value.trim(),
+    };
+  });
+}
+
+function resetSiteVisitForm() {
+  els.siteVisitForm.reset();
+  els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage geöffnet.</div>`;
+  refreshIcons();
+}
+
+function renderSiteVisits() {
+  const visits = [...state.data.siteVisits].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  els.siteVisitList.innerHTML = visits.length
+    ? visits.map(renderSiteVisitCard).join("")
+    : `<div class="empty-state">Noch keine Begehung gespeichert.</div>`;
+}
+
+function renderSiteVisitCard(visit) {
+  const floors = Array.isArray(visit.floors) ? visit.floors : [];
+  const sanitaryTotal = floors.reduce((sum, floor) => sum + (Number(floor.sanitaryRooms) || 0), 0);
+  const officeTotal = floors.reduce((sum, floor) => sum + (Number(floor.officeRooms) || 0), 0);
+  const floorLabel = floors.length === 1 ? "1 Etage" : `${floors.length} Etagen`;
+  const notes = visit.notes
+    ? `<div class="record-lines"><span>${escapeHtml(visit.notes)}</span></div>`
+    : "";
+
+  return `
+    <article class="record-item">
+      <div class="record-main">
+        <div>
+          <div class="record-title">${escapeHtml(visit.customerName)}</div>
+          <div class="record-meta">
+            <span>${escapeHtml(visit.onsiteContact)} vor Ort</span>
+            <span>${escapeHtml(visit.email)} · ${escapeHtml(visit.phone)}</span>
+            <span>Erfasst am ${formatDate(visit.createdAt)}</span>
+          </div>
+        </div>
+        <div class="record-side">
+          <span class="badge">${visit.squareMeters} m²</span>
+          <span class="badge">${escapeHtml(floorLabel)}</span>
+        </div>
+      </div>
+      <div class="record-lines">
+        <span>${escapeHtml(visit.address)}</span>
+        <span>${sanitaryTotal} Sanitärräume · ${officeTotal} Büro-Räume</span>
+      </div>
+      ${notes}
+      <details class="visit-details">
+        <summary>Etagen anzeigen</summary>
+        <div class="floor-summary-list">
+          ${floors.map(renderSiteVisitFloorSummary).join("")}
+        </div>
+      </details>
+      <div class="record-actions">
+        <button class="ghost-button" type="button" data-action="delete-site-visit" data-id="${escapeHtml(visit.id)}">
+          <i data-lucide="trash-2" aria-hidden="true"></i>
+          Löschen
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderSiteVisitFloorSummary(floor, index) {
+  const title = floor.name || `Etage ${index + 1}`;
+  const notes = floor.notes ? `<span>${escapeHtml(floor.notes)}</span>` : "";
+
+  return `
+    <article class="floor-summary-item">
+      <strong>${escapeHtml(title)}</strong>
+      <div class="record-lines">
+        <span>Sanitär: ${Number(floor.sanitaryRooms) || 0} Räume, ${Number(floor.sinks) || 0} Waschbecken, ${Number(floor.mirrors) || 0} Spiegel, ${Number(floor.toilets) || 0} Toiletten</span>
+        <span>Büro: ${Number(floor.officeRooms) || 0} Räume, ${Number(floor.desks) || 0} Schreibtische, ${Number(floor.windows) || 0} Fenster</span>
+        <span>Boden: ${escapeHtml(floor.cleaningType || "Gesaugt")} · ${escapeHtml(floor.floorCondition || "Teppich")}</span>
+        ${notes}
       </div>
     </article>
   `;
@@ -716,6 +939,36 @@ async function handleCustomerSubmit(event) {
   }
 }
 
+async function handleSiteVisitSubmit(event) {
+  event.preventDefault();
+
+  const floors = collectSiteVisitFloors();
+  if (floors.length === 0) {
+    showToast("Bitte zuerst eine Etage öffnen.");
+    return;
+  }
+
+  const payload = {
+    customerName: document.querySelector("#site-visit-customer-name").value.trim(),
+    email: document.querySelector("#site-visit-email").value.trim(),
+    phone: document.querySelector("#site-visit-phone").value.trim(),
+    address: document.querySelector("#site-visit-address").value.trim(),
+    onsiteContact: document.querySelector("#site-visit-onsite-contact").value.trim(),
+    squareMeters: Number(document.querySelector("#site-visit-square-meters").value),
+    floors,
+    notes: document.querySelector("#site-visit-notes").value.trim(),
+  };
+
+  try {
+    await apiPost("api/site-visits.php", payload);
+    resetSiteVisitForm();
+    await loadAll();
+    showToast("Begehung wurde gespeichert.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 async function handleOfferSubmit(event) {
   event.preventDefault();
 
@@ -814,6 +1067,26 @@ async function deleteCustomer(id) {
     await apiDelete(`api/customers.php?id=${encodeURIComponent(id)}`);
     await loadAll();
     showToast("Kunde wurde gelöscht.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function deleteSiteVisit(id) {
+  const visit = getSiteVisit(id);
+  if (!visit) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Begehung für "${visit.customerName}" löschen?`);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await apiDelete(`api/site-visits.php?id=${encodeURIComponent(id)}`);
+    await loadAll();
+    showToast("Begehung wurde gelöscht.");
   } catch (error) {
     showToast(error.message);
   }
@@ -1203,6 +1476,24 @@ async function handleLogoRemove() {
   }
 }
 
+function handleSiteVisitFloorAction(event) {
+  const button = event.target.closest('[data-action="remove-site-visit-floor"]');
+  if (!button) {
+    return;
+  }
+
+  button.closest(".floor-section").remove();
+  renumberSiteVisitFloors();
+  ensureSiteVisitFloorEmptyState();
+  refreshIcons();
+}
+
+function handleSiteVisitFloorInput(event) {
+  if (event.target.matches('[name="floorName"]')) {
+    renumberSiteVisitFloors();
+  }
+}
+
 function handleRecordAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) {
@@ -1227,6 +1518,10 @@ function handleRecordAction(event) {
 
   if (action === "delete-customer") {
     deleteCustomer(id);
+  }
+
+  if (action === "delete-site-visit") {
+    deleteSiteVisit(id);
   }
 
   if (action === "send-offer") {
@@ -1310,12 +1605,18 @@ function bindEvents() {
   els.customerForm.addEventListener("submit", handleCustomerSubmit);
   els.customerSearch.addEventListener("input", renderCustomers);
 
+  els.siteVisitForm.addEventListener("submit", handleSiteVisitSubmit);
+  els.addSiteVisitFloor.addEventListener("click", () => addSiteVisitFloor());
+  els.siteVisitFloors.addEventListener("click", handleSiteVisitFloorAction);
+  els.siteVisitFloors.addEventListener("input", handleSiteVisitFloorInput);
+
   els.offerForm.addEventListener("submit", handleOfferSubmit);
   els.offerSquareMeters.addEventListener("input", updateOfferPreview);
   els.offerInterval.addEventListener("change", updateOfferPreview);
   els.offerService.addEventListener("change", updateOfferPreview);
 
   els.customerList.addEventListener("click", handleRecordAction);
+  els.siteVisitList.addEventListener("click", handleRecordAction);
   els.offerList.addEventListener("click", handleRecordAction);
   els.contractList.addEventListener("click", handleRecordAction);
 

@@ -58,6 +58,10 @@
             <i data-lucide="users-round" aria-hidden="true"></i>
             Kunden
           </button>
+          <button class="nav-link" type="button" data-view="site-visits">
+            <i data-lucide="clipboard-list" aria-hidden="true"></i>
+            Neue Begehung
+          </button>
           <button class="nav-link" type="button" data-view="offers">
             <i data-lucide="file-text" aria-hidden="true"></i>
             Kostenvoranschläge
@@ -123,7 +127,7 @@
           <div class="section-heading">
             <div>
               <h3 id="overview-heading">Heute im Blick</h3>
-              <p class="muted">Kunden, Kostenvoranschläge und signierte Verträge an einem Ort.</p>
+              <p class="muted">Kunden, Begehungen, Kostenvoranschläge und signierte Verträge an einem Ort.</p>
             </div>
           </div>
 
@@ -132,6 +136,11 @@
               <span>Kunden</span>
               <strong id="metric-customers">0</strong>
               <small>aktive Datensätze</small>
+            </article>
+            <article class="metric-card">
+              <span>Begehungen</span>
+              <strong id="metric-site-visits">0</strong>
+              <small>vor Ort erfasst</small>
             </article>
             <article class="metric-card">
               <span>Kostenvoranschläge</span>
@@ -263,6 +272,88 @@
                 </label>
               </div>
               <div id="customer-list" class="record-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="site-visits-view" class="view" aria-labelledby="site-visits-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="site-visits-heading">Neue Begehung</h3>
+              <p class="muted">Objektdaten, Ansprechpartner vor Ort und Etagenaufnahme dokumentieren.</p>
+            </div>
+          </div>
+
+          <div class="split-layout">
+            <section class="panel form-panel" aria-labelledby="site-visit-form-heading">
+              <div class="panel-header">
+                <div>
+                  <h4 id="site-visit-form-heading">Begehung anlegen</h4>
+                  <p class="muted">Kunden- und Objektinformationen für den Vor-Ort-Termin.</p>
+                </div>
+              </div>
+              <form id="site-visit-form" class="form-grid">
+                <label class="span-2">
+                  Name *
+                  <input id="site-visit-customer-name" type="text" required placeholder="z. B. Beispiel GmbH" />
+                </label>
+                <label>
+                  Telefonnummer *
+                  <input id="site-visit-phone" type="tel" required placeholder="+49 711 123456" />
+                </label>
+                <label>
+                  E-Mail-Adresse *
+                  <input id="site-visit-email" type="email" required placeholder="kontakt@firma.de" />
+                </label>
+                <label class="span-2">
+                  Adresse *
+                  <input id="site-visit-address" type="text" required placeholder="Musterstraße 12, 70173 Stuttgart" />
+                </label>
+                <label>
+                  Ansprechpartner vor Ort *
+                  <input id="site-visit-onsite-contact" type="text" required placeholder="z. B. Frau Schneider" />
+                </label>
+                <label>
+                  Objekt in Quadratmetern *
+                  <input id="site-visit-square-meters" type="number" min="1" step="1" required placeholder="250" />
+                </label>
+
+                <div class="floor-builder span-2">
+                  <div class="floor-builder-header">
+                    <div>
+                      <h4>Etagen</h4>
+                    </div>
+                    <button id="add-site-visit-floor" class="secondary-button" type="button">
+                      <i data-lucide="plus" aria-hidden="true"></i>
+                      Eine Etage öffnen
+                    </button>
+                  </div>
+                  <div id="site-visit-floors" class="floor-list">
+                    <div class="empty-state floor-empty-state">Noch keine Etage geöffnet.</div>
+                  </div>
+                </div>
+
+                <label class="span-2">
+                  Notizen
+                  <textarea id="site-visit-notes" rows="4" placeholder="Besonderheiten, Schlüssel, Zugang, Reinigungszeiten"></textarea>
+                </label>
+                <div class="form-actions span-2">
+                  <button class="primary-button" type="submit">
+                    <i data-lucide="save" aria-hidden="true"></i>
+                    Begehung speichern
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel" aria-labelledby="site-visit-list-heading">
+              <div class="panel-header">
+                <div>
+                  <h4 id="site-visit-list-heading">Gespeicherte Begehungen</h4>
+                  <p class="muted">Vor-Ort-Aufnahmen mit Etagen, Sanitär- und Büroräumen.</p>
+                </div>
+              </div>
+              <div id="site-visit-list" class="record-list"></div>
             </section>
           </div>
         </section>
