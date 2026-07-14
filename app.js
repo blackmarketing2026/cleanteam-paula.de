@@ -1494,6 +1494,18 @@ function handleSiteVisitFloorInput(event) {
   }
 }
 
+function handleDashboardAction(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) {
+    return;
+  }
+
+  if (button.dataset.action === "add-site-visit-floor") {
+    event.preventDefault();
+    addSiteVisitFloor();
+  }
+}
+
 function handleRecordAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) {
@@ -1606,7 +1618,7 @@ function bindEvents() {
   els.customerSearch.addEventListener("input", renderCustomers);
 
   els.siteVisitForm.addEventListener("submit", handleSiteVisitSubmit);
-  els.addSiteVisitFloor.addEventListener("click", () => addSiteVisitFloor());
+  document.addEventListener("click", handleDashboardAction);
   els.siteVisitFloors.addEventListener("click", handleSiteVisitFloorAction);
   els.siteVisitFloors.addEventListener("input", handleSiteVisitFloorInput);
 
