@@ -69,7 +69,7 @@ if ($method === 'POST') {
     $offerId = trim((string) ($body['offerId'] ?? ''));
 
     if ($offerId === '') {
-        json_error('Angebots-ID fehlt.', 422);
+        json_error('Kostenvoranschlags-ID fehlt.', 422);
     }
 
     $offerStmt = $pdo->prepare('SELECT id, customer_id FROM offers WHERE id = :id');
@@ -77,7 +77,7 @@ if ($method === 'POST') {
     $offer = $offerStmt->fetch();
 
     if (!$offer) {
-        json_error('Angebot wurde nicht gefunden.', 404);
+        json_error('Kostenvoranschlag wurde nicht gefunden.', 404);
     }
 
     $existingStmt = $pdo->prepare('SELECT id FROM contracts WHERE offer_id = :offer_id');

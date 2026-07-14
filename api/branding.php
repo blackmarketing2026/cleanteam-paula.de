@@ -32,7 +32,7 @@ function branding_logo_url(?string $filename): ?string
     return base_url() . '/uploads/' . rawurlencode($filename);
 }
 
-// GET ist bewusst oeffentlich (kein require_login), damit die Angebots-/Vertragsseiten fuer
+// GET ist bewusst oeffentlich (kein require_login), damit die Kostenvoranschlags-/Vertragsseiten fuer
 // Kunden dasselbe Logo laden koennen wie das Dashboard.
 if ($method === 'GET') {
     $settings = load_branding_settings($pdo);

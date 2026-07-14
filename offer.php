@@ -10,15 +10,15 @@ $offerId = trim((string) ($_GET['offerId'] ?? ''));
 $token = trim((string) ($_GET['token'] ?? ''));
 
 if ($token !== '') {
-    // Oeffentlicher Zugriff ueber den Angebots-Token, z. B. aus der Angebots-E-Mail oder dem
-    // "Link kopieren"-Button. Derselbe Token, der auch fuer o.php verwendet wird.
+    // Oeffentlicher Zugriff ueber den Kostenvoranschlags-Token, z. B. aus der Kostenvoranschlags-E-Mail
+    // oder dem "Link kopieren"-Button. Derselbe Token, der auch fuer o.php verwendet wird.
     $stmt = $pdo->prepare('SELECT * FROM offers WHERE token = :token');
     $stmt->execute(['token' => $token]);
     $offer = $stmt->fetch();
 
     if (!$offer) {
         http_response_code(404);
-        echo 'Angebot nicht gefunden.';
+        echo 'Kostenvoranschlag nicht gefunden.';
         exit;
     }
 } else {
@@ -29,7 +29,7 @@ if ($token !== '') {
 
     if ($offerId === '') {
         http_response_code(400);
-        echo 'Angebot fehlt.';
+        echo 'Kostenvoranschlag fehlt.';
         exit;
     }
 
@@ -39,7 +39,7 @@ if ($token !== '') {
 
     if (!$offer) {
         http_response_code(404);
-        echo 'Angebot nicht gefunden.';
+        echo 'Kostenvoranschlag nicht gefunden.';
         exit;
     }
 }

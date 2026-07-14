@@ -117,7 +117,7 @@ if ($method === 'DELETE') {
         $stmt->execute(['id' => $id]);
     } catch (PDOException $exception) {
         if ($exception->getCode() === '23000') {
-            json_error('Kunde kann nicht gelöscht werden, solange noch Angebote oder Verträge vorhanden sind.', 409);
+            json_error('Kunde kann nicht gelöscht werden, solange noch Kostenvoranschläge oder Verträge vorhanden sind.', 409);
         }
         throw $exception;
     }

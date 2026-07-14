@@ -122,7 +122,7 @@ const els = {
 const titles = {
   overview: "Übersicht",
   customers: "Kundenverwaltung",
-  offers: "Angebotserstellung",
+  offers: "Kostenvoranschlagserstellung",
   contracts: "Verträge & Signatur",
   mailbox: "Postfach",
   "settings-smtp": "SMTP-Server-Einstellungen",
@@ -385,7 +385,7 @@ function renderMetrics() {
           `;
         })
         .join("")
-    : `<div class="empty-state">Noch keine Angebote vorhanden.</div>`;
+    : `<div class="empty-state">Noch keine Kostenvoranschläge vorhanden.</div>`;
 
   const openContracts = state.data.contracts.filter((contract) => contract.status === "entwurf").length;
   const signedContracts = state.data.contracts.filter((contract) => contract.status === "signiert").length;
@@ -487,7 +487,7 @@ function renderCustomerCard(customer) {
         </button>
         <button class="primary-button" type="button" data-action="offer-for-customer" data-id="${escapeHtml(customer.id)}">
           <i data-lucide="file-plus-2" aria-hidden="true"></i>
-          Angebot
+          Kostenvoranschlag
         </button>
         ${contractButton}
         <button class="ghost-button" type="button" data-action="delete-customer" data-id="${escapeHtml(customer.id)}">
@@ -504,7 +504,7 @@ function renderOffers() {
 
   els.offerList.innerHTML = offers.length
     ? offers.map(renderOfferCard).join("")
-    : `<div class="empty-state">Noch keine Angebote erstellt.</div>`;
+    : `<div class="empty-state">Noch keine Kostenvoranschläge erstellt.</div>`;
 }
 
 function renderOfferCard(offer) {
@@ -554,11 +554,11 @@ function renderOfferCard(offer) {
       <div class="record-actions">
         <a class="secondary-button" href="offer.php?offerId=${encodeURIComponent(offer.id)}" target="_blank" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
-          Angebot Vorschau
+          Kostenvoranschlag Vorschau
         </a>
         <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
-          Angebot senden
+          Kostenvoranschlag senden
         </button>
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="link" aria-hidden="true"></i>
@@ -645,7 +645,7 @@ function renderContractPreview() {
   }
 
   // Zeigt exakt dasselbe serverseitig generierte Vertragsdokument wie der
-  // "Vertragsdokument"-Link bei den Angeboten, statt einer eigenen (und leicht
+  // "Vertragsdokument"-Link bei den Kostenvoranschlägen, statt einer eigenen (und leicht
   // abweichenden) clientseitigen Zusammenfassung.
   els.contractPreview.className = "contract-preview";
   els.printContract.disabled = false;
@@ -741,7 +741,7 @@ async function handleOfferSubmit(event) {
     els.offerStartDate.value = todayAsInputValue();
     updateOfferPreview();
     await loadAll();
-    showToast("Angebot wurde erstellt.");
+    showToast("Kostenvoranschlag wurde erstellt.");
   } catch (error) {
     showToast(error.message);
   }
@@ -751,7 +751,7 @@ async function sendOffer(id) {
   try {
     await apiPost(`api/send-offer.php?id=${encodeURIComponent(id)}`);
     await loadAll();
-    showToast("Angebot wurde per E-Mail versendet.");
+    showToast("Kostenvoranschlag wurde per E-Mail versendet.");
   } catch (error) {
     showToast(error.message);
   }
@@ -820,7 +820,7 @@ async function deleteCustomer(id) {
 }
 
 async function deleteOffer(id) {
-  const confirmed = window.confirm("Angebot löschen? Ein bereits gestarteter Vertrag wird ebenfalls entfernt.");
+  const confirmed = window.confirm("Kostenvoranschlag löschen? Ein bereits gestarteter Vertrag wird ebenfalls entfernt.");
   if (!confirmed) {
     return;
   }
@@ -831,7 +831,7 @@ async function deleteOffer(id) {
       state.selectedContractId = null;
     }
     await loadAll();
-    showToast("Angebot wurde gelöscht.");
+    showToast("Kostenvoranschlag wurde gelöscht.");
   } catch (error) {
     showToast(error.message);
   }

@@ -7,7 +7,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>CleanTeam – Ihr Angebot</title>
+    <title>CleanTeam – Ihr Kostenvoranschlag</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -22,13 +22,13 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         <div class="brand-mark" aria-hidden="true"><span>CT</span></div>
         <div>
           <strong>CleanTeam</strong>
-          <span>Ihr persönliches Angebot</span>
+          <span>Ihr persönlicher Kostenvoranschlag</span>
         </div>
       </header>
 
       <div class="public-card" id="public-card">
         <section id="screen-loading" class="public-screen active-screen">
-          <p class="muted">Angebot wird geladen …</p>
+          <p class="muted">Kostenvoranschlag wird geladen …</p>
         </section>
 
         <section id="screen-error" class="public-screen">
@@ -37,8 +37,8 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </section>
 
         <section id="screen-offer" class="public-screen">
-          <p class="eyebrow">Angebot</p>
-          <h2>Ihr individuelles Reinigungsangebot</h2>
+          <p class="eyebrow">Kostenvoranschlag</p>
+          <h2>Ihr individueller Reinigungs-Kostenvoranschlag</h2>
           <dl id="offer-summary" class="data-check"></dl>
           <p id="offer-validity" class="muted"></p>
           <div class="form-actions">
@@ -51,7 +51,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         <section id="screen-abgelehnt" class="public-screen">
           <h2>Vielen Dank für Ihre Rückmeldung</h2>
           <p class="muted">
-            Bitte kontaktieren Sie CleanTeam, damit wir das Angebot für Sie anpassen können.
+            Bitte kontaktieren Sie CleanTeam, damit wir den Kostenvoranschlag für Sie anpassen können.
             Wir melden uns schnellstmöglich bei Ihnen.
           </p>
         </section>
@@ -118,7 +118,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
           <h2>Vertragsbedingungen</h2>
           <div class="terms-text">
             <p>
-              CleanTeam übernimmt die oben beschriebene Reinigungsleistung gemäß Angebot.
+              CleanTeam übernimmt die oben beschriebene Reinigungsleistung gemäß Kostenvoranschlag.
               Leistungszeiten, Zugang und Objektbesonderheiten werden vor Leistungsbeginn abgestimmt.
             </p>
             <p>

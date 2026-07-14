@@ -11,8 +11,8 @@ $offerId = trim((string) ($_GET['offerId'] ?? ''));
 $token = trim((string) ($_GET['token'] ?? ''));
 
 if ($token !== '') {
-    // Oeffentlicher Zugriff ueber den Angebots-Token (z. B. von der "fertig"-Seite des
-    // Kunden-Vertragswizards). Der Token beweist bereits den Zugriff auf genau dieses Angebot,
+    // Oeffentlicher Zugriff ueber den Kostenvoranschlags-Token (z. B. von der "fertig"-Seite des
+    // Kunden-Vertragswizards). Der Token beweist bereits den Zugriff auf genau diesen Kostenvoranschlag,
     // dieselbe Berechtigung wie api/public.php verwendet, daher keine zusaetzliche Admin-Session
     // noetig.
     $stmt = $pdo->prepare('SELECT * FROM offers WHERE token = :token');
@@ -21,7 +21,7 @@ if ($token !== '') {
 
     if (!$offer) {
         http_response_code(404);
-        echo 'Angebot nicht gefunden.';
+        echo 'Kostenvoranschlag nicht gefunden.';
         exit;
     }
 
@@ -58,7 +58,7 @@ if ($token !== '') {
 
     if ($offerId === '') {
         http_response_code(400);
-        echo 'Angebot fehlt.';
+        echo 'Kostenvoranschlag fehlt.';
         exit;
     }
 
@@ -68,7 +68,7 @@ if ($token !== '') {
 
     if (!$offer) {
         http_response_code(404);
-        echo 'Angebot nicht gefunden.';
+        echo 'Kostenvoranschlag nicht gefunden.';
         exit;
     }
 

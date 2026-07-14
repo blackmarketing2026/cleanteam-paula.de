@@ -12,7 +12,7 @@ require_method('POST');
 $pdo = db();
 $offerId = (string) ($_GET['id'] ?? '');
 if ($offerId === '') {
-    json_error('Angebots-ID fehlt.', 422);
+    json_error('Kostenvoranschlags-ID fehlt.', 422);
 }
 
 $stmt = $pdo->prepare(
@@ -23,7 +23,7 @@ $stmt->execute(['id' => $offerId]);
 $offer = $stmt->fetch();
 
 if (!$offer) {
-    json_error('Angebot wurde nicht gefunden.', 404);
+    json_error('Kostenvoranschlag wurde nicht gefunden.', 404);
 }
 
 $settingsStmt = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1');
@@ -39,8 +39,8 @@ $contactName = $offer['c_salutation'] . ' ' . $offer['c_contact_last_name'];
 
 $body = '<div style="font-family: Arial, sans-serif; color: #1c2733; line-height: 1.5;">'
     . '<p>Guten Tag ' . htmlspecialchars($contactName, ENT_QUOTES, 'UTF-8') . ',</p>'
-    . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individuelles Angebot steht ab sofort online bereit:</p>'
-    . '<p><a href="' . htmlspecialchars($publicUrl, ENT_QUOTES, 'UTF-8') . '" style="display:inline-block;padding:12px 20px;background:#1a6de0;color:#ffffff;text-decoration:none;border-radius:6px;">Angebot ansehen</a></p>'
+    . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individueller Kostenvoranschlag steht ab sofort online bereit:</p>'
+    . '<p><a href="' . htmlspecialchars($publicUrl, ENT_QUOTES, 'UTF-8') . '" style="display:inline-block;padding:12px 20px;background:#1a6de0;color:#ffffff;text-decoration:none;border-radius:6px;">Kostenvoranschlag ansehen</a></p>'
     . '<p>Der Link ist bis zum ' . $validUntil . ' gültig.</p>'
     . '<p>Mit freundlichen Grüßen<br>Ihr CleanTeam</p>'
     . '</div>';
@@ -59,7 +59,7 @@ try {
         $settings['from_name'],
         $offer['c_email'],
         $offer['c_name'],
-        'Ihr Angebot von CleanTeam',
+        'Ihr Kostenvoranschlag von CleanTeam',
         $body,
         true
     );

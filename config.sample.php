@@ -17,6 +17,6 @@ return [
     'app_key' => 'BITTE_ZUFAELLIGEN_64-STELLIGEN_HEX_SCHLUESSEL_EINTRAGEN',
 
     // Basis-URL der Installation ohne abschliessenden Slash, wird fuer die
-    // Angebots-Links in den E-Mails an Kunden verwendet.
+    // Kostenvoranschlags-Links in den E-Mails an Kunden verwendet.
     'base_url' => 'https://www.example.de/salemanager',
 ];

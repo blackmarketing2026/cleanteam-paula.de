@@ -101,7 +101,7 @@ if ($method === 'POST') {
 if ($method === 'DELETE') {
     $id = (string) ($_GET['id'] ?? '');
     if ($id === '') {
-        json_error('Angebots-ID fehlt.', 422);
+        json_error('Kostenvoranschlags-ID fehlt.', 422);
     }
 
     $stmt = $pdo->prepare('DELETE FROM offers WHERE id = :id');

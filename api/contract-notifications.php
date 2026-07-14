@@ -28,7 +28,7 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
 
     $contractRow = $pdo->query('SELECT id FROM contracts ORDER BY created_at DESC LIMIT 1')->fetch();
     if (!$contractRow) {
-        json_error('Es existiert noch kein Vertrag zum Testen. Bitte zuerst ein Angebot mit Vertrag anlegen.', 422);
+        json_error('Es existiert noch kein Vertrag zum Testen. Bitte zuerst einen Kostenvoranschlag mit Vertrag anlegen.', 422);
     }
 
     $context = load_contract_context($pdo, $contractRow['id']);

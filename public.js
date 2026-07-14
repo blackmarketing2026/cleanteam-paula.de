@@ -106,7 +106,7 @@ function renderOfferSummary() {
     ["Intervall", offer.interval],
     ["Geschätzter Nettowert", formatCurrency(offer.price)],
   ]);
-  els.offerValidity.textContent = `Dieses Angebot ist gültig bis ${formatDate(offer.expiresAt)}.`;
+  els.offerValidity.textContent = `Dieser Kostenvoranschlag ist gültig bis ${formatDate(offer.expiresAt)}.`;
 }
 
 function renderDataCheck() {
@@ -162,7 +162,7 @@ function routeToState(data) {
   state.contract = data.contract;
 
   if (data.offer.expired) {
-    els.errorMessage.textContent = "Dieses Angebot ist leider abgelaufen. Bitte kontaktieren Sie CleanTeam für ein neues Angebot.";
+    els.errorMessage.textContent = "Dieser Kostenvoranschlag ist leider abgelaufen. Bitte kontaktieren Sie CleanTeam für einen neuen Kostenvoranschlag.";
     showScreen("error");
     return;
   }
@@ -360,7 +360,7 @@ async function loadBranding() {
 
 function init() {
   if (!token) {
-    els.errorMessage.textContent = "Dieser Link enthält kein gültiges Angebot.";
+    els.errorMessage.textContent = "Dieser Link enthält keinen gültigen Kostenvoranschlag.";
     showScreen("error");
     return;
   }

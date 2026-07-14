@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS offers (
   PRIMARY KEY (id),
   UNIQUE KEY uniq_offers_token (token),
   KEY idx_offers_customer (customer_id),
-  -- Bewusst kein ON DELETE CASCADE: ein Kunde mit bestehenden Angeboten/Vertraegen
+  -- Bewusst kein ON DELETE CASCADE: ein Kunde mit bestehenden Kostenvoranschlaegen/Vertraegen
   -- darf nicht geloescht werden, damit Vertragshistorie nicht verloren geht.
   CONSTRAINT fk_offers_customer FOREIGN KEY (customer_id) REFERENCES customers (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
