@@ -341,10 +341,20 @@
                 Ansprechpartner vor Ort *
                 <input id="site-visit-onsite-contact" type="text" required placeholder="z. B. Frau Schneider" />
               </label>
-              <label>
-                Objekt in Quadratmetern *
-                <input id="site-visit-square-meters" type="number" min="1" step="1" required placeholder="250" />
-              </label>
+              <div class="counter-control">
+                <span class="counter-label">Objekt in Quadratmetern *</span>
+                <div class="counter-stepper">
+                  <button class="icon-button" type="button" data-action="counter-decrement" data-counter-target="siteVisitSquareMeters" aria-label="Objektgröße verringern">
+                    <i data-lucide="minus" aria-hidden="true"></i>
+                  </button>
+                  <strong data-counter-value="siteVisitSquareMeters">0</strong>
+                  <span class="counter-suffix">m²</span>
+                  <button class="icon-button" type="button" data-action="counter-increment" data-counter-target="siteVisitSquareMeters" aria-label="Objektgröße erhöhen">
+                    <i data-lucide="plus" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <input id="site-visit-square-meters" type="hidden" value="0" data-counter-input="siteVisitSquareMeters" data-min="0" data-step="10" />
+              </div>
 
               <div class="floor-builder span-2">
                 <div class="floor-builder-header">
@@ -807,6 +817,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=customers-menu-20260714-1"></script>
+    <script src="app.js?v=visit-steppers-20260714-1"></script>
   </body>
 </html>

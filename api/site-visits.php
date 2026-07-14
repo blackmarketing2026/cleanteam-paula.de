@@ -37,8 +37,16 @@ function normalize_visit_floor(array $floor, int $index): array
 {
     $cleaning = trim((string) ($floor['cleaningType'] ?? ''));
     $condition = trim((string) ($floor['floorCondition'] ?? ''));
+    $areaNotes = trim((string) ($floor['areaNotes'] ?? ($floor['notes'] ?? '')));
 
-    $allowedCleaning = ['Gesaugt', 'Gewischt', 'Gesaugt und gewischt'];
+    if ($cleaning === 'Gesaugt') {
+        $cleaning = 'Nur gesaugt';
+    }
+    if ($cleaning === 'Gewischt') {
+        $cleaning = 'Nur gewischt';
+    }
+
+    $allowedCleaning = ['Gesaugt und gewischt', 'Nur gesaugt', 'Nur gewischt', 'Gesaugt', 'Gewischt'];
     $allowedConditions = ['Teppich', 'Fliesen', 'Laminat', 'Parkett', 'Anderer Boden'];
 
     return [
@@ -50,9 +58,12 @@ function normalize_visit_floor(array $floor, int $index): array
         'officeRooms' => visit_int($floor['officeRooms'] ?? 0),
         'desks' => visit_int($floor['desks'] ?? 0),
         'windows' => visit_int($floor['windows'] ?? 0),
-        'cleaningType' => in_array($cleaning, $allowedCleaning, true) ? $cleaning : 'Gesaugt',
+        'cleaningType' => in_array($cleaning, $allowedCleaning, true) ? $cleaning : 'Gesaugt und gewischt',
         'floorCondition' => in_array($condition, $allowedConditions, true) ? $condition : 'Teppich',
-        'notes' => trim((string) ($floor['notes'] ?? '')),
+        'areaName' => trim((string) ($floor['areaName'] ?? '')),
+        'extraAgreements' => trim((string) ($floor['extraAgreements'] ?? '')),
+        'areaNotes' => $areaNotes,
+        'notes' => $areaNotes,
     ];
 }
 

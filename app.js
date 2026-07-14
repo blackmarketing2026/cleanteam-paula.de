@@ -545,6 +545,47 @@ function optionSelected(value, currentValue) {
   return value === currentValue ? " selected" : "";
 }
 
+function numericValue(value) {
+  return Math.max(0, Number(value) || 0);
+}
+
+function normalizeCleaningType(value) {
+  if (value === "Gesaugt") {
+    return "Nur gesaugt";
+  }
+  if (value === "Gewischt") {
+    return "Nur gewischt";
+  }
+  return value || "Gesaugt und gewischt";
+}
+
+function counterMarkup(name, label, value, options = {}) {
+  const min = Number(options.min ?? 0);
+  const step = Number(options.step ?? 1);
+  const suffix = `<span class="counter-suffix">${options.suffix ? escapeHtml(options.suffix) : ""}</span>`;
+  const className = options.className ? ` ${options.className}` : "";
+  const safeName = escapeHtml(name);
+  const safeLabel = escapeHtml(label);
+  const currentValue = numericValue(value);
+
+  return `
+    <div class="counter-control${className}">
+      <span class="counter-label">${safeLabel}</span>
+      <div class="counter-stepper">
+        <button class="icon-button" type="button" data-action="counter-decrement" data-counter-target="${safeName}" aria-label="${safeLabel} verringern">
+          <i data-lucide="minus" aria-hidden="true"></i>
+        </button>
+        <strong data-counter-value="${safeName}">${currentValue}</strong>
+        ${suffix}
+        <button class="icon-button" type="button" data-action="counter-increment" data-counter-target="${safeName}" aria-label="${safeLabel} erhöhen">
+          <i data-lucide="plus" aria-hidden="true"></i>
+        </button>
+      </div>
+      <input name="${safeName}" type="hidden" value="${currentValue}" data-counter-input="${safeName}" data-min="${min}" data-step="${step}" />
+    </div>
+  `;
+}
+
 function ensureSiteVisitFloorEmptyState() {
   if (els.siteVisitFloors.querySelector(".floor-section")) {
     return;
@@ -558,6 +599,60 @@ function renumberSiteVisitFloors() {
     const name = section.querySelector('[name="floorName"]').value.trim();
     section.querySelector("legend").textContent = name || `Etage ${index + 1}`;
   });
+}
+
+function syncFloorConditionalSections(section) {
+  const value = (name) => Number(section.querySelector(`[name="${name}"]`)?.value) || 0;
+  const sanitaryDetails = section.querySelector('[data-conditional-section="sanitary"]');
+  const officeDetails = section.querySelector('[data-conditional-section="office"]');
+
+  if (sanitaryDetails) {
+    sanitaryDetails.hidden = value("sanitaryRooms") <= 0;
+  }
+
+  if (officeDetails) {
+    officeDetails.hidden = value("officeRooms") <= 0;
+  }
+}
+
+function findCounterInput(button) {
+  const target = button.dataset.counterTarget;
+  const control = button.closest(".counter-control");
+  return (
+    control?.querySelector(`[data-counter-input="${target}"]`) ||
+    document.querySelector(`[data-counter-input="${target}"]`)
+  );
+}
+
+function updateCounterControl(input, value) {
+  if (!input) {
+    return;
+  }
+
+  const min = Number(input.dataset.min ?? 0);
+  const nextValue = Math.max(min, numericValue(value));
+  input.value = String(nextValue);
+
+  const control = input.closest(".counter-control");
+  const display = control?.querySelector(`[data-counter-value="${input.dataset.counterInput}"]`);
+  if (display) {
+    display.textContent = String(nextValue);
+  }
+
+  const floorSection = input.closest(".floor-section");
+  if (floorSection) {
+    syncFloorConditionalSections(floorSection);
+  }
+}
+
+function changeCounter(button, direction) {
+  const input = findCounterInput(button);
+  if (!input) {
+    return;
+  }
+
+  const step = Number(input.dataset.step ?? 1) || 1;
+  updateCounterControl(input, (Number(input.value) || 0) + direction * step);
 }
 
 function addSiteVisitFloor(values = {}) {
@@ -575,9 +670,11 @@ function addSiteVisitFloor(values = {}) {
     officeRooms: Number(values.officeRooms) || 0,
     desks: Number(values.desks) || 0,
     windows: Number(values.windows) || 0,
-    cleaningType: values.cleaningType || "Gesaugt",
+    cleaningType: normalizeCleaningType(values.cleaningType),
     floorCondition: values.floorCondition || "Teppich",
-    notes: values.notes || "",
+    areaName: values.areaName || "",
+    extraAgreements: values.extraAgreements || "",
+    areaNotes: values.areaNotes || values.notes || "",
   };
 
   const section = document.createElement("fieldset");
@@ -595,61 +692,52 @@ function addSiteVisitFloor(values = {}) {
         Etagenname
         <input name="floorName" type="text" placeholder="z. B. Erdgeschoss, 1. OG" value="${escapeHtml(floor.name)}" />
       </label>
+      ${counterMarkup("sanitaryRooms", "Sanitärräume", floor.sanitaryRooms)}
+      <div class="conditional-fields span-2" data-conditional-section="sanitary" hidden>
+        ${counterMarkup("sinks", "Anzahl der Waschbecken", floor.sinks)}
+        ${counterMarkup("mirrors", "Anzahl der Spiegel", floor.mirrors)}
+        ${counterMarkup("toilets", "Anzahl der Toiletten", floor.toilets)}
+      </div>
+      ${counterMarkup("officeRooms", "Büro-Räume", floor.officeRooms)}
+      <div class="conditional-fields span-2" data-conditional-section="office" hidden>
+        ${counterMarkup("desks", "Anzahl der Schreibtische", floor.desks)}
+        ${counterMarkup("windows", "Anzahl der Fenster", floor.windows)}
+        <label>
+          Bodenart
+          <select name="floorCondition">
+            <option value="Teppich"${optionSelected("Teppich", floor.floorCondition)}>Teppich</option>
+            <option value="Laminat"${optionSelected("Laminat", floor.floorCondition)}>Laminat</option>
+            <option value="Parkett"${optionSelected("Parkett", floor.floorCondition)}>Parkett</option>
+            <option value="Fliesen"${optionSelected("Fliesen", floor.floorCondition)}>Fliesen</option>
+          </select>
+        </label>
+        <label>
+          Wie soll der Boden behandelt werden?
+          <select name="cleaningType">
+            <option value="Gesaugt und gewischt"${optionSelected("Gesaugt und gewischt", floor.cleaningType)}>Gesaugt und gewischt</option>
+            <option value="Nur gesaugt"${optionSelected("Nur gesaugt", floor.cleaningType)}>Nur gesaugt</option>
+            <option value="Nur gewischt"${optionSelected("Nur gewischt", floor.cleaningType)}>Nur gewischt</option>
+          </select>
+        </label>
+      </div>
       <label>
-        Sanitärräume
-        <input name="sanitaryRooms" type="number" min="0" step="1" value="${floor.sanitaryRooms}" />
-      </label>
-      <label>
-        Waschbecken
-        <input name="sinks" type="number" min="0" step="1" value="${floor.sinks}" />
-      </label>
-      <label>
-        Spiegel
-        <input name="mirrors" type="number" min="0" step="1" value="${floor.mirrors}" />
-      </label>
-      <label>
-        Toiletten
-        <input name="toilets" type="number" min="0" step="1" value="${floor.toilets}" />
-      </label>
-      <label>
-        Büro-Räume
-        <input name="officeRooms" type="number" min="0" step="1" value="${floor.officeRooms}" />
-      </label>
-      <label>
-        Schreibtische
-        <input name="desks" type="number" min="0" step="1" value="${floor.desks}" />
-      </label>
-      <label>
-        Fenster
-        <input name="windows" type="number" min="0" step="1" value="${floor.windows}" />
-      </label>
-      <label>
-        Bodenreinigung
-        <select name="cleaningType">
-          <option value="Gesaugt"${optionSelected("Gesaugt", floor.cleaningType)}>Gesaugt</option>
-          <option value="Gewischt"${optionSelected("Gewischt", floor.cleaningType)}>Gewischt</option>
-          <option value="Gesaugt und gewischt"${optionSelected("Gesaugt und gewischt", floor.cleaningType)}>Gesaugt und gewischt</option>
-        </select>
-      </label>
-      <label>
-        Bodenbelag / Zustand
-        <select name="floorCondition">
-          <option value="Teppich"${optionSelected("Teppich", floor.floorCondition)}>Teppich</option>
-          <option value="Fliesen"${optionSelected("Fliesen", floor.floorCondition)}>Fliesen</option>
-          <option value="Laminat"${optionSelected("Laminat", floor.floorCondition)}>Laminat</option>
-          <option value="Parkett"${optionSelected("Parkett", floor.floorCondition)}>Parkett</option>
-          <option value="Anderer Boden"${optionSelected("Anderer Boden", floor.floorCondition)}>Anderer Boden</option>
-        </select>
+        Bereich
+        <input name="areaName" type="text" placeholder="z. B. Empfang, Flur, Küche" value="${escapeHtml(floor.areaName)}" />
       </label>
       <label class="span-2">
-        Notizen zur Etage
-        <textarea name="floorNotes" rows="3" placeholder="Besonderheiten je Etage">${escapeHtml(floor.notes)}</textarea>
+        Extra Vereinbarungen
+        <textarea name="extraAgreements" rows="3" placeholder="Besondere Absprachen für diesen Bereich">${escapeHtml(floor.extraAgreements)}</textarea>
+      </label>
+      <label class="span-2">
+        Notiz zu dem Bereich
+        <textarea name="areaNotes" rows="3" placeholder="Notizen zu diesem Bereich">${escapeHtml(floor.areaNotes)}</textarea>
       </label>
     </div>
   `;
 
   els.siteVisitFloors.appendChild(section);
   renumberSiteVisitFloors();
+  syncFloorConditionalSections(section);
   refreshIcons();
   section.querySelector('[name="floorName"]').focus();
 }
@@ -657,24 +745,31 @@ function addSiteVisitFloor(values = {}) {
 function collectSiteVisitFloors() {
   return [...els.siteVisitFloors.querySelectorAll(".floor-section")].map((section, index) => {
     const field = (name) => section.querySelector(`[name="${name}"]`);
+    const counter = (name) => Number(field(name)?.value) || 0;
+    const sanitaryRooms = counter("sanitaryRooms");
+    const officeRooms = counter("officeRooms");
     return {
       name: field("floorName").value.trim() || `Etage ${index + 1}`,
-      sanitaryRooms: Number(field("sanitaryRooms").value) || 0,
-      sinks: Number(field("sinks").value) || 0,
-      mirrors: Number(field("mirrors").value) || 0,
-      toilets: Number(field("toilets").value) || 0,
-      officeRooms: Number(field("officeRooms").value) || 0,
-      desks: Number(field("desks").value) || 0,
-      windows: Number(field("windows").value) || 0,
-      cleaningType: field("cleaningType").value,
-      floorCondition: field("floorCondition").value,
-      notes: field("floorNotes").value.trim(),
+      sanitaryRooms,
+      sinks: sanitaryRooms > 0 ? counter("sinks") : 0,
+      mirrors: sanitaryRooms > 0 ? counter("mirrors") : 0,
+      toilets: sanitaryRooms > 0 ? counter("toilets") : 0,
+      officeRooms,
+      desks: officeRooms > 0 ? counter("desks") : 0,
+      windows: officeRooms > 0 ? counter("windows") : 0,
+      cleaningType: field("cleaningType")?.value || "Gesaugt und gewischt",
+      floorCondition: field("floorCondition")?.value || "Teppich",
+      areaName: field("areaName").value.trim(),
+      extraAgreements: field("extraAgreements").value.trim(),
+      areaNotes: field("areaNotes").value.trim(),
+      notes: field("areaNotes").value.trim(),
     };
   });
 }
 
 function resetSiteVisitForm() {
   els.siteVisitForm.reset();
+  updateCounterControl(document.querySelector("#site-visit-square-meters"), 0);
   els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage geöffnet.</div>`;
   refreshIcons();
 }
@@ -739,15 +834,31 @@ function renderSiteVisitCard(visit) {
 
 function renderSiteVisitFloorSummary(floor, index) {
   const title = floor.name || `Etage ${index + 1}`;
-  const notes = floor.notes ? `<span>${escapeHtml(floor.notes)}</span>` : "";
+  const areaName = floor.areaName ? `<span>Bereich: ${escapeHtml(floor.areaName)}</span>` : "";
+  const extraAgreements = floor.extraAgreements
+    ? `<span>Extra Vereinbarungen: ${escapeHtml(floor.extraAgreements)}</span>`
+    : "";
+  const areaNotes = floor.areaNotes || floor.notes;
+  const notes = areaNotes ? `<span>Notiz: ${escapeHtml(areaNotes)}</span>` : "";
+  const sanitaryLine = Number(floor.sanitaryRooms) > 0
+    ? `<span>Sanitär: ${Number(floor.sanitaryRooms) || 0} Räume, ${Number(floor.sinks) || 0} Waschbecken, ${Number(floor.mirrors) || 0} Spiegel, ${Number(floor.toilets) || 0} Toiletten</span>`
+    : "";
+  const officeLine = Number(floor.officeRooms) > 0
+    ? `<span>Büro: ${Number(floor.officeRooms) || 0} Räume, ${Number(floor.desks) || 0} Schreibtische, ${Number(floor.windows) || 0} Fenster</span>`
+    : "";
+  const floorLine = Number(floor.officeRooms) > 0
+    ? `<span>Boden: ${escapeHtml(normalizeCleaningType(floor.cleaningType))} · ${escapeHtml(floor.floorCondition || "Teppich")}</span>`
+    : "";
 
   return `
     <article class="floor-summary-item">
       <strong>${escapeHtml(title)}</strong>
       <div class="record-lines">
-        <span>Sanitär: ${Number(floor.sanitaryRooms) || 0} Räume, ${Number(floor.sinks) || 0} Waschbecken, ${Number(floor.mirrors) || 0} Spiegel, ${Number(floor.toilets) || 0} Toiletten</span>
-        <span>Büro: ${Number(floor.officeRooms) || 0} Räume, ${Number(floor.desks) || 0} Schreibtische, ${Number(floor.windows) || 0} Fenster</span>
-        <span>Boden: ${escapeHtml(floor.cleaningType || "Gesaugt")} · ${escapeHtml(floor.floorCondition || "Teppich")}</span>
+        ${areaName}
+        ${sanitaryLine}
+        ${officeLine}
+        ${floorLine}
+        ${extraAgreements}
         ${notes}
       </div>
     </article>
@@ -758,12 +869,21 @@ function siteVisitOfferNotes(visit) {
   const floors = Array.isArray(visit.floors) ? visit.floors : [];
   const floorLines = floors.map((floor, index) => {
     const title = floor.name || `Etage ${index + 1}`;
+    const areaNotes = floor.areaNotes || floor.notes;
     return [
       `- ${title}`,
-      `  Sanitär: ${Number(floor.sanitaryRooms) || 0} Räume, ${Number(floor.sinks) || 0} Waschbecken, ${Number(floor.mirrors) || 0} Spiegel, ${Number(floor.toilets) || 0} Toiletten`,
-      `  Büro: ${Number(floor.officeRooms) || 0} Räume, ${Number(floor.desks) || 0} Schreibtische, ${Number(floor.windows) || 0} Fenster`,
-      `  Boden: ${floor.cleaningType || "Gesaugt"} · ${floor.floorCondition || "Teppich"}`,
-      floor.notes ? `  Notiz: ${floor.notes}` : "",
+      floor.areaName ? `  Bereich: ${floor.areaName}` : "",
+      Number(floor.sanitaryRooms) > 0
+        ? `  Sanitär: ${Number(floor.sanitaryRooms) || 0} Räume, ${Number(floor.sinks) || 0} Waschbecken, ${Number(floor.mirrors) || 0} Spiegel, ${Number(floor.toilets) || 0} Toiletten`
+        : "",
+      Number(floor.officeRooms) > 0
+        ? `  Büro: ${Number(floor.officeRooms) || 0} Räume, ${Number(floor.desks) || 0} Schreibtische, ${Number(floor.windows) || 0} Fenster`
+        : "",
+      Number(floor.officeRooms) > 0
+        ? `  Boden: ${normalizeCleaningType(floor.cleaningType)} · ${floor.floorCondition || "Teppich"}`
+        : "",
+      floor.extraAgreements ? `  Extra Vereinbarungen: ${floor.extraAgreements}` : "",
+      areaNotes ? `  Notiz zum Bereich: ${areaNotes}` : "",
     ]
       .filter(Boolean)
       .join("\n");
@@ -1134,13 +1254,19 @@ async function handleSiteVisitSubmit(event) {
     return;
   }
 
+  const squareMeters = Number(document.querySelector("#site-visit-square-meters").value);
+  if (squareMeters <= 0) {
+    showToast("Bitte die Objektgröße in Quadratmetern angeben.");
+    return;
+  }
+
   const payload = {
     customerName: document.querySelector("#site-visit-customer-name").value.trim(),
     email: document.querySelector("#site-visit-email").value.trim(),
     phone: document.querySelector("#site-visit-phone").value.trim(),
     address: document.querySelector("#site-visit-address").value.trim(),
     onsiteContact: document.querySelector("#site-visit-onsite-contact").value.trim(),
-    squareMeters: Number(document.querySelector("#site-visit-square-meters").value),
+    squareMeters,
     floors,
     notes: document.querySelector("#site-visit-notes").value.trim(),
   };
@@ -1690,6 +1816,16 @@ function handleDashboardAction(event) {
   if (button.dataset.action === "add-site-visit-floor") {
     event.preventDefault();
     addSiteVisitFloor();
+  }
+
+  if (button.dataset.action === "counter-decrement") {
+    event.preventDefault();
+    changeCounter(button, -1);
+  }
+
+  if (button.dataset.action === "counter-increment") {
+    event.preventDefault();
+    changeCounter(button, 1);
   }
 }
 
