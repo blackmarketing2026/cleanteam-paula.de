@@ -1042,6 +1042,25 @@ function ensureFloorRoomEmptyState(floorSection) {
   roomList.innerHTML = `<div class="empty-state room-empty-state">Noch kein Raum hinzugefügt.</div>`;
 }
 
+function addSiteVisitRoomFromToolbar(floorSection) {
+  const roomNameInput = floorSection.querySelector('[name="newRoomName"]');
+  const roomName = roomNameInput?.value.trim() || "";
+
+  if (!roomName) {
+    showToast("Bitte zuerst den Raumnamen eintragen.");
+    roomNameInput?.focus();
+    return;
+  }
+
+  floorSection.querySelectorAll(".room-section").forEach((roomSection) => {
+    setRoomSectionCollapsed(roomSection, true);
+  });
+
+  const roomSection = addSiteVisitRoom(floorSection, { name: roomName }, { focus: false });
+  roomNameInput.value = "";
+  roomSection.querySelector('[name="roomType"]')?.focus();
+}
+
 function findCounterInput(button) {
   const target = button.dataset.counterTarget;
   const control = button.closest(".counter-control");
@@ -1109,12 +1128,18 @@ function addSiteVisitFloor(values = {}) {
         <input name="floorName" type="text" placeholder="z. B. Erdgeschoss, 1. OG" value="${escapeHtml(floor.name)}" />
       </label>
       <div class="room-builder span-2">
-        <div class="floor-section-toolbar">
+        <div class="floor-section-toolbar room-add-toolbar">
           <strong>Räume</strong>
-          <button class="secondary-button" type="button" data-action="add-site-visit-room">
-            <i data-lucide="plus" aria-hidden="true"></i>
-            Raum hinzufügen
-          </button>
+          <div class="room-add-controls">
+            <label class="room-add-name">
+              Neuer Raum
+              <input name="newRoomName" type="text" placeholder="z. B. Empfang, WC Damen, Konferenzraum" />
+            </label>
+            <button class="secondary-button" type="button" data-action="add-site-visit-room">
+              <i data-lucide="plus" aria-hidden="true"></i>
+              Raum hinzufügen
+            </button>
+          </div>
         </div>
         <div class="room-list"></div>
       </div>
@@ -1122,8 +1147,11 @@ function addSiteVisitFloor(values = {}) {
   `;
 
   els.siteVisitFloors.appendChild(section);
-  const rooms = floor.rooms.length ? floor.rooms : [{}];
-  rooms.forEach((room) => addSiteVisitRoom(section, room, { focus: false }));
+  if (floor.rooms.length) {
+    floor.rooms.forEach((room) => addSiteVisitRoom(section, room, { focus: false }));
+  } else {
+    ensureFloorRoomEmptyState(section);
+  }
   renumberSiteVisitFloors();
   refreshIcons();
   section.querySelector('[name="floorName"]').focus();
@@ -1280,7 +1308,7 @@ function addSiteVisitRoom(floorSection, values = {}, options = {}) {
     <div class="form-grid room-section-body">
       <label>
         Raumname
-        <input name="roomName" type="text" placeholder="z. B. Büro 1, WC Damen, Flur" value="${escapeHtml(room.name)}" />
+        <input name="roomName" type="text" placeholder="z. B. Empfang, WC Damen, Konferenzraum" value="${escapeHtml(room.name)}" />
       </label>
       <label>
         Raumart
@@ -1323,6 +1351,8 @@ function addSiteVisitRoom(floorSection, values = {}, options = {}) {
   if (options.focus !== false) {
     section.querySelector('[name="roomName"]').focus();
   }
+
+  return section;
 }
 
 function collectSiteVisitFloors() {
@@ -2713,10 +2743,7 @@ function handleSiteVisitFloorAction(event) {
   if (addRoomButton) {
     event.preventDefault();
     const floorSection = addRoomButton.closest(".floor-section");
-    floorSection.querySelectorAll(".room-section").forEach((roomSection) => {
-      setRoomSectionCollapsed(roomSection, true);
-    });
-    addSiteVisitRoom(floorSection);
+    addSiteVisitRoomFromToolbar(floorSection);
     return;
   }
 
@@ -2771,6 +2798,18 @@ function handleSiteVisitFloorInput(event) {
     if (roomSection) {
       syncCleaningTaskSections(roomSection);
     }
+  }
+}
+
+function handleSiteVisitFloorKeydown(event) {
+  if (event.key !== "Enter" || !event.target.matches('[name="newRoomName"]')) {
+    return;
+  }
+
+  event.preventDefault();
+  const floorSection = event.target.closest(".floor-section");
+  if (floorSection) {
+    addSiteVisitRoomFromToolbar(floorSection);
   }
 }
 
@@ -2942,6 +2981,7 @@ function bindEvents() {
   els.siteVisitFloors.addEventListener("click", handleSiteVisitFloorAction);
   els.siteVisitFloors.addEventListener("input", handleSiteVisitFloorInput);
   els.siteVisitFloors.addEventListener("change", handleSiteVisitFloorInput);
+  els.siteVisitFloors.addEventListener("keydown", handleSiteVisitFloorKeydown);
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
   els.offerSiteVisit.addEventListener("change", handleOfferSiteVisitChange);

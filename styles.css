@@ -1029,6 +1029,31 @@ button.compact-item.selected {
   gap: 12px;
 }
 
+.room-add-toolbar {
+  align-items: flex-end;
+}
+
+.room-add-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.room-add-name {
+  min-width: 260px;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.room-add-name input {
+  min-height: 38px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
 .room-section {
   min-width: 0;
   margin: 0;
@@ -1631,6 +1656,12 @@ button.compact-item.selected {
   .room-section-header {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .room-add-controls,
+  .room-add-name,
+  .room-add-controls .secondary-button {
+    width: 100%;
   }
 
   .span-2 {
