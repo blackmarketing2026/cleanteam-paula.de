@@ -716,14 +716,42 @@ function renderCustomers() {
     })
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
 
+  const customersWithContract = customers.filter((customer) => getLatestContractForCustomer(customer.id));
+  const newCustomers = customers.filter((customer) => !getLatestContractForCustomer(customer.id));
+
   els.customerList.innerHTML = customers.length
-    ? customers.map(renderCustomerCard).join("")
+    ? `
+        ${renderCustomerSection("Kunden, die neu erstellt worden sind", newCustomers, "Keine neuen Kunden gefunden.")}
+        ${renderCustomerSection("Kunden, die einen Vertrag haben", customersWithContract, "Keine Kunden mit Vertrag gefunden.")}
+      `
     : `<div class="empty-state">Keine Kunden gefunden.</div>`;
+}
+
+function renderCustomerSection(title, customers, emptyText) {
+  return `
+    <section class="customer-list-section" aria-label="${escapeHtml(title)}">
+      <div class="customer-list-section-header">
+        <h5>${escapeHtml(title)}</h5>
+        <span class="badge">${customers.length}</span>
+      </div>
+      <div class="record-list">
+        ${customers.length ? customers.map(renderCustomerCard).join("") : `<div class="empty-state">${escapeHtml(emptyText)}</div>`}
+      </div>
+    </section>
+  `;
 }
 
 function renderCustomerCard(customer) {
   const contract = getLatestContractForCustomer(customer.id);
   const contractBadge = contract ? `<span class="badge success">Vertrag vorhanden</span>` : "";
+  const offerButton = contract
+    ? ""
+    : `
+        <button class="primary-button" type="button" data-action="offer-for-customer" data-id="${escapeHtml(customer.id)}">
+          <i data-lucide="file-plus-2" aria-hidden="true"></i>
+          Kostenvoranschlag
+        </button>
+      `;
   const contractButton = contract
     ? `
       <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
@@ -756,10 +784,7 @@ function renderCustomerCard(customer) {
           <i data-lucide="pencil" aria-hidden="true"></i>
           Bearbeiten
         </button>
-        <button class="primary-button" type="button" data-action="offer-for-customer" data-id="${escapeHtml(customer.id)}">
-          <i data-lucide="file-plus-2" aria-hidden="true"></i>
-          Kostenvoranschlag
-        </button>
+        ${offerButton}
         ${contractButton}
         <button class="ghost-button" type="button" data-action="delete-customer" data-id="${escapeHtml(customer.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
