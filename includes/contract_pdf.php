@@ -833,8 +833,8 @@ function render_site_visit_pdf(array $siteVisit, array $offer, array $customer, 
     $pdf->label('Begehung zum Vertrag ' . $contractNumber);
     $pdf->meta('Erfasst am: ' . $createdAt . ' | Kostenvoranschlag: ' . contract_format_date($offer['created_at'] ?? null));
 
-    $pdf->heading('Kundendaten');
-    $pdf->keyValue('Kunde', $customerName);
+    $pdf->heading('Firmendaten');
+    $pdf->keyValue('Firma', $customerName);
     $pdf->keyValue('Telefon', (string) ($siteVisit['phone'] ?? ''));
     $pdf->keyValue('E-Mail', (string) ($siteVisit['email'] ?? ''));
     $pdf->keyValue('Adresse', (string) ($siteVisit['address'] ?? ''));

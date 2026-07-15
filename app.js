@@ -595,6 +595,10 @@ function clearOfferSiteVisitFields() {
   updateOfferPreview();
 }
 
+function siteVisitCompanyName(visit) {
+  return String(visit.companyName || visit.customerName || "").trim();
+}
+
 function renderOfferSiteVisitOptions() {
   const openVisits = getOpenSiteVisits();
   const selectedVisitId = state.pendingOfferSiteVisitId;
@@ -604,7 +608,7 @@ function renderOfferSiteVisitOptions() {
   els.offerSiteVisit.innerHTML = openVisits.length
     ? `<option value="">Offene Begehung auswählen</option>` + openVisits
         .map((visit) => {
-          const label = `${visit.customerName} · ${formatDate(visit.createdAt)} · ${visit.squareMeters} m²`;
+          const label = `${siteVisitCompanyName(visit)} · ${formatDate(visit.createdAt)} · ${visit.squareMeters} m²`;
           return `<option value="${escapeHtml(visit.id)}">${escapeHtml(label)}</option>`;
         })
         .join("")
@@ -1468,6 +1472,7 @@ function renderSiteVisits() {
 
 function renderSiteVisitCard(visit) {
   const floors = Array.isArray(visit.floors) ? visit.floors : [];
+  const companyName = siteVisitCompanyName(visit);
   const roomTotal = floors.reduce((sum, floor) => {
     return sum + floorRoomsForDisplay(floor).reduce((roomSum, room) => roomSum + (Number(room.quantity) || 1), 0);
   }, 0);
@@ -1481,7 +1486,7 @@ function renderSiteVisitCard(visit) {
     <article class="record-item">
       <div class="record-main">
         <div>
-          <div class="record-title">${escapeHtml(visit.customerName)}</div>
+          <div class="record-title">${escapeHtml(companyName)}</div>
           <div class="record-meta">
             <span>${escapeHtml(visit.onsiteContact)} vor Ort</span>
             <span>${escapeHtml(visit.email)} · ${escapeHtml(visit.phone)}</span>
@@ -1560,6 +1565,7 @@ function renderSiteVisitRoomSummary(room) {
 function siteVisitOfferNotes(visit) {
   return [
     "Aus Begehung übernommen:",
+    `Firma: ${siteVisitCompanyName(visit)}`,
     `Ansprechpartner vor Ort: ${visit.onsiteContact}`,
     `Adresse: ${visit.address}`,
     `Objektgröße: ${visit.squareMeters} m²`,
@@ -1572,7 +1578,7 @@ function siteVisitOfferNotes(visit) {
 function findCustomerForSiteVisit(visit) {
   const email = String(visit.email || "").trim().toLowerCase();
   const phone = String(visit.phone || "").trim();
-  const name = String(visit.customerName || "").trim().toLowerCase();
+  const name = siteVisitCompanyName(visit).toLowerCase();
 
   return (
     state.data.customers.find((customer) => String(customer.email || "").trim().toLowerCase() === email) ||
@@ -1613,7 +1619,7 @@ function prefillCustomerFromSiteVisit(visit) {
   const address = parseSiteVisitAddress(visit.address);
 
   resetCustomerForm();
-  document.querySelector("#customer-name").value = visit.customerName || "";
+  document.querySelector("#customer-name").value = siteVisitCompanyName(visit);
   document.querySelector("#customer-email").value = visit.email || "";
   document.querySelector("#customer-phone").value = visit.phone || "";
   document.querySelector("#customer-salutation").value = contact.salutation;
@@ -1631,7 +1637,7 @@ function customerPayloadFromSiteVisit(visit) {
 
   return {
     payload: {
-      name: String(visit.customerName || "").trim(),
+      name: siteVisitCompanyName(visit),
       email: String(visit.email || "").trim(),
       phone: String(visit.phone || "").trim(),
       salutation: contact.salutation,
@@ -2082,8 +2088,10 @@ async function handleSiteVisitSubmit(event) {
     return;
   }
 
+  const companyName = document.querySelector("#site-visit-customer-name").value.trim();
   const payload = {
-    customerName: document.querySelector("#site-visit-customer-name").value.trim(),
+    companyName,
+    customerName: companyName,
     email: document.querySelector("#site-visit-email").value.trim(),
     phone: document.querySelector("#site-visit-phone").value.trim(),
     address: document.querySelector("#site-visit-address").value.trim(),
@@ -2230,7 +2238,7 @@ async function deleteSiteVisit(id) {
     return;
   }
 
-  const confirmed = window.confirm(`Begehung für "${visit.customerName}" löschen?`);
+  const confirmed = window.confirm(`Begehung für "${siteVisitCompanyName(visit)}" löschen?`);
   if (!confirmed) {
     return;
   }

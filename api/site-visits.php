@@ -91,6 +91,10 @@ function cleaning_task_label(string $key): string
         'trash' => 'Mülleimer-Entleerung',
         'kitchen' => 'Küchenflächen',
         'handrail' => 'Handlauf / Geländer',
+        'treatmentDesk' => 'Schreibtisch',
+        'treatmentChair' => 'Behandlungsstühle',
+        'treatmentTable' => 'Behandlungstisch',
+        'disinfection' => 'Desinfektion',
     ];
 
     return $labels[$key] ?? $key;
@@ -162,7 +166,7 @@ function cleaning_items_from_room(array $room): array
 function normalize_visit_room(array $room, int $index): array
 {
     $roomType = trim((string) ($room['roomType'] ?? ''));
-    $allowedTypes = ['Büro', 'Sanitär', 'Küche', 'Flur', 'Treppenhaus', 'Empfang', 'Lager', 'Sonstiger Raum'];
+    $allowedTypes = ['Büro', 'Behandlungsräume', 'Sanitär', 'Küche', 'Flur', 'Treppenhaus', 'Empfang', 'Lager', 'Sonstiger Raum'];
     $notes = trim((string) ($room['notes'] ?? ($room['areaNotes'] ?? '')));
 
     return [
@@ -324,6 +328,7 @@ function site_visit_to_json(array $row): array
 
     return [
         'id' => $row['id'],
+        'companyName' => $row['customer_name'],
         'customerName' => $row['customer_name'],
         'email' => $row['email'],
         'phone' => $row['phone'],
@@ -345,7 +350,12 @@ if ($method === 'GET') {
 
 if ($method === 'POST') {
     $body = read_json_body();
-    $required = ['customerName', 'email', 'phone', 'address', 'onsiteContact'];
+    $companyName = trim((string) ($body['companyName'] ?? ($body['customerName'] ?? '')));
+    if ($companyName === '') {
+        json_error('Bitte den Firmennamen eintragen.', 422);
+    }
+
+    $required = ['email', 'phone', 'address', 'onsiteContact'];
 
     foreach ($required as $field) {
         if (trim((string) ($body[$field] ?? '')) === '') {
@@ -402,7 +412,7 @@ if ($method === 'POST') {
     );
     $stmt->execute([
         'id' => $id,
-        'customer_name' => trim((string) $body['customerName']),
+        'customer_name' => $companyName,
         'email' => trim((string) $body['email']),
         'phone' => trim((string) $body['phone']),
         'address' => trim((string) $body['address']),
