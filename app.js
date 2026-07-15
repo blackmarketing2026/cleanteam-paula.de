@@ -737,10 +737,36 @@ const CLEANING_TASKS = [
   { key: "trash", label: "Mülleimer-Entleerung" },
   { key: "kitchen", label: "Küchenflächen" },
   { key: "handrail", label: "Handlauf / Geländer" },
+  { key: "treatmentDesk", label: "Schreibtisch" },
+  { key: "treatmentChair", label: "Behandlungsstühle" },
+  { key: "treatmentTable", label: "Behandlungstisch" },
+  { key: "disinfection", label: "Desinfektion" },
 ];
 
 const SANITARY_CLEANING_TASK_KEYS = ["mirror", "floor", "door", "toilet"];
 const OFFICE_CLEANING_TASK_KEYS = ["floor", "desk", "window", "trash"];
+const GENERAL_CLEANING_TASK_KEYS = [
+  "washbasin",
+  "toilet",
+  "mirror",
+  "floor",
+  "door",
+  "desk",
+  "window",
+  "surface",
+  "trash",
+  "kitchen",
+  "handrail",
+];
+const TREATMENT_ROOM_CLEANING_TASK_KEYS = [
+  "floor",
+  "window",
+  "treatmentDesk",
+  "trash",
+  "treatmentChair",
+  "treatmentTable",
+  "disinfection",
+];
 const FLOOR_CLEANING_METHODS = ["Gesaugt", "Gewischt", "Gesaugt und gewischt"];
 const TRASH_BAG_MODES = ["Mit Mülltüte", "Ohne Mülltüte"];
 
@@ -748,19 +774,24 @@ function cleaningTaskLabel(key) {
   return CLEANING_TASKS.find((task) => task.key === key)?.label || key;
 }
 
+function cleaningTasksFromKeys(keys) {
+  return keys
+    .map((key) => CLEANING_TASKS.find((task) => task.key === key))
+    .filter(Boolean);
+}
+
 function cleaningTasksForRoomType(roomType) {
   if (roomType === "Sanitär") {
-    return SANITARY_CLEANING_TASK_KEYS
-      .map((key) => CLEANING_TASKS.find((task) => task.key === key))
-      .filter(Boolean);
+    return cleaningTasksFromKeys(SANITARY_CLEANING_TASK_KEYS);
   }
   if (roomType === "Büro") {
-    return OFFICE_CLEANING_TASK_KEYS
-      .map((key) => CLEANING_TASKS.find((task) => task.key === key))
-      .filter(Boolean);
+    return cleaningTasksFromKeys(OFFICE_CLEANING_TASK_KEYS);
+  }
+  if (roomType === "Behandlungsräume") {
+    return cleaningTasksFromKeys(TREATMENT_ROOM_CLEANING_TASK_KEYS);
   }
 
-  return CLEANING_TASKS;
+  return cleaningTasksFromKeys(GENERAL_CLEANING_TASK_KEYS);
 }
 
 function normalizeCleaningFrequency(value) {
@@ -1314,6 +1345,7 @@ function addSiteVisitRoom(floorSection, values = {}, options = {}) {
         Raumart
         <select name="roomType">
           <option value="Büro"${optionSelected("Büro", room.roomType)}>Büro</option>
+          <option value="Behandlungsräume"${optionSelected("Behandlungsräume", room.roomType)}>Behandlungsräume</option>
           <option value="Sanitär"${optionSelected("Sanitär", room.roomType)}>Sanitär</option>
           <option value="Küche"${optionSelected("Küche", room.roomType)}>Küche</option>
           <option value="Flur"${optionSelected("Flur", room.roomType)}>Flur</option>
