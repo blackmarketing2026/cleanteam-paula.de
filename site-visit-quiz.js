@@ -109,6 +109,52 @@ function svqCurrentDraft() {
   return svqState.draftId ? SiteVisitQuizStore.get(svqState.draftId) : null;
 }
 
+function svqContractLinkedSiteVisitIds() {
+  if (typeof window.ctContractLinkedSiteVisitIds !== "function") {
+    return new Set();
+  }
+  return new Set(window.ctContractLinkedSiteVisitIds().filter(Boolean));
+}
+
+function svqIsContractLinkedCompletedDraft(draft, hiddenSiteVisitIds = svqContractLinkedSiteVisitIds()) {
+  return draft?.status === "completed"
+    && draft.linkedSiteVisitId
+    && hiddenSiteVisitIds.has(draft.linkedSiteVisitId);
+}
+
+function svqVisibleDraftsByStatus(status) {
+  const hiddenSiteVisitIds = svqContractLinkedSiteVisitIds();
+  return SiteVisitQuizStore.list()
+    .filter((draft) => draft.status === status)
+    .filter((draft) => !svqIsContractLinkedCompletedDraft(draft, hiddenSiteVisitIds));
+}
+
+function svqPruneContractLinkedCompletedVisits() {
+  const hiddenSiteVisitIds = svqContractLinkedSiteVisitIds();
+  if (hiddenSiteVisitIds.size === 0) {
+    return false;
+  }
+
+  const drafts = SiteVisitQuizStore.list();
+  const remaining = drafts.filter((draft) => !svqIsContractLinkedCompletedDraft(draft, hiddenSiteVisitIds));
+  if (remaining.length === drafts.length) {
+    return false;
+  }
+
+  try {
+    localStorage.setItem(SVQ_STORAGE_KEY, JSON.stringify(remaining));
+  } catch (error) {
+    return false;
+  }
+  if (svqState.draftId && !remaining.some((draft) => draft.id === svqState.draftId)) {
+    svqState.draftId = null;
+    svqState.screen = "home";
+  }
+  return true;
+}
+
+window.svqPruneContractLinkedCompletedVisits = svqPruneContractLinkedCompletedVisits;
+
 function svqMutate(mutator, { rerender = true } = {}) {
   const draft = svqCurrentDraft();
   if (!draft) return;
@@ -486,6 +532,7 @@ function svqRoot() {
 }
 
 function svqShow() {
+  svqPruneContractLinkedCompletedVisits();
   svqRender();
 }
 
@@ -515,8 +562,8 @@ function svqRender() {
 }
 
 function svqRenderHome() {
-  const drafts = SiteVisitQuizStore.list().filter((d) => d.status === "draft");
-  const completed = SiteVisitQuizStore.list().filter((d) => d.status === "completed");
+  const drafts = svqVisibleDraftsByStatus("draft");
+  const completed = svqVisibleDraftsByStatus("completed");
 
   return `
     <div class="svq-home">
@@ -552,8 +599,7 @@ function svqRenderHome() {
 }
 
 function svqRenderList(status) {
-  const items = SiteVisitQuizStore.list()
-    .filter((d) => d.status === status)
+  const items = svqVisibleDraftsByStatus(status)
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
   const rows = items

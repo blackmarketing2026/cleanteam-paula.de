@@ -170,9 +170,8 @@ const titles = {
   overview: "Übersicht",
   "customer-new": "Kunden anlegen",
   "customer-list": "Kundenliste",
-  "site-visit-new": "Neue Begehung erstellen",
   "site-visit-saved": "Gespeicherte Begehungen",
-  "site-visit-quiz": "Begehung erstellen (Quiz)",
+  "site-visit-quiz": "Neue Begehung erstellen",
   "offers-new": "Neue Kostenvoranschläge",
   "offers-saved": "Gespeicherte Kostenvoranschläge",
   contracts: "Verträge",
@@ -282,16 +281,15 @@ function signedContractOfferIds() {
   return ids;
 }
 
-function signedContractSiteVisitIds() {
+function contractLinkedSiteVisitIds() {
   const ids = new Set(
     state.data.contracts
-      .filter((contract) => contract.status === "signiert")
       .map((contract) => contract.offer?.siteVisitId)
       .filter(Boolean),
   );
 
   state.data.offers.forEach((offer) => {
-    if (offer.contractStatus === "signiert" && offer.siteVisitId) {
+    if (offer.siteVisitId && (offer.contractId || offer.contractStatus)) {
       ids.add(offer.siteVisitId);
     }
   });
@@ -299,13 +297,15 @@ function signedContractSiteVisitIds() {
   return ids;
 }
 
+window.ctContractLinkedSiteVisitIds = () => [...contractLinkedSiteVisitIds()];
+
 function visibleSavedOffers() {
   const hiddenOfferIds = signedContractOfferIds();
   return state.data.offers.filter((offer) => !hiddenOfferIds.has(offer.id));
 }
 
 function visibleSavedSiteVisits() {
-  const hiddenVisitIds = signedContractSiteVisitIds();
+  const hiddenVisitIds = contractLinkedSiteVisitIds();
   return state.data.siteVisits.filter((visit) => !hiddenVisitIds.has(visit.id));
 }
 
@@ -465,6 +465,10 @@ function setOffersGroupExpanded(expanded) {
 }
 
 function switchView(view) {
+  if (view === "site-visit-new") {
+    view = "site-visit-quiz";
+  }
+
   if (view.startsWith("settings-") && !isAdmin()) {
     showToast("Nur Admins können die Einstellungen öffnen.");
     view = "overview";
@@ -564,6 +568,10 @@ async function loadAll() {
 }
 
 function renderAll() {
+  const prunedQuizVisits = typeof window.svqPruneContractLinkedCompletedVisits === "function"
+    ? window.svqPruneContractLinkedCompletedVisits()
+    : false;
+
   renderMetrics();
   renderCustomerOptions();
   renderOfferSiteVisitOptions();
@@ -572,6 +580,9 @@ function renderAll() {
   renderOffers();
   renderContracts();
   updateOfferPreview();
+  if (prunedQuizVisits && state.currentView === "site-visit-quiz" && typeof svqShow === "function") {
+    svqShow();
+  }
   refreshIcons();
 }
 
@@ -1519,6 +1530,10 @@ function collectSiteVisitFloors() {
 }
 
 function resetSiteVisitForm() {
+  if (!els.siteVisitForm || !els.siteVisitFloors) {
+    return;
+  }
+
   els.siteVisitForm.reset();
   updateCounterControl(document.querySelector("#site-visit-square-meters"), 0);
   els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage hinzugefügt.</div>`;
@@ -2122,6 +2137,12 @@ async function handleCustomerSubmit(event) {
 
 async function handleSiteVisitSubmit(event) {
   event.preventDefault();
+
+  if (!els.siteVisitForm || !els.siteVisitFloors) {
+    showToast("Begehungen werden nur noch über das Quiz erstellt.");
+    switchView("site-visit-quiz");
+    return;
+  }
 
   const unnamedRoom = [...els.siteVisitFloors.querySelectorAll(".room-section")]
     .find((roomSection) => !roomSection.querySelector('[name="roomName"]')?.value.trim());
@@ -3220,12 +3241,7 @@ function bindEvents() {
   els.customerForm.addEventListener("submit", handleCustomerSubmit);
   els.customerSearch.addEventListener("input", renderCustomers);
 
-  els.siteVisitForm.addEventListener("submit", handleSiteVisitSubmit);
   document.addEventListener("click", handleDashboardAction);
-  els.siteVisitFloors.addEventListener("click", handleSiteVisitFloorAction);
-  els.siteVisitFloors.addEventListener("input", handleSiteVisitFloorInput);
-  els.siteVisitFloors.addEventListener("change", handleSiteVisitFloorInput);
-  els.siteVisitFloors.addEventListener("keydown", handleSiteVisitFloorKeydown);
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
   els.offerSiteVisit.addEventListener("change", handleOfferSiteVisitChange);
