@@ -124,6 +124,39 @@ final class SimplePdfDocument
         }
     }
 
+    public function protocolKeyValue(string $key, string $value): void
+    {
+        $fontSize = 9.5;
+        $lineHeight = 15.0;
+        $keyWidth = 205.0;
+        $valueX = self::MARGIN_LEFT + 220.0;
+        $valueWidth = self::PAGE_WIDTH - self::MARGIN_RIGHT - $valueX;
+        $keyLines = $this->wrap($this->normalizeWhitespace($key), $fontSize, $keyWidth);
+        $valueLines = $this->wrap($this->normalizeWhitespace($value), $fontSize, $valueWidth);
+
+        if ($keyLines === []) {
+            $keyLines = ['-'];
+        }
+        if ($valueLines === []) {
+            $valueLines = ['-'];
+        }
+
+        $lineCount = max(count($keyLines), count($valueLines));
+        $this->ensureSpace(($lineCount * $lineHeight) + 5.0);
+
+        for ($index = 0; $index < $lineCount; $index++) {
+            $lineY = $this->y - ($index * $lineHeight);
+            if (isset($keyLines[$index])) {
+                $this->line($keyLines[$index], self::MARGIN_LEFT, $lineY, $fontSize, 'F2');
+            }
+            if (isset($valueLines[$index])) {
+                $this->line($valueLines[$index], $valueX, $lineY, $fontSize, 'F1');
+            }
+        }
+
+        $this->y -= ($lineCount * $lineHeight) + 3.0;
+    }
+
     public function signatureImage(?string $dataUrl): bool
     {
         $image = $this->parsePngDataUrl($dataUrl);
@@ -1108,22 +1141,19 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $termsAccepted = $termsAcceptedAt !== null || $isSigned;
         $termsAcceptedTime = contract_format_datetime($termsAcceptedAt ?: ($isSigned ? ($contract['signed_at'] ?? null) : null));
         $signedAtDisplay = contract_format_datetime($contract['signed_at'] ?? null);
-        $pdf->keyValue('Vertragsnummer', $contractNumber);
-        $pdf->keyValue('Kunde', $customerName);
-        $pdf->keyValue('Unterzeichner', $signatoryName);
-        $pdf->keyValue('Kostenvoranschlag erstellt', contract_format_datetime($offer['created_at'] ?? null));
-        $pdf->keyValue('Vertrag erstellt', contract_format_datetime($contract['created_at'] ?? null));
-        $pdf->keyValue('Vertrag elektronisch signiert', $signedAtDisplay);
-        $pdf->keyValue('AGB / Vertragsbedingungen zugestimmt', $termsAccepted ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt');
-        $pdf->keyValue('Zeitpunkt der Zustimmung', $termsAcceptedTime);
-        $pdf->keyValue('AGB-Fassung', LEGAL['agb_version']);
-        $pdf->keyValue('AGB-Quelle', LEGAL['agb_url']);
+        $pdf->protocolKeyValue('Vertragsnummer', $contractNumber);
+        $pdf->protocolKeyValue('Kunde', $customerName);
+        $pdf->protocolKeyValue('Unterzeichner', $signatoryName);
+        $pdf->protocolKeyValue('Kostenvoranschlag erstellt', contract_format_datetime($offer['created_at'] ?? null));
+        $pdf->protocolKeyValue('Vertrag erstellt', contract_format_datetime($contract['created_at'] ?? null));
+        $pdf->protocolKeyValue('Vertrag elektronisch signiert', $signedAtDisplay);
+        $pdf->protocolKeyValue('AGB / Vertragsbedingungen zugestimmt', $termsAccepted ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt');
+        $pdf->protocolKeyValue('Zeitpunkt der Zustimmung', $termsAcceptedTime);
+        $pdf->protocolKeyValue('AGB-Fassung', LEGAL['agb_version']);
+        $pdf->protocolKeyValue('AGB-Quelle', LEGAL['agb_url']);
         if ($contract !== null && contract_has_authorization_details($contract)) {
-            $pdf->keyValue('Vollmachtgeber', contract_authorization_grantor_name($contract));
-            $pdf->keyValue('Vollmacht-Adresse', contract_authorization_company_address($contract));
-        }
-        if (!empty($contract['signature_data'])) {
-            $pdf->keyValue('Signatur-Prüfsumme', hash('sha256', (string) $contract['signature_data']));
+            $pdf->protocolKeyValue('Vollmachtgeber', contract_authorization_grantor_name($contract));
+            $pdf->protocolKeyValue('Vollmacht-Adresse', contract_authorization_company_address($contract));
         }
     }
 

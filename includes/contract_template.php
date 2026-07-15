@@ -608,9 +608,10 @@ function contract_document_style_css(): string
   .sign-col { flex: 1; border-top: 1px solid #333; padding-top: 8px; }
   .sign-placeholder { color: #999; font-style: italic; }
   .signature-protocol { page-break-before: always; margin-top: 48px; padding-top: 20px; border-top: 2px solid #333; }
-  .protocol-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 18px; margin-top: 16px; font-family: Arial, sans-serif; font-size: 13px; }
+  .signature-protocol p { max-width: 680px; }
+  .protocol-grid { display: grid; grid-template-columns: 260px 1fr; column-gap: 28px; row-gap: 10px; margin-top: 18px; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.45; align-items: start; }
   .protocol-grid dt { font-weight: 700; color: #333; }
-  .protocol-grid dd { margin: 0; }
+  .protocol-grid dd { margin: 0; overflow-wrap: anywhere; }
   @media print { body { margin: 0; } }
 CSS;
 }
