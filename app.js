@@ -145,6 +145,12 @@ const els = {
   logoPreview: document.querySelector("#logo-preview"),
   logoFileInput: document.querySelector("#logo-file-input"),
   logoRemove: document.querySelector("#logo-remove"),
+  templatePlaceholderGroups: document.querySelector("#template-placeholder-groups"),
+  templateEditor: document.querySelector("#contract-template-editor"),
+  templateReset: document.querySelector("#contract-template-reset"),
+  templatePreviewButton: document.querySelector("#contract-template-preview-button"),
+  templateSave: document.querySelector("#contract-template-save"),
+  templatePreviewFrame: document.querySelector("#contract-template-preview-frame"),
   userForm: document.querySelector("#user-form"),
   userName: document.querySelector("#user-name"),
   userEmail: document.querySelector("#user-email"),
@@ -177,6 +183,7 @@ const titles = {
   "settings-smtp": "SMTP-Server-Einstellungen",
   "settings-notify": "Vertragsbenachrichtigungen-Einstellungen",
   "settings-logo": "Logo-Einstellungen",
+  "settings-template": "Mustervertrag",
   "settings-users": "User & Rollen",
 };
 
@@ -473,6 +480,10 @@ function switchView(view) {
 
   if (view === "settings-users") {
     loadUsers();
+  }
+
+  if (view === "settings-template") {
+    loadContractTemplate();
   }
 
   if (view === "mailbox") {
@@ -2657,6 +2668,92 @@ async function handleLogoRemove() {
   }
 }
 
+function renderTemplatePlaceholderChips(groups) {
+  if (!els.templatePlaceholderGroups) {
+    return;
+  }
+
+  els.templatePlaceholderGroups.innerHTML = Object.entries(groups || {})
+    .map(([groupLabel, tokens]) => {
+      const chips = Object.entries(tokens)
+        .map(
+          ([token, description]) =>
+            `<button type="button" class="template-placeholder-chip" data-token="${escapeHtml(token)}" title="${escapeHtml(description)}">{{${escapeHtml(token)}}}</button>`
+        )
+        .join("");
+      return `
+        <div class="template-placeholder-group">
+          <span class="template-placeholder-group-label">${escapeHtml(groupLabel)}</span>
+          ${chips}
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function insertTemplatePlaceholder(token) {
+  const textarea = els.templateEditor;
+  if (!textarea) {
+    return;
+  }
+
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? textarea.value.length;
+  const insertion = `{{${token}}}`;
+  textarea.value = textarea.value.slice(0, start) + insertion + textarea.value.slice(end);
+  const cursor = start + insertion.length;
+  textarea.focus();
+  textarea.setSelectionRange(cursor, cursor);
+}
+
+async function loadContractTemplate() {
+  if (!els.templateEditor) {
+    return;
+  }
+
+  try {
+    const result = await apiGet("api/contract-template.php");
+    els.templateEditor.value = result.templateHtml || "";
+    renderTemplatePlaceholderChips(result.placeholders || {});
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleContractTemplateSave() {
+  try {
+    await apiPost("api/contract-template.php", { templateHtml: els.templateEditor.value });
+    showToast("Mustervertrag wurde gespeichert.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleContractTemplateReset() {
+  if (!window.confirm("Vertragstext wirklich auf den Standardtext zurücksetzen? Ungespeicherte Änderungen gehen dabei verloren.")) {
+    return;
+  }
+
+  try {
+    const result = await apiGet("api/contract-template.php?action=default");
+    els.templateEditor.value = result.templateHtml || "";
+    showToast("Standardtext geladen. Zum Übernehmen bitte speichern.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleContractTemplatePreview() {
+  try {
+    const result = await apiPost("api/contract-template.php?action=preview", { templateHtml: els.templateEditor.value });
+    if (els.templatePreviewFrame) {
+      els.templatePreviewFrame.srcdoc = result.html || "";
+    }
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function userRoleOptions(selectedRole) {
   const roles = Object.keys(state.userRoles).length
     ? state.userRoles
@@ -3126,6 +3223,15 @@ function bindEvents() {
 
   els.logoFileInput.addEventListener("change", handleLogoUpload);
   els.logoRemove.addEventListener("click", handleLogoRemove);
+  els.templatePlaceholderGroups.addEventListener("click", (event) => {
+    const chip = event.target.closest(".template-placeholder-chip");
+    if (chip) {
+      insertTemplatePlaceholder(chip.dataset.token);
+    }
+  });
+  els.templateSave.addEventListener("click", handleContractTemplateSave);
+  els.templateReset.addEventListener("click", handleContractTemplateReset);
+  els.templatePreviewButton.addEventListener("click", handleContractTemplatePreview);
   els.userForm.addEventListener("submit", handleUserSubmit);
   els.userList.addEventListener("click", handleUserListAction);
 

@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=app-nav-20260715-1" />
+    <link rel="stylesheet" href="styles.css?v=app-nav-20260715-2" />
     <link rel="stylesheet" href="site-visit-quiz.css?v=svq-20260715-6" />
   </head>
   <body>
@@ -129,6 +129,10 @@
             <button class="nav-link" type="button" data-view="settings-logo">
               <i data-lucide="image" aria-hidden="true"></i>
               <span>Logo</span>
+            </button>
+            <button class="nav-link" type="button" data-view="settings-template">
+              <i data-lucide="file-edit" aria-hidden="true"></i>
+              <span>Mustervertrag</span>
             </button>
             <button class="nav-link" type="button" data-view="settings-users">
               <i data-lucide="shield-check" aria-hidden="true"></i>
@@ -889,6 +893,57 @@
           </section>
         </section>
 
+        <section id="settings-template-view" class="view" aria-labelledby="settings-template-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="settings-template-heading">Mustervertrag</h3>
+              <p class="muted">Vertragstext mit Platzhaltern – die Basis, aus der alle Verträge erstellt werden.</p>
+            </div>
+          </div>
+
+          <section class="panel form-panel" aria-labelledby="template-editor-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="template-editor-heading">Vertragstext (HTML)</h4>
+                <p class="muted">
+                  Erlaubte Tags: <code>h2</code> (§-Überschrift), <code>h3</code>/<code>h4</code> (Unterüberschrift),
+                  <code>p</code>, <code>br</code>, <code>strong</code>, <code>ul</code>/<code>li</code>, <code>ol</code>/<code>li</code>.
+                  Auf einen Platzhalter klicken, um ihn an der Cursor-Position einzufügen.
+                </p>
+              </div>
+            </div>
+
+            <div id="template-placeholder-groups" class="template-placeholder-groups"></div>
+
+            <textarea id="contract-template-editor" class="template-editor" rows="22" spellcheck="false"></textarea>
+
+            <div class="form-actions">
+              <button id="contract-template-reset" class="ghost-button" type="button">
+                <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+                Auf Standard zurücksetzen
+              </button>
+              <button id="contract-template-preview-button" class="secondary-button" type="button">
+                <i data-lucide="eye" aria-hidden="true"></i>
+                Vorschau aktualisieren
+              </button>
+              <button id="contract-template-save" class="primary-button" type="button">
+                <i data-lucide="save" aria-hidden="true"></i>
+                Speichern
+              </button>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="template-preview-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="template-preview-heading">Vorschau</h4>
+                <p class="muted">Mit Beispieldaten gerendert, so wie es später im Vertrag erscheint.</p>
+              </div>
+            </div>
+            <iframe id="contract-template-preview-frame" class="template-preview-frame" title="Vertragsvorschau"></iframe>
+          </section>
+        </section>
+
         <section id="settings-users-view" class="view" aria-labelledby="settings-users-heading">
           <div class="section-heading">
             <div>
@@ -989,6 +1044,6 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="site-visit-quiz-data.js?v=svq-20260715-6"></script>
     <script src="site-visit-quiz.js?v=svq-20260715-6"></script>
-    <script src="app.js?v=app-nav-20260715-1"></script>
+    <script src="app.js?v=app-nav-20260715-2"></script>
   </body>
 </html>

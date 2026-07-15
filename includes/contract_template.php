@@ -231,16 +231,262 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
 HTML;
 }
 
+function ensure_contract_template_settings_table(PDO $pdo): void
+{
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS contract_template_settings (
+            id TINYINT UNSIGNED NOT NULL,
+            template_html LONGTEXT NOT NULL,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+}
+
+// Startwert des Mustervertrags: der bisherige, fest verdrahtete Vertragstext (§ 1 - § 9),
+// jetzt mit {{platzhalter}}-Tokens statt PHP-Interpolation. Wird beim ersten Aufruf in
+// contract_template_settings gespeichert und ist danach ueber die Einstellungen editierbar.
+function default_contract_template_html(): string
+{
+    $serviceCatalogHtml = render_service_catalog_html();
+    $obligationsHtml = render_obligations_html();
+
+    return <<<HTML
+<h2>§ 1 Beginn, Rechtswahl und Vertragssprache</h2>
+<p>
+  1. Der Vertrag zur Gebäudereinigung tritt am <strong>{{beginn_datum}}</strong> in Kraft.<br>
+  2. Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss
+  aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.
+</p>
+
+<h2>§ 2 Vertragsgegenstand und Objekt</h2>
+<p>
+  Vertragsgegenstand sind die in § 3 genannten Reinigungsarbeiten für das nachfolgend näher bezeichnete Objekt:<br>
+  Leistungsort: {{leistungsort}}
+</p>
+
+<h2>§ 3 Art und Umfang der Reinigung</h2>
+<p>Die Reinigung findet <strong>{{intervall}}</strong> statt.</p>
+<p>Gebuchte Leistung: {{leistung}}</p>
+{{zusatzhinweis_block}}
+{$serviceCatalogHtml}
+<p>Leistungen, die nicht in diesem Vertrag aufgeführt sind, bedürfen einer gesonderten Beauftragung und werden zusätzlich berechnet.</p>
+
+<h2>§ 4 Vergütung</h2>
+<p>
+  Die monatliche Pauschalvergütung beträgt <strong>{{preis_netto}} netto</strong> zuzüglich der jeweils geltenden Umsatzsteuer
+  (aktuell {{ust_satz}}&nbsp;%). Der Bruttobetrag beträgt zum Zeitpunkt der Vertragserstellung <strong>{{preis_brutto}}</strong>.
+  Leistungen außerhalb von § 3 sind separat zu beauftragen und werden zusätzlich berechnet. Rechnungen sind binnen
+  {{zahlungsfrist_tage}} Arbeitstagen zu zahlen; nach {{verzug_tage}} Tagen fallen automatisch Verzugszinsen an.
+</p>
+<p>
+  Bei einer Tariferhöhung in der Gebäudereinigung geben wir die entsprechenden Lohnsteigerungen an unser Personal und
+  unsere Kunden weiter. Die Lohnkosten werden voraussichtlich um {{lohn_min}} bis {{lohn_max}} Prozent steigen. Unsere Kunden
+  informieren wir mindestens {{ankuendigung_monate}} Monat(e) vorher und teilen den exakten Differenzbetrag mit, der aus Lohn-,
+  Betriebs- und Materialkosten berechnet wird.
+</p>
+<p>
+  <strong>Zahlungsverzug / Zurückbehaltungsrecht:</strong> Die vereinbarte Vergütung ist innerhalb von {{zahlungsfrist_tage}}
+  Arbeitstagen nach Zugang der Rechnung ohne Abzug auf das von uns benannte Konto zu überweisen. Geht innerhalb dieser
+  Frist kein vollständiger Zahlungseingang ein und erfolgt keine vorherige Mitteilung oder anderweitige Vereinbarung durch
+  den Auftraggeber, sind wir berechtigt, von unserem Zurückbehaltungsrecht gemäß § 320 BGB Gebrauch zu machen und die
+  vertraglich geschuldeten Reinigungsleistungen bis zum vollständigen Ausgleich der offenen Forderung auszusetzen.
+  Die während der Ausübung des Zurückbehaltungsrechts ausfallenden Reinigungstermine gelten als vertraglich geschuldet
+  und werden dem Auftraggeber vergütungsrechtlich berechnet. Ein Anspruch auf Nachholung der während dieses Zeitraums
+  ausgefallenen Reinigungsleistungen besteht nicht.
+</p>
+
+<h2>§ 5 Pflichten des Auftraggebers</h2>
+{$obligationsHtml}
+
+<h2>§ 6 Vertraulichkeit</h2>
+<p>
+  Die Parteien vereinbaren, während der Laufzeit dieses Vertrags über die Geschäfts- und Betriebsgeheimnisse der jeweils
+  anderen Partei, einschließlich dieses Vertrags, über jedes Know-how, jegliches von einer Partei ausgehändigte Material
+  und sämtliche Informationen, die eine Partei über das Geschäft der jeweils anderen erhält ("vertrauliche Informationen"),
+  vertraulich zu behandeln und nicht an Dritte weiterzugeben.
+</p>
+
+<h2>§ 7 Erfüllungsort, Gerichtsstand und Schlussbestimmungen</h2>
+<p>
+  1. Der Erfüllungsort richtet sich nach dem Sitz des Auftraggebers.<br>
+  2. Ausschließlicher Gerichtsstand für Streitigkeiten im Zusammenhang mit dem Vertragsverhältnis ist <strong>{{gerichtsstand}}</strong>.<br>
+  3. Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter
+  Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen.<br>
+  4. Sollte eine Bestimmung dieses Vertrags unwirksam sein, wird die Wirksamkeit der übrigen Bestimmungen hiervon nicht
+  berührt. Die Parteien werden über eine die unwirksame Bestimmung ersetzende Regelung verhandeln, die dem Inhalt der
+  ursprünglichen Bestimmung möglichst nahekommt. Gleiches gilt für mögliche Vertragslücken.
+</p>
+
+<h2>§ 8 Einbeziehung der Allgemeinen Geschäftsbedingungen</h2>
+<p>
+  Es gelten zusätzlich die Allgemeinen Geschäftsbedingungen des Auftragnehmers. Die gültige Fassung mit
+  <strong>{{agb_version}}</strong> ist auf der Website <strong>{{agb_url}}</strong> einsehbar. Auf Wunsch kann dem Auftraggeber
+  eine Ausfertigung der Allgemeinen Geschäftsbedingungen auch postalisch zugesendet werden.
+</p>
+
+<h2>§ 9 Ausfertigungen und elektronische Dokumentation</h2>
+<p>
+  Beide Parteien erhalten eine Ausfertigung dieses Gebäudereinigungsvertrags. Bei elektronischer Unterzeichnung wird jeder
+  Partei nach Abschluss des Signaturvorgangs eine Ausfertigung zur Verfügung gestellt.
+</p>
+HTML;
+}
+
+function get_contract_template_html(PDO $pdo): string
+{
+    ensure_contract_template_settings_table($pdo);
+    $stmt = $pdo->query('SELECT template_html FROM contract_template_settings WHERE id = 1');
+    $row = $stmt->fetch();
+
+    return $row && trim((string) $row['template_html']) !== '' ? (string) $row['template_html'] : default_contract_template_html();
+}
+
+function save_contract_template_html(PDO $pdo, string $html): void
+{
+    ensure_contract_template_settings_table($pdo);
+    $stmt = $pdo->prepare(
+        'INSERT INTO contract_template_settings (id, template_html, updated_at)
+         VALUES (1, :html, UTC_TIMESTAMP())
+         ON DUPLICATE KEY UPDATE template_html = :html2, updated_at = UTC_TIMESTAMP()'
+    );
+    $stmt->execute(['html' => $html, 'html2' => $html]);
+}
+
+// Fuer die Platzhalter-Palette in den Einstellungen: Gruppe, Token, Beschreibung.
+function contract_template_placeholder_definitions(): array
+{
+    return [
+        'Firma / Kunde' => [
+            'kunde_name' => 'Name des Auftraggebers',
+            'kunde_adresse' => 'Straße und Hausnummer des Kunden',
+            'kunde_ort' => 'PLZ und Ort des Kunden',
+            'unterzeichner' => 'Name des Vertragsunterzeichners',
+            'vertretung' => 'Vertretungshinweis',
+            'logo' => 'Firmenlogo (nur in der HTML-Ansicht sichtbar)',
+        ],
+        'Leistung' => [
+            'leistungsort' => 'Adresse des zu reinigenden Objekts',
+            'intervall' => 'Reinigungsintervall',
+            'leistung' => 'Leistungsbeschreibung inkl. Quadratmeter',
+            'zusatzhinweis_block' => 'Zusatzhinweis aus dem Kostenvoranschlag (falls vorhanden)',
+            'beginn_datum' => 'Vertragsbeginn',
+        ],
+        'Preis' => [
+            'preis_netto' => 'Monatspreis netto',
+            'preis_brutto' => 'Monatspreis brutto',
+            'ust_satz' => 'Umsatzsteuersatz in Prozent',
+            'zahlungsfrist_tage' => 'Zahlungsfrist in Arbeitstagen',
+            'verzug_tage' => 'Tage bis Verzugszinsen',
+            'lohn_min' => 'Untere Lohnsteigerung in Prozent',
+            'lohn_max' => 'Obere Lohnsteigerung in Prozent',
+            'ankuendigung_monate' => 'Ankündigungsfrist für Preisanpassungen in Monaten',
+        ],
+        'Rechtliches' => [
+            'vertragsnummer' => 'Vertragsnummer',
+            'gerichtsstand' => 'Gerichtsstand',
+            'agb_version' => 'AGB-Version',
+            'agb_url' => 'AGB-Link',
+        ],
+    ];
+}
+
+function contract_template_placeholder_map(array $offer, array $customer, ?array $contract, bool $forPdf = false): array
+{
+    $netPrice = (float) $offer['price'];
+    $vatAmount = round($netPrice * VAT_RATE / 100, 2);
+    $grossPrice = round($netPrice + $vatAmount, 2);
+    $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
+    $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
+    $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
+    $offerNotes = trim((string) ($offer['notes'] ?? ''));
+
+    $authorized = isset($contract['authorized']) && $contract['authorized'] !== null ? (bool) $contract['authorized'] : null;
+    $representationNote = $contract['representation_note'] ?? null;
+    $authorityText = $authorized === false && $representationNote
+        ? (string) $representationNote
+        : 'ohne gesonderte Vertretungsangabe';
+
+    $values = [
+        'vertragsnummer' => (string) ($contract['number'] ?? 'Entwurf'),
+        'beginn_datum' => $effectiveDate,
+        'leistungsort' => $customerAddress . ', ' . $customerZipCity,
+        'intervall' => (string) $offer['interval_label'],
+        'leistung' => (string) $offer['service'] . ' (' . (int) $offer['square_meters'] . ' m² Reinigungsfläche)',
+        'preis_netto' => contract_format_money($netPrice),
+        'preis_brutto' => contract_format_money($grossPrice),
+        'ust_satz' => rtrim(rtrim(number_format(VAT_RATE, 1, ',', '.'), '0'), ','),
+        'zahlungsfrist_tage' => (string) PAYMENT_DUE_DAYS,
+        'verzug_tage' => (string) DEFAULT_AFTER_DAYS,
+        'lohn_min' => (string) WAGE_INCREASE_MIN_PERCENT,
+        'lohn_max' => (string) WAGE_INCREASE_MAX_PERCENT,
+        'ankuendigung_monate' => (string) PRICE_ADJUSTMENT_NOTICE_MONTHS,
+        'gerichtsstand' => LEGAL['jurisdiction_city'],
+        'agb_version' => LEGAL['agb_version'],
+        'agb_url' => LEGAL['agb_url'],
+        'kunde_name' => contract_customer_display_name($customer),
+        'kunde_adresse' => $customerAddress,
+        'kunde_ort' => $customerZipCity,
+        'unterzeichner' => contract_signatory_display($customer),
+        'vertretung' => $authorityText,
+    ];
+
+    foreach ($values as $key => $value) {
+        $values[$key] = h((string) $value);
+    }
+
+    $values['logo'] = $forPdf ? '' : contract_logo_html();
+    $values['zusatzhinweis_block'] = $offerNotes !== ''
+        ? '<p>' . ($forPdf ? '' : '<strong>Zusatzhinweis:</strong> ') . h($offerNotes) . '</p>'
+        : '';
+
+    return $values;
+}
+
+function render_contract_template_body(string $templateHtml, array $placeholders): string
+{
+    $map = [];
+    foreach ($placeholders as $key => $value) {
+        $map['{{' . $key . '}}'] = $value;
+    }
+
+    return strtr($templateHtml, $map);
+}
+
+// Wird sowohl vom echten Vertragsdokument als auch von der Mustervertrag-Vorschau in den
+// Einstellungen verwendet, damit beide identisch aussehen.
+function contract_document_style_css(): string
+{
+    return <<<CSS
+  body { font-family: Georgia, "Times New Roman", serif; max-width: 780px; margin: 40px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.55; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  h2 { font-size: 16px; margin-top: 32px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  h4 { font-size: 14px; margin: 18px 0 4px; }
+  .doc-logo { max-height: 64px; max-width: 260px; margin-bottom: 16px; }
+  .meta-bar { font-size: 13px; color: #555; margin-bottom: 24px; }
+  .doc-label { display: inline-block; margin: 8px 0 0; padding: 3px 8px; border: 1px solid #bbb; border-radius: 4px; color: #444; font-size: 12px; font-family: Arial, sans-serif; }
+  .parties { display: flex; gap: 40px; margin: 24px 0; }
+  .party { flex: 1; }
+  .party small { color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
+  ul, ol { padding-left: 20px; }
+  ul li, ol.obligations li { margin-bottom: 4px; }
+  .sign-block { display: flex; gap: 40px; margin-top: 40px; }
+  .sign-col { flex: 1; border-top: 1px solid #333; padding-top: 8px; }
+  .sign-placeholder { color: #999; font-style: italic; }
+  .signature-protocol { page-break-before: always; margin-top: 48px; padding-top: 20px; border-top: 2px solid #333; }
+  .protocol-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 18px; margin-top: 16px; font-family: Arial, sans-serif; font-size: 13px; }
+  .protocol-grid dt { font-weight: 700; color: #333; }
+  .protocol-grid dd { margin: 0; }
+  @media print { body { margin: 0; } }
+CSS;
+}
+
 function render_contract_document(array $offer, array $customer, ?array $contract, array $options = []): string
 {
     $audience = ($options['audience'] ?? 'customer') === 'cleanteam' ? 'cleanteam' : 'customer';
     $isCleanTeamCopy = $audience === 'cleanteam';
-    $netPrice = (float) $offer['price'];
-    $vatAmount = round($netPrice * VAT_RATE / 100, 2);
-    $grossPrice = round($netPrice + $vatAmount, 2);
 
     $contractNumber = h($contract['number'] ?? 'Entwurf');
-    $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
     $createdAt = contract_format_date($offer['created_at']);
     $customerCity = h($customer['city']);
 
@@ -263,38 +509,23 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $contractorZipCity = h(CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city'] . ', ' . CONTRACTOR['country']);
     $contractorServicePoint = h(CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city']);
     $contractorServicePointCity = h(CONTRACTOR['service_point_city']);
-    $jurisdictionCity = h(LEGAL['jurisdiction_city']);
-    $agbVersion = h(LEGAL['agb_version']);
-    $agbUrl = h(LEGAL['agb_url']);
 
     $customerName = h(contract_customer_display_name($customer));
     $signatoryName = h(contract_signatory_display($customer));
     $customerAddress = h($customer['address'] . ' ' . $customer['house_number']);
     $customerZipCity = h($customer['zip'] . ' ' . $customer['city']);
 
-    $offerInterval = h((string) $offer['interval_label']);
-    $serviceLine = h((string) $offer['service']) . ' (' . (int) $offer['square_meters'] . ' m² Reinigungsfläche)';
-    $offerNotes = trim((string) ($offer['notes'] ?? ''));
-    $notesBlock = $offerNotes !== '' ? '<p><strong>Zusatzhinweis:</strong> ' . h($offerNotes) . '</p>' : '';
-    $serviceCatalogHtml = render_service_catalog_html();
-    $obligationsHtml = render_obligations_html();
-
-    $netPriceFormatted = contract_format_money($netPrice);
-    $grossPriceFormatted = contract_format_money($grossPrice);
-    $vatRateFormatted = h(rtrim(rtrim(number_format(VAT_RATE, 1, ',', '.'), '0'), ','));
-
     $statusLabel = $contract === null
         ? 'Entwurf (noch nicht gestartet)'
         : h(ucfirst(str_replace('_', ' ', (string) $contract['status'])));
     $documentLabel = $isCleanTeamCopy ? 'CleanTeam-Ausfertigung' : 'Kundenausfertigung';
     $protocolHtml = $isCleanTeamCopy ? render_signature_protocol_html($offer, $customer, $contract) : '';
-
-    $paymentDueDays = PAYMENT_DUE_DAYS;
-    $defaultAfterDays = DEFAULT_AFTER_DAYS;
-    $noticeMonths = PRICE_ADJUSTMENT_NOTICE_MONTHS;
-    $wageMin = WAGE_INCREASE_MIN_PERCENT;
-    $wageMax = WAGE_INCREASE_MAX_PERCENT;
     $logoHtml = contract_logo_html();
+
+    $templateHtml = get_contract_template_html(db());
+    $placeholders = contract_template_placeholder_map($offer, $customer, $contract, false);
+    $templateBody = render_contract_template_body($templateHtml, $placeholders);
+    $styleCss = contract_document_style_css();
 
     return <<<HTML
 <!doctype html>
@@ -303,26 +534,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 <meta charset="utf-8">
 <title>Gebäudereinigungsvertrag {$contractNumber}</title>
 <style>
-  body { font-family: Georgia, "Times New Roman", serif; max-width: 780px; margin: 40px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.55; }
-  h1 { font-size: 24px; margin-bottom: 4px; }
-  h2 { font-size: 16px; margin-top: 32px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-  h4 { font-size: 14px; margin: 18px 0 4px; }
-  .doc-logo { max-height: 64px; max-width: 260px; margin-bottom: 16px; }
-  .meta-bar { font-size: 13px; color: #555; margin-bottom: 24px; }
-  .doc-label { display: inline-block; margin: 8px 0 0; padding: 3px 8px; border: 1px solid #bbb; border-radius: 4px; color: #444; font-size: 12px; font-family: Arial, sans-serif; }
-  .parties { display: flex; gap: 40px; margin: 24px 0; }
-  .party { flex: 1; }
-  .party small { color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
-  ul, ol { padding-left: 20px; }
-  ul li, ol.obligations li { margin-bottom: 4px; }
-  .sign-block { display: flex; gap: 40px; margin-top: 40px; }
-  .sign-col { flex: 1; border-top: 1px solid #333; padding-top: 8px; }
-  .sign-placeholder { color: #999; font-style: italic; }
-  .signature-protocol { page-break-before: always; margin-top: 48px; padding-top: 20px; border-top: 2px solid #333; }
-  .protocol-grid { display: grid; grid-template-columns: 220px 1fr; gap: 8px 18px; margin-top: 16px; font-family: Arial, sans-serif; font-size: 13px; }
-  .protocol-grid dt { font-weight: 700; color: #333; }
-  .protocol-grid dd { margin: 0; }
-  @media print { body { margin: 0; } }
+{$styleCss}
 </style>
 </head>
 <body>
@@ -358,84 +570,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
   </div>
 </div>
 
-<h2>§ 1 Beginn, Rechtswahl und Vertragssprache</h2>
-<p>
-  1. Der Vertrag zur Gebäudereinigung tritt am <strong>{$effectiveDate}</strong> in Kraft.<br>
-  2. Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss
-  aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.
-</p>
-
-<h2>§ 2 Vertragsgegenstand und Objekt</h2>
-<p>
-  Vertragsgegenstand sind die in § 3 genannten Reinigungsarbeiten für das nachfolgend näher bezeichnete Objekt:<br>
-  Leistungsort: {$customerAddress}, {$customerZipCity}
-</p>
-
-<h2>§ 3 Art und Umfang der Reinigung</h2>
-<p>Die Reinigung findet <strong>{$offerInterval}</strong> statt.</p>
-<p>Gebuchte Leistung: {$serviceLine}</p>
-{$notesBlock}
-{$serviceCatalogHtml}
-<p>Leistungen, die nicht in diesem Vertrag aufgeführt sind, bedürfen einer gesonderten Beauftragung und werden zusätzlich berechnet.</p>
-
-<h2>§ 4 Vergütung</h2>
-<p>
-  Die monatliche Pauschalvergütung beträgt <strong>{$netPriceFormatted} netto</strong> zuzüglich der jeweils geltenden Umsatzsteuer
-  (aktuell {$vatRateFormatted}&nbsp;%). Der Bruttobetrag beträgt zum Zeitpunkt der Vertragserstellung <strong>{$grossPriceFormatted}</strong>.
-  Leistungen außerhalb von § 3 sind separat zu beauftragen und werden zusätzlich berechnet. Rechnungen sind binnen
-  {$paymentDueDays} Arbeitstagen zu zahlen; nach {$defaultAfterDays} Tagen fallen automatisch Verzugszinsen an.
-</p>
-<p>
-  Bei einer Tariferhöhung in der Gebäudereinigung geben wir die entsprechenden Lohnsteigerungen an unser Personal und
-  unsere Kunden weiter. Die Lohnkosten werden voraussichtlich um {$wageMin} bis {$wageMax} Prozent steigen. Unsere Kunden
-  informieren wir mindestens {$noticeMonths} Monat(e) vorher und teilen den exakten Differenzbetrag mit, der aus Lohn-,
-  Betriebs- und Materialkosten berechnet wird.
-</p>
-<p>
-  <strong>Zahlungsverzug / Zurückbehaltungsrecht:</strong> Die vereinbarte Vergütung ist innerhalb von {$paymentDueDays}
-  Arbeitstagen nach Zugang der Rechnung ohne Abzug auf das von uns benannte Konto zu überweisen. Geht innerhalb dieser
-  Frist kein vollständiger Zahlungseingang ein und erfolgt keine vorherige Mitteilung oder anderweitige Vereinbarung durch
-  den Auftraggeber, sind wir berechtigt, von unserem Zurückbehaltungsrecht gemäß § 320 BGB Gebrauch zu machen und die
-  vertraglich geschuldeten Reinigungsleistungen bis zum vollständigen Ausgleich der offenen Forderung auszusetzen.
-  Die während der Ausübung des Zurückbehaltungsrechts ausfallenden Reinigungstermine gelten als vertraglich geschuldet
-  und werden dem Auftraggeber vergütungsrechtlich berechnet. Ein Anspruch auf Nachholung der während dieses Zeitraums
-  ausgefallenen Reinigungsleistungen besteht nicht.
-</p>
-
-<h2>§ 5 Pflichten des Auftraggebers</h2>
-{$obligationsHtml}
-
-<h2>§ 6 Vertraulichkeit</h2>
-<p>
-  Die Parteien vereinbaren, während der Laufzeit dieses Vertrags über die Geschäfts- und Betriebsgeheimnisse der jeweils
-  anderen Partei, einschließlich dieses Vertrags, über jedes Know-how, jegliches von einer Partei ausgehändigte Material
-  und sämtliche Informationen, die eine Partei über das Geschäft der jeweils anderen erhält ("vertrauliche Informationen"),
-  vertraulich zu behandeln und nicht an Dritte weiterzugeben.
-</p>
-
-<h2>§ 7 Erfüllungsort, Gerichtsstand und Schlussbestimmungen</h2>
-<p>
-  1. Der Erfüllungsort richtet sich nach dem Sitz des Auftraggebers.<br>
-  2. Ausschließlicher Gerichtsstand für Streitigkeiten im Zusammenhang mit dem Vertragsverhältnis ist <strong>{$jurisdictionCity}</strong>.<br>
-  3. Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter
-  Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen.<br>
-  4. Sollte eine Bestimmung dieses Vertrags unwirksam sein, wird die Wirksamkeit der übrigen Bestimmungen hiervon nicht
-  berührt. Die Parteien werden über eine die unwirksame Bestimmung ersetzende Regelung verhandeln, die dem Inhalt der
-  ursprünglichen Bestimmung möglichst nahekommt. Gleiches gilt für mögliche Vertragslücken.
-</p>
-
-<h2>§ 8 Einbeziehung der Allgemeinen Geschäftsbedingungen</h2>
-<p>
-  Es gelten zusätzlich die Allgemeinen Geschäftsbedingungen des Auftragnehmers. Die gültige Fassung mit
-  <strong>{$agbVersion}</strong> ist auf der Website <strong>{$agbUrl}</strong> einsehbar. Auf Wunsch kann dem Auftraggeber
-  eine Ausfertigung der Allgemeinen Geschäftsbedingungen auch postalisch zugesendet werden.
-</p>
-
-<h2>§ 9 Ausfertigungen und elektronische Dokumentation</h2>
-<p>
-  Beide Parteien erhalten eine Ausfertigung dieses Gebäudereinigungsvertrags. Bei elektronischer Unterzeichnung wird jeder
-  Partei nach Abschluss des Signaturvorgangs eine Ausfertigung zur Verfügung gestellt.
-</p>
+{$templateBody}
 
 <div class="sign-block">
   <div class="sign-col">

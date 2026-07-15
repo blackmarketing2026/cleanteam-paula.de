@@ -478,6 +478,97 @@ final class SimplePdfDocument
     }
 }
 
+// Rendert den (bereits mit Platzhaltern befuellten) Mustervertrags-HTML-Text in das
+// dependency-freie PDF-Primitiv-API von SimplePdfDocument. Unterstuetzt genau die Tags, die
+// der Mustervertrag-Editor erlaubt: h2/h3/h4 (Ueberschrift), p (Absatz, <br>/<strong> werden zu
+// Klartext abgeflacht, da die PDF-Engine keine Inline-Formatierung kennt), ul/li, ol/li.
+function contract_template_html_to_pdf(SimplePdfDocument $pdf, string $html): void
+{
+    if (trim($html) === '') {
+        return;
+    }
+
+    $doc = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $doc->loadHTML('<?xml encoding="utf-8"?><div>' . $html . '</div>', LIBXML_NOERROR | LIBXML_NOWARNING);
+    libxml_clear_errors();
+
+    $root = $doc->getElementsByTagName('div')->item(0);
+    if ($root === null) {
+        return;
+    }
+
+    contract_template_walk_pdf_nodes($pdf, $root->childNodes);
+}
+
+function contract_template_walk_pdf_nodes(SimplePdfDocument $pdf, DOMNodeList $nodes): void
+{
+    foreach ($nodes as $node) {
+        if ($node->nodeType !== XML_ELEMENT_NODE) {
+            continue;
+        }
+
+        $tag = strtolower($node->nodeName);
+        if ($tag === 'h1' || $tag === 'h2') {
+            $text = trim($node->textContent);
+            if ($text !== '') {
+                $pdf->heading($text);
+            }
+        } elseif ($tag === 'h3' || $tag === 'h4') {
+            $text = trim($node->textContent);
+            if ($text !== '') {
+                $pdf->subheading($text);
+            }
+        } elseif ($tag === 'ul') {
+            $items = contract_template_pdf_list_items($node);
+            if ($items !== []) {
+                $pdf->bulletList($items);
+            }
+        } elseif ($tag === 'ol') {
+            $items = contract_template_pdf_list_items($node);
+            if ($items !== []) {
+                $pdf->numberedList($items);
+            }
+        } elseif ($tag === 'section' || $tag === 'div') {
+            contract_template_walk_pdf_nodes($pdf, $node->childNodes);
+        } else {
+            $text = contract_template_pdf_node_text($node);
+            if ($text !== '') {
+                $pdf->paragraph($text);
+            }
+        }
+    }
+}
+
+function contract_template_pdf_node_text(DOMNode $node): string
+{
+    $text = '';
+    foreach ($node->childNodes as $child) {
+        if ($child->nodeType === XML_TEXT_NODE) {
+            $text .= $child->textContent;
+        } elseif ($child->nodeType === XML_ELEMENT_NODE) {
+            $text .= strtolower($child->nodeName) === 'br' ? ' ' : $child->textContent;
+        }
+    }
+
+    return trim((string) preg_replace('/\s+/u', ' ', $text));
+}
+
+function contract_template_pdf_list_items(DOMNode $listNode): array
+{
+    $items = [];
+    foreach ($listNode->childNodes as $child) {
+        if ($child->nodeType === XML_ELEMENT_NODE && strtolower($child->nodeName) === 'li') {
+            $text = contract_template_pdf_node_text($child);
+            if ($text !== '') {
+                $items[] = $text;
+            }
+        }
+    }
+
+    return $items;
+}
+
 function ensure_contract_documents_table(PDO $pdo): void
 {
     $pdo->exec(
@@ -953,12 +1044,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $isCleanTeamCopy = $audience === 'cleanteam';
     $pdf = new SimplePdfDocument();
 
-    $netPrice = (float) $offer['price'];
-    $vatAmount = round($netPrice * VAT_RATE / 100, 2);
-    $grossPrice = round($netPrice + $vatAmount, 2);
-
     $contractNumber = (string) ($contract['number'] ?? 'Entwurf');
-    $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
     $createdAt = contract_format_date($offer['created_at']);
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '-';
@@ -994,53 +1080,10 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $pdf->keyValue('Adresse', $customerAddress . ', ' . $customerZipCity);
     $pdf->keyValue('Unterzeichner', $signatoryName . ' (' . $authorityText . ')');
 
-    $pdf->heading('§ 1 Beginn, Rechtswahl und Vertragssprache');
-    $pdf->numberedList([
-        'Der Vertrag zur Gebäudereinigung tritt am ' . $effectiveDate . ' in Kraft.',
-        'Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.',
-    ]);
-
-    $pdf->heading('§ 2 Vertragsgegenstand und Objekt');
-    $pdf->paragraph('Vertragsgegenstand sind die in § 3 genannten Reinigungsarbeiten für das nachfolgend näher bezeichnete Objekt.');
-    $pdf->keyValue('Leistungsort', $customerAddress . ', ' . $customerZipCity);
-
-    $pdf->heading('§ 3 Art und Umfang der Reinigung');
-    $pdf->paragraph('Die Reinigung findet ' . (string) $offer['interval_label'] . ' statt.');
-    $pdf->paragraph('Gebuchte Leistung: ' . (string) $offer['service'] . ' (' . (int) $offer['square_meters'] . ' m² Reinigungsfläche).');
-    $offerNotes = trim((string) ($offer['notes'] ?? ''));
-    if ($offerNotes !== '') {
-        $pdf->paragraph('Zusatzhinweis: ' . $offerNotes);
-    }
-    foreach (STANDARD_SERVICE_CATALOG as $category => $items) {
-        $pdf->subheading((string) $category);
-        $pdf->bulletList($items);
-    }
-    $pdf->paragraph('Leistungen, die nicht in diesem Vertrag aufgeführt sind, bedürfen einer gesonderten Beauftragung und werden zusätzlich berechnet.');
-
-    $pdf->heading('§ 4 Vergütung');
-    $pdf->paragraph('Die monatliche Pauschalvergütung beträgt ' . contract_format_money($netPrice) . ' netto zuzüglich der jeweils geltenden Umsatzsteuer (aktuell ' . rtrim(rtrim(number_format(VAT_RATE, 1, ',', '.'), '0'), ',') . ' %). Der Bruttobetrag beträgt zum Zeitpunkt der Vertragserstellung ' . contract_format_money($grossPrice) . '. Leistungen außerhalb von § 3 sind separat zu beauftragen und werden zusätzlich berechnet. Rechnungen sind binnen ' . PAYMENT_DUE_DAYS . ' Arbeitstagen zu zahlen; nach ' . DEFAULT_AFTER_DAYS . ' Tagen fallen automatisch Verzugszinsen an.');
-    $pdf->paragraph('Bei einer Tariferhöhung in der Gebäudereinigung geben wir die entsprechenden Lohnsteigerungen an unser Personal und unsere Kunden weiter. Die Lohnkosten werden voraussichtlich um ' . WAGE_INCREASE_MIN_PERCENT . ' bis ' . WAGE_INCREASE_MAX_PERCENT . ' Prozent steigen. Unsere Kunden informieren wir mindestens ' . PRICE_ADJUSTMENT_NOTICE_MONTHS . ' Monat(e) vorher und teilen den exakten Differenzbetrag mit, der aus Lohn-, Betriebs- und Materialkosten berechnet wird.');
-    $pdf->paragraph('Zahlungsverzug / Zurückbehaltungsrecht: Die vereinbarte Vergütung ist innerhalb von ' . PAYMENT_DUE_DAYS . ' Arbeitstagen nach Zugang der Rechnung ohne Abzug auf das von uns benannte Konto zu überweisen. Geht innerhalb dieser Frist kein vollständiger Zahlungseingang ein und erfolgt keine vorherige Mitteilung oder anderweitige Vereinbarung durch den Auftraggeber, sind wir berechtigt, von unserem Zurückbehaltungsrecht gemäß § 320 BGB Gebrauch zu machen und die vertraglich geschuldeten Reinigungsleistungen bis zum vollständigen Ausgleich der offenen Forderung auszusetzen. Die während der Ausübung des Zurückbehaltungsrechts ausfallenden Reinigungstermine gelten als vertraglich geschuldet und werden dem Auftraggeber vergütungsrechtlich berechnet. Ein Anspruch auf Nachholung besteht nicht.');
-
-    $pdf->heading('§ 5 Pflichten des Auftraggebers');
-    $pdf->numberedList(CUSTOMER_OBLIGATIONS);
-
-    $pdf->heading('§ 6 Vertraulichkeit');
-    $pdf->paragraph('Die Parteien vereinbaren, während der Laufzeit dieses Vertrags über die Geschäfts- und Betriebsgeheimnisse der jeweils anderen Partei, einschließlich dieses Vertrags, über jedes Know-how, jegliches von einer Partei ausgehändigte Material und sämtliche Informationen, die eine Partei über das Geschäft der jeweils anderen erhält ("vertrauliche Informationen"), vertraulich zu behandeln und nicht an Dritte weiterzugeben.');
-
-    $pdf->heading('§ 7 Erfüllungsort, Gerichtsstand und Schlussbestimmungen');
-    $pdf->numberedList([
-        'Der Erfüllungsort richtet sich nach dem Sitz des Auftraggebers.',
-        'Ausschließlicher Gerichtsstand für Streitigkeiten im Zusammenhang mit dem Vertragsverhältnis ist ' . LEGAL['jurisdiction_city'] . '.',
-        'Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen.',
-        'Sollte eine Bestimmung dieses Vertrags unwirksam sein, wird die Wirksamkeit der übrigen Bestimmungen hiervon nicht berührt. Die Parteien werden über eine die unwirksame Bestimmung ersetzende Regelung verhandeln, die dem Inhalt der ursprünglichen Bestimmung möglichst nahekommt. Gleiches gilt für mögliche Vertragslücken.',
-    ]);
-
-    $pdf->heading('§ 8 Einbeziehung der Allgemeinen Geschäftsbedingungen');
-    $pdf->paragraph('Es gelten zusätzlich die Allgemeinen Geschäftsbedingungen des Auftragnehmers. Die gültige Fassung mit ' . LEGAL['agb_version'] . ' ist auf der Website ' . LEGAL['agb_url'] . ' einsehbar. Auf Wunsch kann dem Auftraggeber eine Ausfertigung der Allgemeinen Geschäftsbedingungen auch postalisch zugesendet werden.');
-
-    $pdf->heading('§ 9 Ausfertigungen und elektronische Dokumentation');
-    $pdf->paragraph('Beide Parteien erhalten eine Ausfertigung dieses Gebäudereinigungsvertrags. Bei elektronischer Unterzeichnung wird jeder Partei nach Abschluss des Signaturvorgangs eine Ausfertigung zur Verfügung gestellt.');
+    $templateHtml = get_contract_template_html(db());
+    $pdfPlaceholders = contract_template_placeholder_map($offer, $customer, $contract, true);
+    $templateBodyHtml = render_contract_template_body($templateHtml, $pdfPlaceholders);
+    contract_template_html_to_pdf($pdf, $templateBodyHtml);
 
     $pdf->heading('Unterschriften');
     $pdf->keyValue('CleanTeam', CONTRACTOR['service_point_city'] . ', ' . $createdAt . ' | Geschäftsführer: ' . $managingDirectors);

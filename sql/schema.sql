@@ -169,6 +169,15 @@ CREATE TABLE IF NOT EXISTS branding_settings (
 
 INSERT IGNORE INTO branding_settings (id, logo_filename) VALUES (1, NULL);
 
+-- Mustervertrag: bearbeitbarer Vertragstext mit {{platzhalter}}-Tokens, siehe
+-- includes/contract_template.php::default_contract_template_html() fuer den Startwert.
+CREATE TABLE IF NOT EXISTS contract_template_settings (
+  id TINYINT UNSIGNED NOT NULL,
+  template_html LONGTEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Demo-Kunden, damit das Dashboard nach der Installation nicht leer ist.
 -- Koennen jederzeit im Dashboard geloescht werden.
 INSERT IGNORE INTO customers (id, name, email, phone, salutation, contact_last_name, address, house_number, zip, city, created_at)
