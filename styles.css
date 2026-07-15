@@ -1066,6 +1066,11 @@ button.compact-item.selected {
   margin-top: 14px;
 }
 
+.room-section-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .room-section > legend {
   position: absolute;
   width: 1px;

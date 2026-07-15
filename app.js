@@ -993,8 +993,7 @@ function renumberSiteVisitFloors() {
 function renumberSiteVisitRooms(floorSection) {
   floorSection.querySelectorAll(".room-section").forEach((section, index) => {
     const name = section.querySelector('[name="roomName"]')?.value.trim();
-    const type = section.querySelector('[name="roomType"]')?.value || "Raum";
-    const title = name || `${type} ${index + 1}`;
+    const title = name || "Neuer Raum";
     section.querySelector("legend").textContent = title;
     const roomTitle = section.querySelector(".room-section-title");
     if (roomTitle) {
@@ -1018,6 +1017,23 @@ function setRoomSectionCollapsed(roomSection, collapsed) {
       label.textContent = collapsed ? "Aufklappen" : "Zuklappen";
     }
   }
+}
+
+function saveSiteVisitRoom(roomSection) {
+  const roomName = roomSection.querySelector('[name="roomName"]');
+  if (!roomName.value.trim()) {
+    showToast("Bitte zuerst einen Raumnamen eintragen.");
+    roomName.focus();
+    return;
+  }
+
+  const floorSection = roomSection.closest(".floor-section");
+  if (floorSection) {
+    renumberSiteVisitRooms(floorSection);
+  }
+  syncCleaningTaskSections(roomSection);
+  setRoomSectionCollapsed(roomSection, true);
+  showToast("Raum wurde gespeichert.");
 }
 
 function ensureFloorRoomEmptyState(floorSection) {
@@ -1303,6 +1319,12 @@ function addSiteVisitRoom(floorSection, values = {}, options = {}) {
         Notiz zum Raum
         <textarea name="roomNotes" rows="2" placeholder="Notizen zu diesem Raum">${escapeHtml(room.notes)}</textarea>
       </label>
+      <div class="room-section-actions span-2">
+        <button class="primary-button" type="button" data-action="save-site-visit-room">
+          <i data-lucide="save" aria-hidden="true"></i>
+          Speichern
+        </button>
+      </div>
     </div>
   `;
 
@@ -1976,6 +1998,15 @@ async function handleCustomerSubmit(event) {
 
 async function handleSiteVisitSubmit(event) {
   event.preventDefault();
+
+  const unnamedRoom = [...els.siteVisitFloors.querySelectorAll(".room-section")]
+    .find((roomSection) => !roomSection.querySelector('[name="roomName"]')?.value.trim());
+  if (unnamedRoom) {
+    setRoomSectionCollapsed(unnamedRoom, false);
+    showToast("Bitte pro Raum einen Raumnamen eintragen.");
+    unnamedRoom.querySelector('[name="roomName"]').focus();
+    return;
+  }
 
   const floors = collectSiteVisitFloors();
   if (floors.length === 0) {
@@ -2690,6 +2721,7 @@ function handleSiteVisitFloorAction(event) {
   const addRoomButton = event.target.closest('[data-action="add-site-visit-room"]');
   const removeRoomButton = event.target.closest('[data-action="remove-site-visit-room"]');
   const toggleRoomButton = event.target.closest('[data-action="toggle-site-visit-room"]');
+  const saveRoomButton = event.target.closest('[data-action="save-site-visit-room"]');
 
   if (addRoomButton) {
     event.preventDefault();
@@ -2705,6 +2737,12 @@ function handleSiteVisitFloorAction(event) {
     event.preventDefault();
     const roomSection = toggleRoomButton.closest(".room-section");
     setRoomSectionCollapsed(roomSection, !roomSection.classList.contains("is-collapsed"));
+    return;
+  }
+
+  if (saveRoomButton) {
+    event.preventDefault();
+    saveSiteVisitRoom(saveRoomButton.closest(".room-section"));
     return;
   }
 
