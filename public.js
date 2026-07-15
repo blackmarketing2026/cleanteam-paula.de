@@ -104,18 +104,9 @@ function renderOfferSummary() {
   const entries = [
     ["Kunde", offer.customer.name],
     ["Ansprechpartner", contactName(offer.customer)],
-    ["Leistung", offer.service],
     ["Fläche", `${offer.squareMeters} m²`],
-    ["Intervall", offer.interval],
   ];
-  if (Number(offer.priceAdjustment || 0) !== 0) {
-    entries.push(["Berechneter Grundpreis", formatCurrency(offer.basePrice || offer.price)]);
-    entries.push([
-      "Preisanpassung",
-      `${formatCurrency(offer.priceAdjustment)}${offer.priceAdjustmentNote ? ` (${offer.priceAdjustmentNote})` : ""}`,
-    ]);
-  }
-  entries.push(["Finaler Nettowert", formatCurrency(offer.price)]);
+  entries.push(["Netto-Betrag", formatCurrency(offer.price)]);
   renderDefinitionList(els.offerSummary, entries);
   els.offerValidity.textContent = `Dieser Kostenvoranschlag ist gültig bis ${formatDate(offer.expiresAt)}.`;
 }
@@ -132,7 +123,7 @@ function renderDataCheck() {
 }
 
 function renderIntervalCheck() {
-  els.intervalCheckText.textContent = `Wie besprochen reinigen wir im Intervall „${state.offer.interval}“. Ist das korrekt?`;
+  els.intervalCheckText.textContent = "Sind die im Kostenvoranschlag aufgeführten Reinigungsintervalle korrekt?";
 }
 
 function renderAuthorizationAddressOptions() {
@@ -171,18 +162,9 @@ function renderPartnerDetails() {
 function renderServiceDetails() {
   const offer = state.offer;
   const entries = [
-    ["Leistung", offer.service],
     ["Fläche", `${offer.squareMeters} m²`],
-    ["Intervall", offer.interval],
     ["Startdatum", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
   ];
-  if (Number(offer.priceAdjustment || 0) !== 0) {
-    entries.push(["Berechneter Grundpreis", formatCurrency(offer.basePrice || offer.price)]);
-    entries.push([
-      "Preisanpassung",
-      `${formatCurrency(offer.priceAdjustment)}${offer.priceAdjustmentNote ? ` (${offer.priceAdjustmentNote})` : ""}`,
-    ]);
-  }
   entries.push(["Netto-Betrag", formatCurrency(offer.price)]);
   if (offer.notes) {
     entries.push(["Besondere Vereinbarungen", offer.notes]);

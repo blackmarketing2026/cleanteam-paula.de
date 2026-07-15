@@ -69,7 +69,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
         <section id="screen-intervall" class="public-screen wizard-screen">
           <p class="step-indicator">Schritt 2 von 7</p>
-          <h2>Ist das besprochene Intervall korrekt?</h2>
+          <h2>Sind die Reinigungsintervalle korrekt?</h2>
           <p class="question" id="interval-check-text"></p>
           <div class="form-actions">
             <button class="ghost-button" data-yesno="no" type="button">Nein</button>
@@ -175,6 +175,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js"></script>
+    <script src="public.js?v=manual-offer-price-20260715-1"></script>
   </body>
 </html>

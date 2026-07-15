@@ -1409,6 +1409,10 @@ button.compact-item.selected {
   padding: 14px;
 }
 
+.single-price-preview {
+  grid-template-columns: 1fr;
+}
+
 .price-preview div {
   display: grid;
   gap: 4px;

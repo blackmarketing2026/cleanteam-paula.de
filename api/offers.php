@@ -97,18 +97,22 @@ if ($method === 'POST') {
     $body = read_json_body();
     $customerId = trim((string) ($body['customerId'] ?? ''));
     $squareMeters = (float) ($body['squareMeters'] ?? 0);
-    $interval = trim((string) ($body['interval'] ?? ''));
-    $service = trim((string) ($body['service'] ?? ''));
+    $interval = trim((string) ($body['interval'] ?? '')) ?: 'laut Begehung';
+    $service = trim((string) ($body['service'] ?? '')) ?: 'Reinigung nach Begehung';
     $siteVisitId = trim((string) ($body['siteVisitId'] ?? ''));
-    $priceAdjustment = round((float) ($body['priceAdjustment'] ?? 0), 2);
+    $manualPrice = round((float) ($body['manualPrice'] ?? 0), 2);
     $priceAdjustmentNote = trim((string) ($body['priceAdjustmentNote'] ?? ''));
 
     if ($siteVisitId === '') {
         json_error('Bitte zuerst eine offene Begehung auswählen.', 422);
     }
 
-    if ($customerId === '' || $squareMeters <= 0 || $interval === '' || $service === '') {
-        json_error('Begehung, Kunde, Quadratmeter, Intervall und Leistung sind erforderlich.', 422);
+    if ($customerId === '' || $squareMeters <= 0) {
+        json_error('Begehung, Kunde, Quadratmeter und Preis sind erforderlich.', 422);
+    }
+
+    if ($manualPrice <= 0) {
+        json_error('Bitte den manuellen Preis eintragen.', 422);
     }
 
     $customerStmt = $pdo->prepare('SELECT id FROM customers WHERE id = :id');
@@ -130,7 +134,8 @@ if ($method === 'POST') {
     }
 
     $basePrice = calculate_offer_price($squareMeters, $interval, $service);
-    $price = max(0, round($basePrice + $priceAdjustment, 2));
+    $price = $manualPrice;
+    $priceAdjustment = round($price - $basePrice, 2);
     $id = generate_id('offer');
     $token = generate_token();
     $startDate = trim((string) ($body['startDate'] ?? ''));

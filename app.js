@@ -84,12 +84,9 @@ const els = {
   offerInterval: document.querySelector("#offer-interval"),
   offerService: document.querySelector("#offer-service"),
   offerStartDate: document.querySelector("#offer-start-date"),
-  offerPriceAdjustment: document.querySelector("#offer-price-adjustment"),
-  offerPriceAdjustmentNote: document.querySelector("#offer-price-adjustment-note"),
+  offerManualPrice: document.querySelector("#offer-manual-price"),
   offerNotes: document.querySelector("#offer-notes"),
-  offerBasePricePreview: document.querySelector("#offer-base-price-preview"),
-  offerAdjustmentPreview: document.querySelector("#offer-adjustment-preview"),
-  offerPricePreview: document.querySelector("#offer-price-preview"),
+  offerEstimatedPricePreview: document.querySelector("#offer-estimated-price-preview"),
   offerList: document.querySelector("#offer-list"),
   contractList: document.querySelector("#contract-list"),
   contractSearch: document.querySelector("#contract-search"),
@@ -342,10 +339,6 @@ function calculateOfferPrice(squareMeters, interval, service) {
   const rate = serviceRates[service] || serviceRates.Unterhaltsreinigung;
   const setup = interval === "Einmalig" ? 65 : 35;
   return Math.max(0, sqm * rate * factor + setup);
-}
-
-function offerPriceAdjustmentValue() {
-  return Number(els.offerPriceAdjustment.value) || 0;
 }
 
 function customerAddress(customer) {
@@ -606,7 +599,7 @@ function renderMetrics() {
             <article class="compact-item">
               <div>
                 <strong>${escapeHtml(offer.customer.name)}</strong>
-                <span>${escapeHtml(offer.service)} · ${offer.squareMeters} m² · ${escapeHtml(offer.interval)}</span>
+                <span>${offer.squareMeters} m² · Erstellt am ${formatDate(offer.createdAt)}</span>
               </div>
               <span class="badge">${formatCurrency(offer.price)}</span>
             </article>
@@ -654,8 +647,7 @@ function renderCustomerOptions() {
 function clearOfferSiteVisitFields() {
   els.offerCustomer.value = "";
   els.offerSquareMeters.value = "";
-  els.offerPriceAdjustment.value = "";
-  els.offerPriceAdjustmentNote.value = "";
+  els.offerManualPrice.value = "";
   els.offerNotes.value = "";
   updateOfferPreview();
 }
@@ -1757,7 +1749,7 @@ async function startOfferFromSiteVisit(id) {
   const prepared = await prepareOfferFromSiteVisit(id);
   if (prepared) {
     switchView("offers-new");
-    els.offerInterval.focus();
+    els.offerManualPrice.focus();
   }
 }
 
@@ -1784,6 +1776,7 @@ async function prepareOfferFromSiteVisit(id) {
     renderOfferSiteVisitOptions();
     els.offerCustomer.value = customer.id;
     els.offerSquareMeters.value = visit.squareMeters || "";
+    els.offerManualPrice.value = "";
     els.offerNotes.value = siteVisitOfferNotes(visit);
     updateOfferPreview();
     showToast(
@@ -1825,9 +1818,6 @@ function renderOfferCard(offer) {
   const sentLabel = offer.sentAt
     ? `Gesendet am ${formatDate(offer.sentAt)}`
     : "Noch nicht per E-Mail versendet";
-  const adjustmentLine = Number(offer.priceAdjustment || 0) !== 0
-    ? `<span>Preisanpassung ${formatCurrency(offer.priceAdjustment)}${offer.priceAdjustmentNote ? ` · ${escapeHtml(offer.priceAdjustmentNote)}` : ""}</span>`
-    : "";
 
   const contractButton = offer.contractId
     ? `
@@ -1853,10 +1843,9 @@ function renderOfferCard(offer) {
         <div>
           <div class="record-title">Firma: ${escapeHtml(offer.customer.name)}</div>
           <div class="record-meta">
-            <span>${escapeHtml(offer.service)} · ${offer.squareMeters} m² · ${escapeHtml(offer.interval)}</span>
+            <span>${offer.squareMeters} m²</span>
             <span>Erstellt am ${formatDate(offer.createdAt)} · Start ${formatDate(offer.startDate)}</span>
             <span>${escapeHtml(sentLabel)}</span>
-            ${adjustmentLine}
           </div>
         </div>
         <div class="record-side">
@@ -2036,7 +2025,7 @@ function renderContractRow(contract) {
     <tr class="${selected}">
       <td>
         <strong>${escapeHtml(contract.number)}</strong>
-        <span>${escapeHtml(contract.offer.service)} · ${contract.offer.squareMeters} m²</span>
+        <span>${contract.offer.squareMeters} m²</span>
       </td>
       <td>${escapeHtml(contract.customer.name)}</td>
       <td>${escapeHtml(contactName(contract.customer))}</td>
@@ -2066,17 +2055,13 @@ function renderContractRow(contract) {
 }
 
 function updateOfferPreview() {
-  const basePrice = calculateOfferPrice(
+  const estimatedPrice = calculateOfferPrice(
     els.offerSquareMeters.value,
     els.offerInterval.value,
     els.offerService.value,
   );
-  const adjustment = offerPriceAdjustmentValue();
-  const price = Math.max(0, basePrice + adjustment);
 
-  els.offerBasePricePreview.textContent = formatCurrency(basePrice);
-  els.offerAdjustmentPreview.textContent = formatCurrency(adjustment);
-  els.offerPricePreview.textContent = formatCurrency(price);
+  els.offerEstimatedPricePreview.textContent = formatCurrency(estimatedPrice);
 }
 
 function resetCustomerForm() {
@@ -2219,6 +2204,18 @@ async function handleOfferSubmit(event) {
     return;
   }
 
+  const estimatedPrice = calculateOfferPrice(
+    els.offerSquareMeters.value,
+    els.offerInterval.value,
+    els.offerService.value,
+  );
+  const manualPrice = Number(els.offerManualPrice.value);
+  if (!Number.isFinite(manualPrice) || manualPrice <= 0) {
+    showToast("Bitte den manuellen Preis eintragen.");
+    els.offerManualPrice.focus();
+    return;
+  }
+
   const payload = {
     customerId,
     siteVisitId: state.pendingOfferSiteVisitId,
@@ -2226,8 +2223,9 @@ async function handleOfferSubmit(event) {
     interval: els.offerInterval.value,
     service: els.offerService.value,
     startDate: els.offerStartDate.value,
-    priceAdjustment: offerPriceAdjustmentValue(),
-    priceAdjustmentNote: els.offerPriceAdjustmentNote.value.trim(),
+    manualPrice,
+    priceAdjustment: manualPrice - estimatedPrice,
+    priceAdjustmentNote: "",
     notes: els.offerNotes.value.trim(),
   };
 
@@ -3234,7 +3232,6 @@ function bindEvents() {
   els.offerSquareMeters.addEventListener("input", updateOfferPreview);
   els.offerInterval.addEventListener("change", updateOfferPreview);
   els.offerService.addEventListener("change", updateOfferPreview);
-  els.offerPriceAdjustment.addEventListener("input", updateOfferPreview);
 
   els.customerList.addEventListener("click", handleRecordAction);
   els.siteVisitList.addEventListener("click", handleRecordAction);

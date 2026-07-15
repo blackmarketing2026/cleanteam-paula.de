@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=quiz-company-offer-20260715-1" />
+    <link rel="stylesheet" href="styles.css?v=manual-offer-price-20260715-1" />
     <link rel="stylesheet" href="site-visit-quiz.css?v=svq-20260715-7" />
   </head>
   <body>
@@ -212,7 +212,7 @@
               <div class="panel-header">
                 <div>
                   <h4>Neueste Kostenvoranschläge</h4>
-                  <p class="muted">Mit Kundendaten, Quadratmetern und Intervall.</p>
+                  <p class="muted">Mit Kundendaten, Fläche und Preis.</p>
                 </div>
               </div>
               <div id="recent-offers" class="compact-list"></div>
@@ -466,54 +466,24 @@
                 Quadratmeter aus Begehung
                 <input id="offer-square-meters" type="number" min="1" step="1" required readonly placeholder="250" />
               </label>
-              <label>
-                Intervall *
-                <select id="offer-interval" required>
-                  <option value="Einmalig">Einmalig</option>
-                  <option value="Wöchentlich">Wöchentlich</option>
-                  <option value="14-tägig">14-tägig</option>
-                  <option value="Monatlich">Monatlich</option>
-                  <option value="Quartalsweise">Quartalsweise</option>
-                </select>
-              </label>
+              <input id="offer-interval" type="hidden" value="laut Begehung" />
+              <input id="offer-service" type="hidden" value="Reinigung nach Begehung" />
               <label>
                 Startdatum
                 <input id="offer-start-date" type="date" />
               </label>
               <label>
-                Leistung
-                <select id="offer-service">
-                  <option value="Unterhaltsreinigung">Unterhaltsreinigung</option>
-                  <option value="Büroreinigung">Büroreinigung</option>
-                  <option value="Treppenhausreinigung">Treppenhausreinigung</option>
-                  <option value="Grundreinigung">Grundreinigung</option>
-                  <option value="Glasreinigung">Glasreinigung</option>
-                </select>
-              </label>
-              <label>
-                Preisanpassung netto
-                <input id="offer-price-adjustment" type="number" step="0.01" placeholder="z. B. -25 oder 40" />
-              </label>
-              <label>
-                Grund der Preisanpassung
-                <input id="offer-price-adjustment-note" type="text" maxlength="255" placeholder="z. B. Sonderrabatt, Zusatzaufwand" />
+                Preis manuell eingeben *
+                <input id="offer-manual-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" />
               </label>
               <label class="span-2">
                 Notizen
                 <textarea id="offer-notes" rows="4" placeholder="Besondere Wünsche, Schlüsselübergabe, Reinigungszeiten"></textarea>
               </label>
-              <div class="price-preview span-2">
+              <div class="price-preview single-price-preview span-2">
                 <div>
-                  <span>Berechneter Grundpreis</span>
-                  <strong id="offer-base-price-preview">0,00 €</strong>
-                </div>
-                <div>
-                  <span>Preisanpassung</span>
-                  <strong id="offer-adjustment-preview">0,00 €</strong>
-                </div>
-                <div>
-                  <span>Finaler Nettowert</span>
-                  <strong id="offer-price-preview">0,00 €</strong>
+                  <span>Geschätzter Preis</span>
+                  <strong id="offer-estimated-price-preview">0,00 €</strong>
                 </div>
               </div>
               <div class="form-actions span-2">
@@ -1044,6 +1014,6 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="site-visit-quiz-data.js?v=svq-20260715-7"></script>
     <script src="site-visit-quiz.js?v=svq-20260715-7"></script>
-    <script src="app.js?v=quiz-company-offer-20260715-1"></script>
+    <script src="app.js?v=manual-offer-price-20260715-1"></script>
   </body>
 </html>
