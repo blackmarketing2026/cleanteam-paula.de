@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=site-visit-company-20260715-1" />
+    <link rel="stylesheet" href="styles.css?v=app-nav-20260715-1" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -139,9 +139,6 @@
 
       <section class="workspace">
         <header class="topbar">
-          <button id="menu-button" class="icon-button mobile-only" type="button" aria-label="Navigation öffnen">
-            <i data-lucide="menu" aria-hidden="true"></i>
-          </button>
           <div>
             <p class="eyebrow">CleanTeam</p>
             <h2 id="view-title">Übersicht</h2>
@@ -927,6 +924,29 @@
           </section>
         </section>
       </section>
+
+      <nav class="app-bottom-nav" aria-label="Hauptnavigation (App-Ansicht)">
+        <button class="nav-link bottom-nav-link active" type="button" data-view="overview">
+          <i data-lucide="layout-dashboard" aria-hidden="true"></i>
+          <span>Übersicht</span>
+        </button>
+        <button class="nav-link bottom-nav-link" type="button" data-view="customer-new">
+          <i data-lucide="users-round" aria-hidden="true"></i>
+          <span>Kunden</span>
+        </button>
+        <button class="nav-link bottom-nav-link" type="button" data-view="site-visit-new">
+          <i data-lucide="clipboard-list" aria-hidden="true"></i>
+          <span>Begehung</span>
+        </button>
+        <button class="nav-link bottom-nav-link" type="button" data-view="offers-new">
+          <i data-lucide="file-text" aria-hidden="true"></i>
+          <span>Kostenvoranschläge</span>
+        </button>
+        <button id="bottom-menu-button" class="bottom-nav-link" type="button" aria-label="Weitere Menüpunkte">
+          <i data-lucide="menu" aria-hidden="true"></i>
+          <span>Mehr</span>
+        </button>
+      </nav>
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -949,6 +969,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=site-visit-company-20260715-1"></script>
+    <script src="app.js?v=app-nav-20260715-1"></script>
   </body>
 </html>

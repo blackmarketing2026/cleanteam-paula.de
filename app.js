@@ -63,7 +63,7 @@ const els = {
   views: document.querySelectorAll(".view"),
   viewTitle: document.querySelector("#view-title"),
   sidebar: document.querySelector(".sidebar"),
-  menuButton: document.querySelector("#menu-button"),
+  bottomMenuButton: document.querySelector("#bottom-menu-button"),
   mobileBackdrop: document.querySelector("#mobile-backdrop"),
   quickCustomer: document.querySelector("#quick-customer"),
   quickOffer: document.querySelector("#quick-offer"),
@@ -3035,7 +3035,7 @@ function bindEvents() {
     setSettingsGroupExpanded(els.settingsSubgroup.hidden);
   });
 
-  els.menuButton.addEventListener("click", openMobileNav);
+  els.bottomMenuButton.addEventListener("click", openMobileNav);
   els.mobileBackdrop.addEventListener("click", closeMobileNav);
   els.quickCustomer.addEventListener("click", () => switchView("customer-new"));
   els.quickOffer.addEventListener("click", () => {
