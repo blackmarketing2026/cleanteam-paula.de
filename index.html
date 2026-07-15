@@ -11,6 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css?v=app-nav-20260715-1" />
+    <link rel="stylesheet" href="site-visit-quiz.css?v=svq-20260715-1" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -82,6 +83,10 @@
             <button class="nav-link" type="button" data-view="site-visit-saved">
               <i data-lucide="list-checks" aria-hidden="true"></i>
               <span>Gespeicherte Begehungen</span>
+            </button>
+            <button class="nav-link" type="button" data-view="site-visit-quiz">
+              <i data-lucide="list-todo" aria-hidden="true"></i>
+              <span>Begehung erstellen (Quiz)</span>
             </button>
           </div>
           <button id="offers-group-toggle" class="nav-link nav-group-toggle" type="button" aria-expanded="false">
@@ -413,6 +418,19 @@
               </div>
             </div>
             <div id="site-visit-list" class="record-list"></div>
+          </section>
+        </section>
+
+        <section id="site-visit-quiz-view" class="view" aria-labelledby="site-visit-quiz-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="site-visit-quiz-heading">Begehung erstellen</h3>
+              <p class="muted">Geführtes Quiz für die digitale Objektbegehung vor Ort.</p>
+            </div>
+          </div>
+
+          <section class="panel svq-panel">
+            <div id="site-visit-quiz-root"></div>
           </section>
         </section>
 
@@ -969,6 +987,8 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="site-visit-quiz-data.js?v=svq-20260715-1"></script>
+    <script src="site-visit-quiz.js?v=svq-20260715-1"></script>
     <script src="app.js?v=app-nav-20260715-1"></script>
   </body>
 </html>

@@ -169,6 +169,7 @@ const titles = {
   "customer-list": "Kundenliste",
   "site-visit-new": "Neue Begehung erstellen",
   "site-visit-saved": "Gespeicherte Begehungen",
+  "site-visit-quiz": "Begehung erstellen (Quiz)",
   "offers-new": "Neue Kostenvoranschläge",
   "offers-saved": "Gespeicherte Kostenvoranschläge",
   contracts: "Verträge",
@@ -367,6 +368,7 @@ function applySession(session = {}) {
     roleLabel: user.roleLabel || (user.role === "admin" ? "Admin" : "Rolle 1"),
     isAdmin: Boolean(user.isAdmin || user.role === "admin"),
   };
+  window.currentUserEmail = state.session.email;
   applyRolePermissions();
 }
 
@@ -475,6 +477,10 @@ function switchView(view) {
 
   if (view === "mailbox") {
     loadMailbox();
+  }
+
+  if (view === "site-visit-quiz" && typeof svqShow === "function") {
+    svqShow();
   }
 
   loadAll();
