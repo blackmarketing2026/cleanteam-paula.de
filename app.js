@@ -1259,7 +1259,7 @@ function syncCleaningTaskSections(roomSection) {
       customField.hidden = !visible || !checkbox.checked || frequencySelect.value !== "Individuell";
     }
     if (methodField) {
-      methodField.hidden = !visible || !checkbox.checked || roomType !== "Büro";
+      methodField.hidden = !visible || !checkbox.checked || key !== "floor";
     }
     if (trashBagField) {
       trashBagField.hidden = !visible || !checkbox.checked;
@@ -1372,7 +1372,7 @@ function collectSiteVisitFloors() {
             label: cleaningTaskLabel(key),
             frequency,
             customFrequency: frequency === "Individuell" ? customFrequency : "",
-            method: key === "floor" && roomType === "Büro"
+            method: key === "floor"
               ? roomSection.querySelector(`[name="cleaningMethod"][data-cleaning-key="${key}"]`)?.value || "Gesaugt und gewischt"
               : "",
             bagMode: key === "trash"
