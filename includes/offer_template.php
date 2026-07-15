@@ -31,6 +31,25 @@ function offer_cleaning_frequency(?string $frequency): string
     return $frequency !== null && in_array($frequency, $allowedFrequencies, true) ? $frequency : 'Täglich';
 }
 
+function offer_floor_cleaning_method(?string $method): string
+{
+    if ($method === 'Nur gesaugt') {
+        return 'Gesaugt';
+    }
+    if ($method === 'Nur gewischt') {
+        return 'Gewischt';
+    }
+
+    $allowedMethods = ['Gesaugt', 'Gewischt', 'Gesaugt und gewischt'];
+    return $method !== null && in_array($method, $allowedMethods, true) ? $method : 'Gesaugt und gewischt';
+}
+
+function offer_trash_bag_mode(?string $mode): string
+{
+    $allowedModes = ['Mit Mülltüte', 'Ohne Mülltüte'];
+    return $mode !== null && in_array($mode, $allowedModes, true) ? $mode : 'Mit Mülltüte';
+}
+
 function offer_cleaning_task_label(string $key): string
 {
     $labels = [
@@ -40,9 +59,9 @@ function offer_cleaning_task_label(string $key): string
         'floor' => 'Boden',
         'door' => 'Tür',
         'desk' => 'Schreibtische',
-        'window' => 'Fenster',
+        'window' => 'Fensterbänke',
         'surface' => 'Oberflächen',
-        'trash' => 'Abfallbehälter',
+        'trash' => 'Mülleimer-Entleerung',
         'kitchen' => 'Küchenflächen',
         'handrail' => 'Handlauf / Geländer',
     ];
@@ -58,12 +77,15 @@ function offer_cleaning_item(array $item): ?array
     }
 
     $frequency = offer_cleaning_frequency(trim((string) ($item['frequency'] ?? '')));
+    $method = trim((string) ($item['method'] ?? ($item['cleaningMethod'] ?? '')));
 
     return [
         'key' => $key,
         'label' => offer_cleaning_task_label($key),
         'frequency' => $frequency,
         'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
+        'method' => $key === 'floor' && $method !== '' ? offer_floor_cleaning_method($method) : '',
+        'bagMode' => $key === 'trash' ? offer_trash_bag_mode(trim((string) ($item['bagMode'] ?? ($item['trashBagMode'] ?? '')))) : '',
     ];
 }
 
@@ -83,10 +105,10 @@ function offer_legacy_cleaning_items_from_room(array $room): array
         $items[] = ['key' => 'desk', 'label' => 'Schreibtische', 'frequency' => 'Wöchentlich', 'customFrequency' => ''];
     }
     if (offer_int($room['windows'] ?? 0) > 0) {
-        $items[] = ['key' => 'window', 'label' => 'Fenster', 'frequency' => '30-täglich', 'customFrequency' => ''];
+        $items[] = ['key' => 'window', 'label' => 'Fensterbänke', 'frequency' => '30-täglich', 'customFrequency' => ''];
     }
     if (trim((string) ($room['cleaningType'] ?? '')) !== '') {
-        $items[] = ['key' => 'floor', 'label' => 'Boden', 'frequency' => 'Täglich', 'customFrequency' => ''];
+        $items[] = ['key' => 'floor', 'label' => 'Boden', 'frequency' => 'Täglich', 'customFrequency' => '', 'method' => offer_floor_cleaning_method(trim((string) ($room['cleaningType'] ?? '')))];
     }
 
     return $items;
@@ -109,13 +131,27 @@ function offer_cleaning_items_from_room(array $room): array
     return $items !== [] ? $items : offer_legacy_cleaning_items_from_room($room);
 }
 
-function offer_cleaning_item_text(array $item): string
+function offer_cleaning_item_text(array $item, array $room = []): string
 {
     $frequency = $item['frequency'] === 'Individuell'
         ? (trim((string) ($item['customFrequency'] ?? '')) ?: 'Individuell')
         : $item['frequency'];
 
-    return $item['label'] . ': ' . $frequency;
+    $details = [$frequency];
+    if (($item['key'] ?? '') === 'floor') {
+        $floorCondition = trim((string) ($room['floorCondition'] ?? ''));
+        if ($floorCondition !== '') {
+            $details[] = $floorCondition;
+        }
+        if (trim((string) ($item['method'] ?? '')) !== '') {
+            $details[] = (string) $item['method'];
+        }
+    }
+    if (($item['key'] ?? '') === 'trash' && trim((string) ($item['bagMode'] ?? '')) !== '') {
+        $details[] = (string) $item['bagMode'];
+    }
+
+    return $item['label'] . ': ' . implode(', ', $details);
 }
 
 function offer_normalize_room(array $room, int $index = 0): array
@@ -208,19 +244,13 @@ function offer_rooms_from_floor(array $floor): array
 
 function offer_room_details(array $room): string
 {
-    $parts = [
-        (string) ($room['floorCondition'] ?? ''),
-    ];
-
-    return implode(' · ', array_filter($parts, function ($part): bool {
-        return trim((string) $part) !== '';
-    }));
+    return '';
 }
 
 function offer_cleaning_items_text(array $room): string
 {
     $items = offer_cleaning_items_from_room($room);
-    return implode(' · ', array_map('offer_cleaning_item_text', $items));
+    return implode(' · ', array_map(fn(array $item): string => offer_cleaning_item_text($item, $room), $items));
 }
 
 function render_offer_floor_plan_html(?array $siteVisit): string

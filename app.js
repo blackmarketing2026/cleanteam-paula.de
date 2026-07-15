@@ -732,14 +732,17 @@ const CLEANING_TASKS = [
   { key: "floor", label: "Boden" },
   { key: "door", label: "Tür" },
   { key: "desk", label: "Schreibtische" },
-  { key: "window", label: "Fenster" },
+  { key: "window", label: "Fensterbänke" },
   { key: "surface", label: "Oberflächen" },
-  { key: "trash", label: "Abfallbehälter" },
+  { key: "trash", label: "Mülleimer-Entleerung" },
   { key: "kitchen", label: "Küchenflächen" },
   { key: "handrail", label: "Handlauf / Geländer" },
 ];
 
 const SANITARY_CLEANING_TASK_KEYS = ["mirror", "floor", "door", "toilet"];
+const OFFICE_CLEANING_TASK_KEYS = ["floor", "desk", "window", "trash"];
+const FLOOR_CLEANING_METHODS = ["Gesaugt", "Gewischt", "Gesaugt und gewischt"];
+const TRASH_BAG_MODES = ["Mit Mülltüte", "Ohne Mülltüte"];
 
 function cleaningTaskLabel(key) {
   return CLEANING_TASKS.find((task) => task.key === key)?.label || key;
@@ -751,6 +754,11 @@ function cleaningTasksForRoomType(roomType) {
       .map((key) => CLEANING_TASKS.find((task) => task.key === key))
       .filter(Boolean);
   }
+  if (roomType === "Büro") {
+    return OFFICE_CLEANING_TASK_KEYS
+      .map((key) => CLEANING_TASKS.find((task) => task.key === key))
+      .filter(Boolean);
+  }
 
   return CLEANING_TASKS;
 }
@@ -759,13 +767,30 @@ function normalizeCleaningFrequency(value) {
   return CLEANING_FREQUENCIES.includes(value) ? value : "Täglich";
 }
 
+function normalizeFloorCleaningMethod(value) {
+  if (value === "Nur gesaugt") {
+    return "Gesaugt";
+  }
+  if (value === "Nur gewischt") {
+    return "Gewischt";
+  }
+  return FLOOR_CLEANING_METHODS.includes(value) ? value : "Gesaugt und gewischt";
+}
+
+function normalizeTrashBagMode(value) {
+  return TRASH_BAG_MODES.includes(value) ? value : "Mit Mülltüte";
+}
+
 function normalizeCleaningItem(item = {}) {
   const key = item.key || item.type || "";
+  const rawMethod = item.method || item.cleaningMethod || "";
   return {
     key,
     label: cleaningTaskLabel(key),
     frequency: normalizeCleaningFrequency(item.frequency),
     customFrequency: item.customFrequency || "",
+    method: key === "floor" && rawMethod ? normalizeFloorCleaningMethod(rawMethod) : "",
+    bagMode: key === "trash" ? normalizeTrashBagMode(item.bagMode || item.trashBagMode) : "",
   };
 }
 
@@ -784,7 +809,7 @@ function legacyCleaningItemsFromRoom(room = {}) {
     items.push({ key: "desk", label: "Schreibtische", frequency: "Wöchentlich" });
   }
   if (Number(room.windows) > 0) {
-    items.push({ key: "window", label: "Fenster", frequency: "30-täglich" });
+    items.push({ key: "window", label: "Fensterbänke", frequency: "30-täglich" });
   }
   if (room.cleaningType) {
     items.push({ key: "floor", label: "Boden", frequency: "Täglich" });
@@ -807,6 +832,25 @@ function cleaningItemFrequencyText(item) {
   }
 
   return item.frequency;
+}
+
+function cleaningItemText(item, room = {}) {
+  const details = [cleaningItemFrequencyText(item)];
+
+  if (item.key === "floor") {
+    if (room.floorCondition) {
+      details.push(room.floorCondition);
+    }
+    if (item.method) {
+      details.push(item.method);
+    }
+  }
+
+  if (item.key === "trash" && item.bagMode) {
+    details.push(item.bagMode);
+  }
+
+  return `${item.label}: ${details.filter(Boolean).join(", ")}`;
 }
 
 function normalizeRoom(room = {}, index = 0) {
@@ -894,16 +938,12 @@ function formatRoomQuantity(room) {
 }
 
 function roomDetailParts(room) {
-  const parts = [
-    room.floorCondition ? room.floorCondition : "",
-  ];
-
-  return parts.filter(Boolean);
+  return [];
 }
 
 function cleaningItemsText(room) {
   return cleaningItemsForDisplay(room)
-    .map((item) => `${item.label}: ${cleaningItemFrequencyText(item)}`)
+    .map((item) => cleaningItemText(item, room))
     .join(" · ");
 }
 
@@ -954,8 +994,30 @@ function renumberSiteVisitRooms(floorSection) {
   floorSection.querySelectorAll(".room-section").forEach((section, index) => {
     const name = section.querySelector('[name="roomName"]')?.value.trim();
     const type = section.querySelector('[name="roomType"]')?.value || "Raum";
-    section.querySelector("legend").textContent = name || `${type} ${index + 1}`;
+    const title = name || `${type} ${index + 1}`;
+    section.querySelector("legend").textContent = title;
+    const roomTitle = section.querySelector(".room-section-title");
+    if (roomTitle) {
+      roomTitle.textContent = title;
+    }
   });
+}
+
+function setRoomSectionCollapsed(roomSection, collapsed) {
+  const body = roomSection.querySelector(".room-section-body");
+  const button = roomSection.querySelector('[data-action="toggle-site-visit-room"]');
+  roomSection.classList.toggle("is-collapsed", collapsed);
+  if (body) {
+    body.hidden = collapsed;
+  }
+  if (button) {
+    button.setAttribute("aria-expanded", String(!collapsed));
+    button.setAttribute("aria-label", collapsed ? "Raum aufklappen" : "Raum zuklappen");
+    const label = button.querySelector("span");
+    if (label) {
+      label.textContent = collapsed ? "Aufklappen" : "Zuklappen";
+    }
+  }
 }
 
 function ensureFloorRoomEmptyState(floorSection) {
@@ -1060,11 +1122,45 @@ function cleaningFrequencyOptions(selectedFrequency) {
     .join("");
 }
 
+function floorCleaningMethodOptions(selectedMethod) {
+  return FLOOR_CLEANING_METHODS
+    .map((method) => `<option value="${escapeHtml(method)}"${optionSelected(method, selectedMethod)}>${escapeHtml(method)}</option>`)
+    .join("");
+}
+
+function trashBagModeOptions(selectedMode) {
+  return TRASH_BAG_MODES
+    .map((mode) => `<option value="${escapeHtml(mode)}"${optionSelected(mode, selectedMode)}>${escapeHtml(mode)}</option>`)
+    .join("");
+}
+
 function cleaningTaskMarkup(task, items) {
   const item = items.find((entry) => entry.key === task.key);
   const checked = item ? " checked" : "";
   const frequency = item?.frequency || "Täglich";
   const customFrequency = item?.customFrequency || "";
+  const method = item?.method || "Gesaugt und gewischt";
+  const bagMode = item?.bagMode || "Mit Mülltüte";
+  const floorMethod = task.key === "floor"
+    ? `
+        <label data-cleaning-method="${escapeHtml(task.key)}" hidden>
+          Reinigungsart
+          <select name="cleaningMethod" data-cleaning-key="${escapeHtml(task.key)}">
+            ${floorCleaningMethodOptions(method)}
+          </select>
+        </label>
+      `
+    : "";
+  const trashBag = task.key === "trash"
+    ? `
+        <label data-cleaning-bag="${escapeHtml(task.key)}" hidden>
+          Mülltüte
+          <select name="cleaningTrashBagMode" data-cleaning-key="${escapeHtml(task.key)}">
+            ${trashBagModeOptions(bagMode)}
+          </select>
+        </label>
+      `
+    : "";
 
   return `
     <div class="cleaning-task-row" data-cleaning-task="${escapeHtml(task.key)}">
@@ -1083,6 +1179,8 @@ function cleaningTaskMarkup(task, items) {
           Individueller Rhythmus
           <input name="cleaningCustomFrequency" type="text" data-cleaning-key="${escapeHtml(task.key)}" placeholder="z. B. 2x pro Woche" value="${escapeHtml(customFrequency)}" />
         </label>
+        ${floorMethod}
+        ${trashBag}
       </div>
     </div>
   `;
@@ -1100,6 +1198,8 @@ function syncCleaningTaskSections(roomSection) {
     const frequencySection = roomSection.querySelector(`[data-cleaning-frequency="${key}"]`);
     const frequencySelect = roomSection.querySelector(`[name="cleaningFrequency"][data-cleaning-key="${key}"]`);
     const customField = roomSection.querySelector(`[data-cleaning-custom="${key}"]`);
+    const methodField = roomSection.querySelector(`[data-cleaning-method="${key}"]`);
+    const trashBagField = roomSection.querySelector(`[data-cleaning-bag="${key}"]`);
     const visible = visibleKeys.has(key);
 
     if (row) {
@@ -1115,6 +1215,12 @@ function syncCleaningTaskSections(roomSection) {
     }
     if (customField && frequencySelect) {
       customField.hidden = !visible || !checkbox.checked || frequencySelect.value !== "Individuell";
+    }
+    if (methodField) {
+      methodField.hidden = !visible || !checkbox.checked || roomType !== "Büro";
+    }
+    if (trashBagField) {
+      trashBagField.hidden = !visible || !checkbox.checked;
     }
   });
 }
@@ -1146,13 +1252,18 @@ function addSiteVisitRoom(floorSection, values = {}, options = {}) {
   section.className = "room-section";
   section.innerHTML = `
     <legend>Raum</legend>
-    <div class="floor-section-toolbar">
+    <div class="room-section-header">
+      <button class="ghost-button room-toggle-button" type="button" data-action="toggle-site-visit-room" aria-expanded="true">
+        <i data-lucide="chevron-up" aria-hidden="true"></i>
+        <span>Zuklappen</span>
+      </button>
+      <strong class="room-section-title">Raum</strong>
       <button class="ghost-button" type="button" data-action="remove-site-visit-room">
         <i data-lucide="x" aria-hidden="true"></i>
         Raum entfernen
       </button>
     </div>
-    <div class="form-grid">
+    <div class="form-grid room-section-body">
       <label>
         Raumname
         <input name="roomName" type="text" placeholder="z. B. Büro 1, WC Damen, Flur" value="${escapeHtml(room.name)}" />
@@ -1198,6 +1309,7 @@ function addSiteVisitRoom(floorSection, values = {}, options = {}) {
   roomList.appendChild(section);
   syncCleaningTaskSections(section);
   renumberSiteVisitRooms(floorSection);
+  setRoomSectionCollapsed(section, Boolean(options.collapsed));
   refreshIcons();
   if (options.focus !== false) {
     section.querySelector('[name="roomName"]').focus();
@@ -1209,6 +1321,7 @@ function collectSiteVisitFloors() {
     const field = (name) => section.querySelector(`[name="${name}"]`);
     const rooms = [...section.querySelectorAll(".room-section")].map((roomSection, roomIndex) => {
       const roomField = (name) => roomSection.querySelector(`[name="${name}"]`);
+      const roomType = roomField("roomType").value;
       const cleaningItems = [...roomSection.querySelectorAll('[name="cleaningItem"]:checked')]
         .filter((checkbox) => !checkbox.closest(".cleaning-task-row")?.hidden)
         .map((checkbox) => {
@@ -1220,11 +1333,17 @@ function collectSiteVisitFloors() {
             label: cleaningTaskLabel(key),
             frequency,
             customFrequency: frequency === "Individuell" ? customFrequency : "",
+            method: key === "floor" && roomType === "Büro"
+              ? roomSection.querySelector(`[name="cleaningMethod"][data-cleaning-key="${key}"]`)?.value || "Gesaugt und gewischt"
+              : "",
+            bagMode: key === "trash"
+              ? roomSection.querySelector(`[name="cleaningTrashBagMode"][data-cleaning-key="${key}"]`)?.value || "Mit Mülltüte"
+              : "",
           };
         });
       return {
         name: roomField("roomName").value.trim() || `Raum ${roomIndex + 1}`,
-        roomType: roomField("roomType").value,
+        roomType,
         quantity: 1,
         squareMeters: 0,
         cleaningItems,
@@ -2570,10 +2689,22 @@ function handleSiteVisitFloorAction(event) {
   const button = event.target.closest('[data-action="remove-site-visit-floor"]');
   const addRoomButton = event.target.closest('[data-action="add-site-visit-room"]');
   const removeRoomButton = event.target.closest('[data-action="remove-site-visit-room"]');
+  const toggleRoomButton = event.target.closest('[data-action="toggle-site-visit-room"]');
 
   if (addRoomButton) {
     event.preventDefault();
-    addSiteVisitRoom(addRoomButton.closest(".floor-section"));
+    const floorSection = addRoomButton.closest(".floor-section");
+    floorSection.querySelectorAll(".room-section").forEach((roomSection) => {
+      setRoomSectionCollapsed(roomSection, true);
+    });
+    addSiteVisitRoom(floorSection);
+    return;
+  }
+
+  if (toggleRoomButton) {
+    event.preventDefault();
+    const roomSection = toggleRoomButton.closest(".room-section");
+    setRoomSectionCollapsed(roomSection, !roomSection.classList.contains("is-collapsed"));
     return;
   }
 

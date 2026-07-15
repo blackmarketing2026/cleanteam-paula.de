@@ -58,6 +58,25 @@ function normalize_cleaning_frequency(string $frequency): string
     return in_array($frequency, $allowedFrequencies, true) ? $frequency : 'Täglich';
 }
 
+function normalize_floor_cleaning_method(string $method): string
+{
+    if ($method === 'Nur gesaugt') {
+        return 'Gesaugt';
+    }
+    if ($method === 'Nur gewischt') {
+        return 'Gewischt';
+    }
+
+    $allowedMethods = ['Gesaugt', 'Gewischt', 'Gesaugt und gewischt'];
+    return in_array($method, $allowedMethods, true) ? $method : 'Gesaugt und gewischt';
+}
+
+function normalize_trash_bag_mode(string $mode): string
+{
+    $allowedModes = ['Mit Mülltüte', 'Ohne Mülltüte'];
+    return in_array($mode, $allowedModes, true) ? $mode : 'Mit Mülltüte';
+}
+
 function cleaning_task_label(string $key): string
 {
     $labels = [
@@ -67,9 +86,9 @@ function cleaning_task_label(string $key): string
         'floor' => 'Boden',
         'door' => 'Tür',
         'desk' => 'Schreibtische',
-        'window' => 'Fenster',
+        'window' => 'Fensterbänke',
         'surface' => 'Oberflächen',
-        'trash' => 'Abfallbehälter',
+        'trash' => 'Mülleimer-Entleerung',
         'kitchen' => 'Küchenflächen',
         'handrail' => 'Handlauf / Geländer',
     ];
@@ -85,12 +104,15 @@ function normalize_cleaning_item(array $item): ?array
     }
 
     $frequency = normalize_cleaning_frequency(trim((string) ($item['frequency'] ?? '')));
+    $method = trim((string) ($item['method'] ?? ($item['cleaningMethod'] ?? '')));
 
     return [
         'key' => $key,
         'label' => cleaning_task_label($key),
         'frequency' => $frequency,
         'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
+        'method' => $key === 'floor' && $method !== '' ? normalize_floor_cleaning_method($method) : '',
+        'bagMode' => $key === 'trash' ? normalize_trash_bag_mode(trim((string) ($item['bagMode'] ?? ($item['trashBagMode'] ?? '')))) : '',
     ];
 }
 
@@ -110,10 +132,10 @@ function legacy_cleaning_items_from_room(array $room): array
         $items[] = ['key' => 'desk', 'label' => 'Schreibtische', 'frequency' => 'Wöchentlich', 'customFrequency' => ''];
     }
     if (visit_int($room['windows'] ?? 0) > 0) {
-        $items[] = ['key' => 'window', 'label' => 'Fenster', 'frequency' => '30-täglich', 'customFrequency' => ''];
+        $items[] = ['key' => 'window', 'label' => 'Fensterbänke', 'frequency' => '30-täglich', 'customFrequency' => ''];
     }
     if (trim((string) ($room['cleaningType'] ?? '')) !== '') {
-        $items[] = ['key' => 'floor', 'label' => 'Boden', 'frequency' => 'Täglich', 'customFrequency' => ''];
+        $items[] = ['key' => 'floor', 'label' => 'Boden', 'frequency' => 'Täglich', 'customFrequency' => '', 'method' => normalize_floor_cleaning_method(trim((string) ($room['cleaningType'] ?? '')))];
     }
 
     return $items;
