@@ -95,6 +95,9 @@ function cleaning_task_label(string $key): string
         'treatmentChair' => 'Behandlungsstühle',
         'treatmentTable' => 'Behandlungstisch',
         'disinfection' => 'Desinfektion',
+        'chairs' => 'Stühle',
+        'tables' => 'Tische',
+        'counter' => 'Tresen',
     ];
 
     return $labels[$key] ?? $key;

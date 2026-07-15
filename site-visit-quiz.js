@@ -90,6 +90,8 @@ function svqNewDraft() {
     updatedAt: svqNowIso(),
     updatedBy: window.currentUserEmail || "",
     completedAt: null,
+    linkedSiteVisitId: null,
+    linkedSiteVisitError: null,
     version: 1,
     company: { name: "", phone: "", email: "" },
     address: { street: "", houseNumber: "", zip: "", city: "" },
@@ -134,7 +136,7 @@ function svqNewRoomDraft(typeId) {
     createdAt: svqNowIso(),
     updatedAt: svqNowIso(),
   };
-  (type ? type.objects : []).forEach((objectId) => svqGetOrCreateObjectEntry(room, objectId));
+  svqRoomObjectIds(room).forEach((objectId) => svqGetOrCreateObjectEntry(room, objectId));
   return room;
 }
 
@@ -156,7 +158,13 @@ function svqGetOrCreateObjectEntry(room, objectId) {
 
 function svqRoomObjectIds(room) {
   const type = svqRoomType(room.type);
-  return type ? type.objects : [];
+  if (!type) return [];
+  if (type.id === "custom") return type.objects;
+  const ids = [...type.objects];
+  ["chairs", "tables"].forEach((id) => {
+    if (!ids.includes(id)) ids.push(id);
+  });
+  return ids;
 }
 
 /* ---------- Fortschritt ---------- */
@@ -381,6 +389,101 @@ function svqCommitActiveRoom(draft) {
   draft.activeRoomDraft = null;
   draft.editingRoomId = null;
   draft.roomObjectIndex = 0;
+}
+
+/* ---------- Übergabe an die echte Begehungs-Datenbank (api/site-visits.php) ---------- */
+
+function svqLegacyFrequency(intervalId, customInterval) {
+  const direct = {
+    daily: "Täglich",
+    every_2_days: "Alle 2 Tage",
+    weekly: "Wöchentlich",
+    biweekly: "14-täglich",
+    monthly: "30-täglich",
+  };
+  if (direct[intervalId]) {
+    return { frequency: direct[intervalId], customFrequency: "" };
+  }
+  const customLabel = intervalId === "custom" ? customInterval : svqIntervalLabel(intervalId);
+  return { frequency: "Individuell", customFrequency: customLabel || "nach Bedarf" };
+}
+
+function svqRoomCleaningItems(room) {
+  const items = [];
+  Object.values(room.objects || {}).forEach((entry) => {
+    if (!entry.present || !entry.shouldClean) return;
+    const def = SVQ_OBJECTS[entry.objectId];
+    if (!def) return;
+    const { frequency, customFrequency } = svqLegacyFrequency(entry.interval, entry.customInterval);
+    items.push({
+      key: def.legacyKey,
+      frequency,
+      customFrequency,
+      bagMode: entry.trashBag === false ? "Ohne Mülltüte" : "Mit Mülltüte",
+    });
+  });
+  (room.customObjects || []).forEach((obj) => {
+    if (!obj.shouldClean) return;
+    const intervalLabel = obj.interval === "custom" ? obj.customInterval : svqIntervalLabel(obj.interval);
+    items.push({
+      key: "surface",
+      frequency: "Individuell",
+      customFrequency: [obj.name, intervalLabel].filter(Boolean).join(" – "),
+    });
+  });
+  return items;
+}
+
+function svqBuildSiteVisitPayload(draft) {
+  const floorGroups = new Map();
+  draft.rooms.forEach((room) => {
+    const cleaningItems = svqRoomCleaningItems(room);
+    if (cleaningItems.length === 0) return;
+    const floorName = (room.floor || "").trim() || "Gesamtes Objekt";
+    if (!floorGroups.has(floorName)) floorGroups.set(floorName, []);
+    floorGroups.get(floorName).push({
+      name: room.label || room.typeLabel,
+      roomType: svqRoomType(room.type)?.legacyType || "Sonstiger Raum",
+      quantity: Number(room.quantity) || 1,
+      squareMeters: Number(room.area) || 0,
+      cleaningItems,
+      notes: [room.notes, room.internalNote].filter(Boolean).join(" / "),
+    });
+  });
+
+  const floors = Array.from(floorGroups.entries()).map(([name, rooms]) => ({ name, rooms }));
+  const areaValue = Number(draft.areaSize.value) || 0;
+  const fallbackArea = draft.rooms.reduce((sum, room) => sum + (Number(room.area) || 0), 0);
+  const address = [`${draft.address.street} ${draft.address.houseNumber}`.trim(), `${draft.address.zip} ${draft.address.city}`.trim()]
+    .filter(Boolean)
+    .join(", ");
+
+  return {
+    companyName: draft.company.name,
+    email: draft.company.email,
+    phone: draft.company.phone,
+    address: address || "Adresse nicht angegeben",
+    onsiteContact: `${draft.contact.firstName} ${draft.contact.lastName}`.trim() || "Ansprechpartner vor Ort",
+    squareMeters: areaValue > 0 ? areaValue : fallbackArea > 0 ? fallbackArea : 1,
+    floors,
+    notes: "Über das Begehungs-Quiz erfasst.",
+  };
+}
+
+async function svqSubmitSiteVisitToBackend(draft) {
+  const payload = svqBuildSiteVisitPayload(draft);
+  if (payload.floors.length === 0) {
+    return { ok: false, reason: "no-cleaning-items" };
+  }
+  if (typeof apiPost !== "function") {
+    return { ok: false, reason: "api-error", message: "Keine Verbindung zum Server." };
+  }
+  try {
+    const created = await apiPost("api/site-visits.php", payload);
+    return { ok: true, id: created.id };
+  } catch (error) {
+    return { ok: false, reason: "api-error", message: error.message };
+  }
 }
 
 /* ---------- Rendering ---------- */
@@ -955,6 +1058,11 @@ function svqRenderFinishSuccess(draft) {
       <h3>Die Begehung wurde erfolgreich fertiggestellt.</h3>
       <p class="muted">${svqEsc(draft.company.name)} · ${draft.rooms.length} Räume erfasst · Version ${svqEsc(draft.version)}</p>
       <div class="svq-menu-list">
+        ${
+          draft.linkedSiteVisitId
+            ? `<button class="svq-menu-item svq-menu-item-primary" type="button" data-svq-action="finish-create-offer"><i data-lucide="file-plus-2" aria-hidden="true"></i>Kostenvoranschlag erstellen</button>`
+            : `<p class="muted">${svqEsc(draft.linkedSiteVisitError || "Für diese Begehung wurde kein Datensatz für Kostenvoranschläge angelegt.")}</p>`
+        }
         <button class="svq-menu-item" type="button" data-svq-action="finish-view"><i data-lucide="eye" aria-hidden="true"></i>Begehung ansehen</button>
         <button class="svq-menu-item" type="button" data-svq-action="finish-edit"><i data-lucide="pencil" aria-hidden="true"></i>Begehung bearbeiten</button>
         <button class="svq-menu-item" type="button" data-svq-action="finish-pdf"><i data-lucide="file-text" aria-hidden="true"></i>PDF-Bericht vorbereiten</button>
@@ -967,7 +1075,7 @@ function svqRenderFinishSuccess(draft) {
 
 /* ---------- Event-Delegation ---------- */
 
-function svqHandleClick(event) {
+async function svqHandleClick(event) {
   const button = event.target.closest("[data-svq-action]");
   if (!button) return;
   event.preventDefault();
@@ -1188,13 +1296,31 @@ function svqHandleClick(event) {
     return;
   }
   if (action === "finish-confirm") {
+    const draftBeforeSubmit = svqCurrentDraft();
+    if (!draftBeforeSubmit) return;
+    button.disabled = true;
+    button.textContent = "Wird gespeichert …";
+    const result = await svqSubmitSiteVisitToBackend(draftBeforeSubmit);
     svqMutate((d) => {
       const wasCompleted = d.status === "completed";
       d.status = "completed";
       d.completedAt = svqNowIso();
       d.version = wasCompleted ? d.version + 1 : d.version;
       d.screen = "finish-success";
+      d.linkedSiteVisitId = result.ok ? result.id : null;
+      d.linkedSiteVisitError = result.ok
+        ? null
+        : result.reason === "no-cleaning-items"
+          ? "Kein Raum hatte zu reinigende Objekte – es konnte kein Datensatz für einen Kostenvoranschlag angelegt werden."
+          : `Begehung wurde lokal abgeschlossen, konnte aber nicht für den Kostenvoranschlag übernommen werden: ${result.message || "unbekannter Fehler"}`;
     });
+    if (result.ok && typeof loadAll === "function") {
+      await loadAll();
+    } else if (result.reason === "api-error") {
+      svqShowValidation(`Begehung wurde lokal abgeschlossen, konnte aber nicht für den Kostenvoranschlag übernommen werden: ${result.message}`);
+    } else if (result.reason === "no-cleaning-items") {
+      svqShowValidation("Kein Raum hat zu reinigende Objekte – für den Kostenvoranschlag wurde daher keine Begehung übernommen.");
+    }
     return;
   }
 
@@ -1203,6 +1329,17 @@ function svqHandleClick(event) {
       if (action === "finish-edit") d.version += 1;
       d.screen = "rooms-overview";
     });
+    return;
+  }
+  if (action === "finish-create-offer") {
+    const draft = svqCurrentDraft();
+    if (!draft?.linkedSiteVisitId) {
+      svqShowValidation("Für diese Begehung wurde kein Datensatz für Kostenvoranschläge angelegt.");
+      return;
+    }
+    if (typeof startOfferFromSiteVisit === "function") {
+      await startOfferFromSiteVisit(draft.linkedSiteVisitId);
+    }
     return;
   }
   if (action === "finish-pdf") {
