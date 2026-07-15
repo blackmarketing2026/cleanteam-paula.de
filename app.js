@@ -1838,7 +1838,7 @@ function renderOfferCard(offer) {
     <article class="record-item">
       <div class="record-main">
         <div>
-          <div class="record-title">${escapeHtml(offer.customer.name)}</div>
+          <div class="record-title">Firma: ${escapeHtml(offer.customer.name)}</div>
           <div class="record-meta">
             <span>${escapeHtml(offer.service)} · ${offer.squareMeters} m² · ${escapeHtml(offer.interval)}</span>
             <span>Erstellt am ${formatDate(offer.createdAt)} · Start ${formatDate(offer.startDate)}</span>
