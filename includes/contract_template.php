@@ -172,6 +172,135 @@ function render_service_catalog_html(): string
     return $html;
 }
 
+function contract_template_cleaning_task_label(string $key): string
+{
+    $labels = [
+        'washbasin' => 'Waschbecken',
+        'toilet' => 'WC',
+        'mirror' => 'Spiegel',
+        'floor' => 'Boden',
+        'door' => 'Tür',
+        'desk' => 'Schreibtische',
+        'window' => 'Fensterbänke',
+        'surface' => 'Oberflächen',
+        'trash' => 'Mülleimer-Entleerung',
+        'kitchen' => 'Küchenflächen',
+        'handrail' => 'Handlauf / Geländer',
+        'stairFloor' => 'Etage',
+        'stairDoor' => 'Türen',
+        'treatmentDesk' => 'Schreibtisch',
+        'treatmentChair' => 'Behandlungsstühle',
+        'treatmentTable' => 'Behandlungstisch',
+        'disinfection' => 'Desinfektion',
+    ];
+
+    return $labels[$key] ?? $key;
+}
+
+function contract_template_cleaning_item_text(array $item): string
+{
+    $key = trim((string) ($item['key'] ?? ($item['type'] ?? '')));
+    if ($key === '') {
+        return '';
+    }
+
+    $frequency = trim((string) ($item['frequency'] ?? 'Täglich'));
+    if ($frequency === 'Individuell') {
+        $frequency = trim((string) ($item['customFrequency'] ?? '')) ?: 'Individuell';
+    }
+
+    $details = [$frequency];
+    if ($key === 'floor' && trim((string) ($item['method'] ?? '')) !== '') {
+        $details[] = trim((string) $item['method']);
+    }
+    if ($key === 'trash' && trim((string) ($item['bagMode'] ?? '')) !== '') {
+        $details[] = trim((string) $item['bagMode']);
+    }
+
+    return contract_template_cleaning_task_label($key) . ': ' . implode(', ', array_filter($details));
+}
+
+function contract_template_site_visit_for_offer(array $offer): ?array
+{
+    $siteVisitId = trim((string) ($offer['site_visit_id'] ?? ''));
+    if ($siteVisitId === '') {
+        return null;
+    }
+
+    $stmt = db()->prepare('SELECT * FROM site_visits WHERE id = :id');
+    $stmt->execute(['id' => $siteVisitId]);
+    $siteVisit = $stmt->fetch();
+
+    return $siteVisit ?: null;
+}
+
+function render_site_visit_service_catalog_html(?array $siteVisit): string
+{
+    if ($siteVisit === null) {
+        return render_service_catalog_html();
+    }
+
+    $floors = json_decode((string) ($siteVisit['floors_json'] ?? '[]'), true);
+    if (!is_array($floors) || $floors === []) {
+        return render_service_catalog_html();
+    }
+
+    $html = '';
+    foreach ($floors as $floorIndex => $floor) {
+        if (!is_array($floor)) {
+            continue;
+        }
+
+        $floorName = trim((string) ($floor['name'] ?? '')) ?: 'Etage ' . ($floorIndex + 1);
+        $rooms = isset($floor['rooms']) && is_array($floor['rooms']) ? $floor['rooms'] : [];
+        if ($rooms === []) {
+            continue;
+        }
+
+        $html .= '<h4>' . h($floorName) . '</h4><ul>';
+        foreach ($rooms as $roomIndex => $room) {
+            if (!is_array($room)) {
+                continue;
+            }
+
+            $roomName = trim((string) ($room['name'] ?? '')) ?: 'Raum ' . ($roomIndex + 1);
+            $roomType = trim((string) ($room['roomType'] ?? ''));
+            $items = isset($room['cleaningItems']) && is_array($room['cleaningItems']) ? $room['cleaningItems'] : [];
+            $cleaningTexts = [];
+            foreach ($items as $item) {
+                if (is_array($item)) {
+                    $text = contract_template_cleaning_item_text($item);
+                    if ($text !== '') {
+                        $cleaningTexts[] = $text;
+                    }
+                }
+            }
+
+            $line = '<strong>' . h($roomName) . '</strong>';
+            if ($roomType !== '') {
+                $line .= ' (' . h($roomType) . ')';
+            }
+            if ($cleaningTexts !== []) {
+                $line .= ': ' . h(implode('; ', $cleaningTexts));
+            }
+
+            $html .= '<li>' . $line . '</li>';
+        }
+        $html .= '</ul>';
+    }
+
+    return $html !== '' ? $html : render_service_catalog_html();
+}
+
+function normalize_contract_template_html(string $html): string
+{
+    if (strpos($html, '{{begehung_leistungsverzeichnis}}') !== false) {
+        return $html;
+    }
+
+    return str_replace(render_service_catalog_html(), '{{begehung_leistungsverzeichnis}}', $html);
+}
+
 function render_obligations_html(): string
 {
     $html = '<ol class="obligations">';
@@ -248,7 +377,6 @@ function ensure_contract_template_settings_table(PDO $pdo): void
 // contract_template_settings gespeichert und ist danach ueber die Einstellungen editierbar.
 function default_contract_template_html(): string
 {
-    $serviceCatalogHtml = render_service_catalog_html();
     $obligationsHtml = render_obligations_html();
 
     return <<<HTML
@@ -269,7 +397,7 @@ function default_contract_template_html(): string
 <p>Die Reinigung findet <strong>{{intervall}}</strong> statt.</p>
 <p>Gebuchte Leistung: {{leistung}}</p>
 {{zusatzhinweis_block}}
-{$serviceCatalogHtml}
+{{begehung_leistungsverzeichnis}}
 <p>Leistungen, die nicht in diesem Vertrag aufgeführt sind, bedürfen einer gesonderten Beauftragung und werden zusätzlich berechnet.</p>
 
 <h2>§ 4 Vergütung</h2>
@@ -339,12 +467,15 @@ function get_contract_template_html(PDO $pdo): string
     $stmt = $pdo->query('SELECT template_html FROM contract_template_settings WHERE id = 1');
     $row = $stmt->fetch();
 
-    return $row && trim((string) $row['template_html']) !== '' ? (string) $row['template_html'] : default_contract_template_html();
+    return $row && trim((string) $row['template_html']) !== ''
+        ? normalize_contract_template_html((string) $row['template_html'])
+        : default_contract_template_html();
 }
 
 function save_contract_template_html(PDO $pdo, string $html): void
 {
     ensure_contract_template_settings_table($pdo);
+    $html = normalize_contract_template_html($html);
     $stmt = $pdo->prepare(
         'INSERT INTO contract_template_settings (id, template_html, updated_at)
          VALUES (1, :html, UTC_TIMESTAMP())
@@ -370,6 +501,7 @@ function contract_template_placeholder_definitions(): array
             'intervall' => 'Reinigungsintervall',
             'leistung' => 'Leistungsbeschreibung inkl. Quadratmeter',
             'zusatzhinweis_block' => 'Zusatzhinweis aus dem Kostenvoranschlag (falls vorhanden)',
+            'begehung_leistungsverzeichnis' => 'Großes Leistungsverzeichnis aus Begehung/Kostenvoranschlag',
             'beginn_datum' => 'Vertragsbeginn',
         ],
         'Preis' => [
@@ -400,6 +532,7 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
     $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
     $offerNotes = trim((string) ($offer['notes'] ?? ''));
+    $siteVisit = contract_template_site_visit_for_offer($offer);
 
     $authorized = isset($contract['authorized']) && $contract['authorized'] !== null ? (bool) $contract['authorized'] : null;
     $representationNote = $contract['representation_note'] ?? null;
@@ -439,6 +572,7 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $values['zusatzhinweis_block'] = $offerNotes !== ''
         ? '<p>' . ($forPdf ? '' : '<strong>Zusatzhinweis:</strong> ') . h($offerNotes) . '</p>'
         : '';
+    $values['begehung_leistungsverzeichnis'] = render_site_visit_service_catalog_html($siteVisit);
 
     return $values;
 }

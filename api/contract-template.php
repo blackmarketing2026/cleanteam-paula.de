@@ -72,7 +72,7 @@ if ($method === 'GET') {
     $row = $pdo->query('SELECT template_html, updated_at FROM contract_template_settings WHERE id = 1')->fetch();
 
     json_response([
-        'templateHtml' => $row ? (string) $row['template_html'] : default_contract_template_html(),
+        'templateHtml' => get_contract_template_html($pdo),
         'updatedAt' => $row ? to_iso($row['updated_at']) : null,
         'placeholders' => contract_template_placeholder_definitions(),
     ]);

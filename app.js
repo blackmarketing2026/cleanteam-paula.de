@@ -268,6 +268,50 @@ function getOffer(id) {
   return state.data.offers.find((offer) => offer.id === id);
 }
 
+function signedContractOfferIds() {
+  const ids = new Set(
+    state.data.contracts
+      .filter((contract) => contract.status === "signiert")
+      .map((contract) => contract.offer?.id || contract.offerId)
+      .filter(Boolean),
+  );
+
+  state.data.offers.forEach((offer) => {
+    if (offer.contractStatus === "signiert") {
+      ids.add(offer.id);
+    }
+  });
+
+  return ids;
+}
+
+function signedContractSiteVisitIds() {
+  const ids = new Set(
+    state.data.contracts
+      .filter((contract) => contract.status === "signiert")
+      .map((contract) => contract.offer?.siteVisitId)
+      .filter(Boolean),
+  );
+
+  state.data.offers.forEach((offer) => {
+    if (offer.contractStatus === "signiert" && offer.siteVisitId) {
+      ids.add(offer.siteVisitId);
+    }
+  });
+
+  return ids;
+}
+
+function visibleSavedOffers() {
+  const hiddenOfferIds = signedContractOfferIds();
+  return state.data.offers.filter((offer) => !hiddenOfferIds.has(offer.id));
+}
+
+function visibleSavedSiteVisits() {
+  const hiddenVisitIds = signedContractSiteVisitIds();
+  return state.data.siteVisits.filter((visit) => !hiddenVisitIds.has(visit.id));
+}
+
 function getOpenSiteVisits() {
   const processedVisitIds = new Set(
     state.data.offers
@@ -539,16 +583,19 @@ function renderAll() {
 }
 
 function renderMetrics() {
+  const savedSiteVisits = visibleSavedSiteVisits();
+  const savedOffers = visibleSavedOffers();
+
   els.metricCustomers.textContent = state.data.customers.length;
-  els.metricSiteVisits.textContent = state.data.siteVisits.length;
-  els.metricOffers.textContent = state.data.offers.length;
+  els.metricSiteVisits.textContent = savedSiteVisits.length;
+  els.metricOffers.textContent = savedOffers.length;
   els.metricContracts.textContent = state.data.contracts.length;
   els.metricSigned.textContent = state.data.contracts.filter((contract) => contract.status === "signiert").length;
   els.metricFollowups.textContent = state.data.contracts.filter((contract) =>
     contract.status === "daten_abgelehnt" || contract.status === "intervall_abgelehnt",
   ).length;
 
-  const latestOffers = [...state.data.offers]
+  const latestOffers = [...savedOffers]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 4);
 
@@ -759,6 +806,8 @@ const CLEANING_TASKS = [
   { key: "trash", label: "Mülleimer-Entleerung" },
   { key: "kitchen", label: "Küchenflächen" },
   { key: "handrail", label: "Handlauf / Geländer" },
+  { key: "stairFloor", label: "Etage" },
+  { key: "stairDoor", label: "Türen" },
   { key: "treatmentDesk", label: "Schreibtisch" },
   { key: "treatmentChair", label: "Behandlungsstühle" },
   { key: "treatmentTable", label: "Behandlungstisch" },
@@ -767,6 +816,7 @@ const CLEANING_TASKS = [
 
 const SANITARY_CLEANING_TASK_KEYS = ["mirror", "floor", "door", "toilet"];
 const OFFICE_CLEANING_TASK_KEYS = ["floor", "desk", "window", "trash"];
+const STAIRCASE_CLEANING_TASK_KEYS = ["stairFloor", "stairDoor"];
 const GENERAL_CLEANING_TASK_KEYS = [
   "washbasin",
   "toilet",
@@ -811,6 +861,9 @@ function cleaningTasksForRoomType(roomType) {
   }
   if (roomType === "Behandlungsräume") {
     return cleaningTasksFromKeys(TREATMENT_ROOM_CLEANING_TASK_KEYS);
+  }
+  if (roomType === "Treppenhaus") {
+    return cleaningTasksFromKeys(STAIRCASE_CLEANING_TASK_KEYS);
   }
 
   return cleaningTasksFromKeys(GENERAL_CLEANING_TASK_KEYS);
@@ -1481,7 +1534,7 @@ function resetSiteVisitForm() {
 }
 
 function renderSiteVisits() {
-  const visits = [...state.data.siteVisits].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const visits = [...visibleSavedSiteVisits()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   els.siteVisitList.innerHTML = visits.length
     ? visits.map(renderSiteVisitCard).join("")
@@ -1747,7 +1800,7 @@ async function handleOfferSiteVisitChange() {
 }
 
 function renderOffers() {
-  const offers = [...state.data.offers].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const offers = [...visibleSavedOffers()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   els.offerList.innerHTML = offers.length
     ? offers.map(renderOfferCard).join("")

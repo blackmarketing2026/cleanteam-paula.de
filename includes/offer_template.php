@@ -64,6 +64,8 @@ function offer_cleaning_task_label(string $key): string
         'trash' => 'Mülleimer-Entleerung',
         'kitchen' => 'Küchenflächen',
         'handrail' => 'Handlauf / Geländer',
+        'stairFloor' => 'Etage',
+        'stairDoor' => 'Türen',
         'treatmentDesk' => 'Schreibtisch',
         'treatmentChair' => 'Behandlungsstühle',
         'treatmentTable' => 'Behandlungstisch',
