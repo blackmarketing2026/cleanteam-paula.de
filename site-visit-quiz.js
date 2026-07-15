@@ -119,18 +119,13 @@ function svqMutate(mutator, { rerender = true } = {}) {
   if (rerender) svqRender();
 }
 
-function svqNewRoomDraft(typeId) {
+function svqNewRoomDraft(typeId, label = "") {
   const type = svqRoomType(typeId);
   const room = {
     id: svqUid(),
     type: typeId,
     typeLabel: type ? type.label : typeId,
-    label: "",
-    floor: "",
-    area: "",
-    quantity: 1,
-    notes: "",
-    internalNote: "",
+    label,
     objects: {},
     customObjects: [],
     createdAt: svqNowIso(),
@@ -138,6 +133,13 @@ function svqNewRoomDraft(typeId) {
   };
   svqRoomObjectIds(room).forEach((objectId) => svqGetOrCreateObjectEntry(room, objectId));
   return room;
+}
+
+function svqNextRoomLabel(draft, typeId) {
+  const type = svqRoomType(typeId);
+  const baseLabel = type ? type.label : typeId;
+  const count = draft.rooms.filter((room) => room.type === typeId).length;
+  return `${baseLabel} ${count + 1}`;
 }
 
 function svqGetOrCreateObjectEntry(room, objectId) {
@@ -309,7 +311,7 @@ function svqGoBack() {
       if (d.roomObjectIndex > 0) {
         d.roomObjectIndex -= 1;
       } else {
-        d.screen = "room-basic-info";
+        d.screen = d.activeRoomDraft.type === "custom" ? "room-basic-info" : "room-type-select";
       }
     });
     return;
@@ -435,25 +437,23 @@ function svqRoomCleaningItems(room) {
 }
 
 function svqBuildSiteVisitPayload(draft) {
-  const floorGroups = new Map();
-  draft.rooms.forEach((room) => {
-    const cleaningItems = svqRoomCleaningItems(room);
-    if (cleaningItems.length === 0) return;
-    const floorName = (room.floor || "").trim() || "Gesamtes Objekt";
-    if (!floorGroups.has(floorName)) floorGroups.set(floorName, []);
-    floorGroups.get(floorName).push({
-      name: room.label || room.typeLabel,
-      roomType: svqRoomType(room.type)?.legacyType || "Sonstiger Raum",
-      quantity: Number(room.quantity) || 1,
-      squareMeters: Number(room.area) || 0,
-      cleaningItems,
-      notes: [room.notes, room.internalNote].filter(Boolean).join(" / "),
-    });
-  });
+  const rooms = draft.rooms
+    .map((room) => {
+      const cleaningItems = svqRoomCleaningItems(room);
+      if (cleaningItems.length === 0) return null;
+      return {
+        name: room.label || room.typeLabel,
+        roomType: svqRoomType(room.type)?.legacyType || "Sonstiger Raum",
+        quantity: 1,
+        squareMeters: 0,
+        cleaningItems,
+        notes: "",
+      };
+    })
+    .filter(Boolean);
 
-  const floors = Array.from(floorGroups.entries()).map(([name, rooms]) => ({ name, rooms }));
+  const floors = rooms.length ? [{ name: "Gesamtes Objekt", rooms }] : [];
   const areaValue = Number(draft.areaSize.value) || 0;
-  const fallbackArea = draft.rooms.reduce((sum, room) => sum + (Number(room.area) || 0), 0);
   const address = [`${draft.address.street} ${draft.address.houseNumber}`.trim(), `${draft.address.zip} ${draft.address.city}`.trim()]
     .filter(Boolean)
     .join(", ");
@@ -464,7 +464,7 @@ function svqBuildSiteVisitPayload(draft) {
     phone: draft.company.phone,
     address: address || "Adresse nicht angegeben",
     onsiteContact: `${draft.contact.firstName} ${draft.contact.lastName}`.trim() || "Ansprechpartner vor Ort",
-    squareMeters: areaValue > 0 ? areaValue : fallbackArea > 0 ? fallbackArea : 1,
+    squareMeters: areaValue > 0 ? areaValue : 1,
     floors,
     notes: "Über das Begehungs-Quiz erfasst.",
   };
@@ -775,21 +775,12 @@ function svqRenderRoomTypeSelect() {
 
 function svqRenderRoomBasicInfo(draft) {
   const room = draft.activeRoomDraft;
-  const isCustom = room.type === "custom";
   return `
-    <h3>Angaben zu „${svqEsc(room.typeLabel)}“</h3>
-    <div class="svq-field-grid">
-      ${
-        isCustom
-          ? `<label class="svq-field span-2">Bezeichnung des Raumes<input type="text" data-svq-input="activeRoomDraft.label" value="${svqEsc(room.label)}" placeholder="z. B. Serverraum" /></label>`
-          : `<label class="svq-field span-2">Individuelle Raumbezeichnung<input type="text" data-svq-input="activeRoomDraft.label" value="${svqEsc(room.label)}" placeholder="z. B. ${svqEsc(room.typeLabel)} 1" /></label>`
-      }
-      <label class="svq-field">Etage<input type="text" data-svq-input="activeRoomDraft.floor" value="${svqEsc(room.floor)}" placeholder="z. B. EG" /></label>
-      <label class="svq-field">Quadratmeterzahl<input type="number" min="0" data-svq-input="activeRoomDraft.area" value="${svqEsc(room.area)}" /></label>
-      <label class="svq-field">Anzahl der Räume<input type="number" min="1" data-svq-input="activeRoomDraft.quantity" value="${svqEsc(room.quantity)}" /></label>
-      <label class="svq-field span-2">Besondere Hinweise<textarea rows="2" data-svq-input="activeRoomDraft.notes">${svqEsc(room.notes)}</textarea></label>
-      <label class="svq-field span-2">Interne Notiz<textarea rows="2" data-svq-input="activeRoomDraft.internalNote">${svqEsc(room.internalNote)}</textarea></label>
-    </div>
+    <h3>Wie soll der Raum heißen?</h3>
+    <label class="svq-field">
+      Bezeichnung des Raumes
+      <input type="text" data-svq-input="activeRoomDraft.label" value="${svqEsc(room.label)}" placeholder="z. B. Serverraum" autofocus />
+    </label>
   `;
 }
 
@@ -947,8 +938,6 @@ function svqRenderRoomCard(room, { compact = false, index = null } = {}) {
           <strong>${svqEsc(room.label || room.typeLabel)}</strong>
           <span class="record-meta">
             <span>${svqEsc(room.typeLabel)}</span>
-            ${room.floor ? `<span>Etage: ${svqEsc(room.floor)}</span>` : ""}
-            ${room.area ? `<span>${svqEsc(room.area)} m²</span>` : ""}
           </span>
         </div>
         ${
@@ -975,7 +964,6 @@ function svqRenderRoomCard(room, { compact = false, index = null } = {}) {
                 .join("")}</ul>`
             : ""
         }
-        ${room.notes ? `<p class="muted">Hinweis: ${svqEsc(room.notes)}</p>` : ""}
       </div>
     </article>
   `;
@@ -1156,11 +1144,16 @@ async function svqHandleClick(event) {
   }
 
   if (action === "select-room-type") {
+    const typeId = button.dataset.svqType;
     svqMutate((d) => {
-      d.activeRoomDraft = svqNewRoomDraft(button.dataset.svqType);
+      d.activeRoomDraft = svqNewRoomDraft(typeId, typeId === "custom" ? "" : svqNextRoomLabel(d, typeId));
       d.editingRoomId = null;
-      d.roomObjectIndex = 0;
-      d.screen = "room-basic-info";
+      if (typeId === "custom") {
+        d.screen = "room-basic-info";
+      } else {
+        d.roomObjectIndex = 0;
+        d.screen = svqRoomObjectIds(d.activeRoomDraft).length === 0 ? "custom-object-prompt" : "room-object";
+      }
     });
     return;
   }
