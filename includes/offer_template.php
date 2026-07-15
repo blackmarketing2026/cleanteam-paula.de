@@ -312,8 +312,6 @@ function render_offer_document(array $offer, array $customer, ?array $siteVisit 
     $customerAddress = h($customer['address'] . ' ' . $customer['house_number']);
     $customerZipCity = h($customer['zip'] . ' ' . $customer['city']);
 
-    $service = h((string) $offer['service']);
-    $interval = h((string) $offer['interval_label']);
     $squareMeters = (int) $offer['square_meters'];
     $startDate = $offer['start_date'] !== null ? contract_format_date($offer['start_date']) : 'Nach Absprache';
     $validUntil = contract_format_date($offer['expires_at']);
@@ -383,9 +381,7 @@ function render_offer_document(array $offer, array $customer, ?array $siteVisit 
 
 <h2>Kostenvoranschlag</h2>
 <dl>
-  <dt>Leistung</dt><dd>{$service}</dd>
   <dt>Fläche</dt><dd>{$squareMeters} m²</dd>
-  <dt>Intervall</dt><dd>{$interval}</dd>
   <dt>Startdatum</dt><dd>{$startDate}</dd>
   {$priceAdjustmentRows}
   <dt>Finaler Preis</dt><dd>{$priceFormatted} netto</dd>
