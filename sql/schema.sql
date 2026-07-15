@@ -5,8 +5,11 @@ SET NAMES utf8mb4;
 
 CREATE TABLE IF NOT EXISTS users (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(190) NULL,
   email VARCHAR(190) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  -- Reversibel verschluesselte Kopie des Passworts, damit Admins es einsehen koennen.
+  password_encrypted TEXT NULL,
   -- role: admin | role_one
   role VARCHAR(30) NOT NULL DEFAULT 'role_one',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

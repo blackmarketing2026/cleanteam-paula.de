@@ -922,6 +922,20 @@ button.compact-item.selected {
   flex: 1 1 190px;
 }
 
+.password-reveal {
+  display: flex;
+  gap: 6px;
+}
+
+.password-reveal input {
+  flex: 1;
+  min-width: 0;
+}
+
+.password-reveal .ghost-button {
+  padding: 0 10px;
+}
+
 .counter-control {
   display: grid;
   gap: 8px;

@@ -3,10 +3,12 @@
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/crypto.php';
 
 $currentUser = require_admin();
 $pdo = db();
 ensure_users_role_column($pdo);
+ensure_users_profile_columns($pdo);
 $method = $_SERVER['REQUEST_METHOD'];
 
 function user_response(array $user): array
@@ -15,7 +17,9 @@ function user_response(array $user): array
 
     return [
         'id' => (int) $user['id'],
+        'name' => $user['name'] ?? '',
         'email' => $user['email'],
+        'password' => decrypt_secret($user['password_encrypted'] ?? null),
         'role' => $role,
         'roleLabel' => user_role_label($role),
         'createdAt' => to_iso($user['created_at'] ?? null),
@@ -33,7 +37,7 @@ function validate_role(string $role): string
 
 function load_user(PDO $pdo, int $id): ?array
 {
-    $stmt = $pdo->prepare('SELECT id, email, role, created_at FROM users WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, name, email, role, password_encrypted, created_at FROM users WHERE id = :id');
     $stmt->execute(['id' => $id]);
     $user = $stmt->fetch();
 
@@ -46,7 +50,7 @@ function admin_count(PDO $pdo): int
 }
 
 if ($method === 'GET') {
-    $stmt = $pdo->query('SELECT id, email, role, created_at FROM users ORDER BY created_at ASC, id ASC');
+    $stmt = $pdo->query('SELECT id, name, email, role, password_encrypted, created_at FROM users ORDER BY created_at ASC, id ASC');
     $users = array_map('user_response', $stmt->fetchAll());
 
     json_response([
@@ -58,6 +62,7 @@ if ($method === 'GET') {
 
 if ($method === 'POST') {
     $body = read_json_body();
+    $name = trim((string) ($body['name'] ?? ''));
     $email = strtolower(trim((string) ($body['email'] ?? '')));
     $password = (string) ($body['password'] ?? '');
     $role = validate_role((string) ($body['role'] ?? USER_ROLE_ONE));
@@ -76,12 +81,14 @@ if ($method === 'POST') {
 
     try {
         $stmt = $pdo->prepare(
-            'INSERT INTO users (email, password_hash, role, created_at)
-             VALUES (:email, :password_hash, :role, UTC_TIMESTAMP())'
+            'INSERT INTO users (name, email, password_hash, password_encrypted, role, created_at)
+             VALUES (:name, :email, :password_hash, :password_encrypted, :role, UTC_TIMESTAMP())'
         );
         $stmt->execute([
+            'name' => $name !== '' ? $name : null,
             'email' => $email,
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'password_encrypted' => encrypt_secret($password),
             'role' => $role,
         ]);
     } catch (PDOException $exception) {
@@ -98,6 +105,7 @@ if ($method === 'POST') {
 if ($method === 'PUT') {
     $body = read_json_body();
     $id = (int) ($_GET['id'] ?? ($body['id'] ?? 0));
+    $name = trim((string) ($body['name'] ?? ''));
     $role = validate_role((string) ($body['role'] ?? USER_ROLE_ONE));
     $password = (string) ($body['password'] ?? '');
 
@@ -127,16 +135,19 @@ if ($method === 'PUT') {
     }
 
     if ($password !== '') {
-        $stmt = $pdo->prepare('UPDATE users SET role = :role, password_hash = :password_hash WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE users SET name = :name, role = :role, password_hash = :password_hash, password_encrypted = :password_encrypted WHERE id = :id');
         $stmt->execute([
             'id' => $id,
+            'name' => $name !== '' ? $name : null,
             'role' => $role,
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'password_encrypted' => encrypt_secret($password),
         ]);
     } else {
-        $stmt = $pdo->prepare('UPDATE users SET role = :role WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE users SET name = :name, role = :role WHERE id = :id');
         $stmt->execute([
             'id' => $id,
+            'name' => $name !== '' ? $name : null,
             'role' => $role,
         ]);
     }

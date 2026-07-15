@@ -146,6 +146,7 @@ const els = {
   logoFileInput: document.querySelector("#logo-file-input"),
   logoRemove: document.querySelector("#logo-remove"),
   userForm: document.querySelector("#user-form"),
+  userName: document.querySelector("#user-name"),
   userEmail: document.querySelector("#user-email"),
   userPassword: document.querySelector("#user-password"),
   userRole: document.querySelector("#user-role"),
@@ -2672,8 +2673,9 @@ function renderUsers() {
           <article class="user-management-item" data-user-id="${escapeHtml(user.id)}">
             <div class="user-management-main">
               <div>
-                <strong>${escapeHtml(user.email)}</strong>
+                <strong>${escapeHtml(user.name) || "<em>Ohne Namen</em>"}</strong>
                 <div class="record-meta">
+                  <span>${escapeHtml(user.email)}</span>
                   <span>${escapeHtml(user.roleLabel)}</span>
                   <span>Angelegt am ${formatDate(user.createdAt)}</span>
                 </div>
@@ -2682,10 +2684,23 @@ function renderUsers() {
             </div>
             <div class="user-management-controls">
               <label>
+                Name
+                <input name="managedUserName" type="text" value="${escapeHtml(user.name || "")}" placeholder="Vor- und Nachname" />
+              </label>
+              <label>
                 Rolle
                 <select name="managedUserRole">
                   ${userRoleOptions(user.role)}
                 </select>
+              </label>
+              <label>
+                Aktuelles Passwort
+                <div class="password-reveal">
+                  <input name="managedUserCurrentPassword" type="password" value="${escapeHtml(user.password || "")}" readonly />
+                  <button class="ghost-button" type="button" data-action="toggle-user-password">
+                    <i data-lucide="eye" aria-hidden="true"></i>
+                  </button>
+                </div>
               </label>
               <label>
                 Neues Passwort
@@ -2724,6 +2739,7 @@ async function handleUserSubmit(event) {
   event.preventDefault();
 
   const payload = {
+    name: els.userName.value.trim(),
     email: els.userEmail.value.trim(),
     password: els.userPassword.value,
     role: els.userRole.value,
@@ -2747,13 +2763,14 @@ async function saveManagedUser(button) {
   }
 
   const id = button.dataset.id;
+  const name = item.querySelector('[name="managedUserName"]').value.trim();
   const role = item.querySelector('[name="managedUserRole"]').value;
   const passwordInput = item.querySelector('[name="managedUserPassword"]');
   const password = passwordInput.value;
 
   button.disabled = true;
   try {
-    await apiPut(`api/users.php?id=${encodeURIComponent(id)}`, { role, password });
+    await apiPut(`api/users.php?id=${encodeURIComponent(id)}`, { name, role, password });
     passwordInput.value = "";
     await loadUsers();
     showToast("User wurde aktualisiert.");
@@ -2764,13 +2781,33 @@ async function saveManagedUser(button) {
   }
 }
 
-function handleUserListAction(event) {
-  const button = event.target.closest('[data-action="save-user"]');
-  if (!button) {
+function toggleUserPasswordVisibility(button) {
+  const wrapper = button.closest(".password-reveal");
+  const input = wrapper?.querySelector('[name="managedUserCurrentPassword"]');
+  if (!input) {
     return;
   }
 
-  saveManagedUser(button);
+  const icon = button.querySelector("i");
+  const revealed = input.type === "text";
+  input.type = revealed ? "password" : "text";
+  if (icon) {
+    icon.setAttribute("data-lucide", revealed ? "eye" : "eye-off");
+  }
+  refreshIcons();
+}
+
+function handleUserListAction(event) {
+  const saveButton = event.target.closest('[data-action="save-user"]');
+  if (saveButton) {
+    saveManagedUser(saveButton);
+    return;
+  }
+
+  const toggleButton = event.target.closest('[data-action="toggle-user-password"]');
+  if (toggleButton) {
+    toggleUserPasswordVisibility(toggleButton);
+  }
 }
 
 function handleSiteVisitFloorAction(event) {

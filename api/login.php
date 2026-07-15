@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/crypto.php';
 
 require_method('POST');
 
@@ -25,15 +26,17 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uniq_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 ensure_users_role_column($pdo);
+ensure_users_profile_columns($pdo);
 
 $userCount = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
 
 if ($userCount === 0) {
     // Erster Start: die zuerst eingegebenen Zugangsdaten werden zum Admin-Konto.
-    $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, role, created_at) VALUES (:email, :hash, :role, UTC_TIMESTAMP())');
+    $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, password_encrypted, role, created_at) VALUES (:email, :hash, :password_encrypted, :role, UTC_TIMESTAMP())');
     $stmt->execute([
         'email' => $email,
         'hash' => password_hash($password, PASSWORD_DEFAULT),
+        'password_encrypted' => encrypt_secret($password),
         'role' => USER_ROLE_ADMIN,
     ]);
 

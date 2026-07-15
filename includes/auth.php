@@ -63,6 +63,19 @@ function ensure_users_role_column(PDO $pdo): void
     }
 }
 
+function ensure_users_profile_columns(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'name'");
+    if (!$stmt->fetch()) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN name VARCHAR(190) NULL AFTER id");
+    }
+
+    $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'password_encrypted'");
+    if (!$stmt->fetch()) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN password_encrypted TEXT NULL AFTER password_hash");
+    }
+}
+
 function current_user(): ?array
 {
     $userId = current_user_id();
