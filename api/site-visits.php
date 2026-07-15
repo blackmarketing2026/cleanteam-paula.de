@@ -98,6 +98,7 @@ function cleaning_task_label(string $key): string
         'chairs' => 'Stühle',
         'tables' => 'Tische',
         'counter' => 'Tresen',
+        'cabinets' => 'Schränke',
     ];
 
     return $labels[$key] ?? $key;

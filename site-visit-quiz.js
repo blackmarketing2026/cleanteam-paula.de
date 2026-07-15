@@ -166,7 +166,7 @@ function svqRoomObjectIds(room) {
   if (type.id === "custom") return type.objects;
   const ids = [...type.objects];
   ["chairs", "tables"].forEach((id) => {
-    if (!ids.includes(id)) ids.push(id);
+    if (!ids.includes(id) && !type.excludeUniversal?.includes(id)) ids.push(id);
   });
   return ids;
 }
@@ -932,6 +932,14 @@ function svqRenderCustomObjectPrompt(draft) {
         Nein, weiter zur Raumübersicht
       </button>
     </div>
+    <div class="svq-menu-list">
+      <button class="svq-menu-item" type="button" data-svq-action="custom-object-add-room">
+        <i data-lucide="plus" aria-hidden="true"></i>Weitere Räume hinzufügen
+      </button>
+      <button class="svq-menu-item svq-menu-item-primary" type="button" data-svq-action="custom-object-finish">
+        <i data-lucide="flag" aria-hidden="true"></i>Begehung beenden
+      </button>
+    </div>
   `;
 }
 
@@ -1204,6 +1212,20 @@ async function svqHandleClick(event) {
   if (action === "custom-object-no") {
     svqMutate((d) => {
       d.screen = "room-summary";
+    });
+    return;
+  }
+  if (action === "custom-object-add-room") {
+    svqMutate((d) => {
+      svqCommitActiveRoom(d);
+      d.screen = "room-type-select";
+    });
+    return;
+  }
+  if (action === "custom-object-finish") {
+    svqMutate((d) => {
+      svqCommitActiveRoom(d);
+      d.screen = "finish-confirm";
     });
     return;
   }

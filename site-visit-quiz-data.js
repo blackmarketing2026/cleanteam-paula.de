@@ -23,7 +23,7 @@ const SVQ_INTERVALS = [
 ];
 
 /* Für den Boden gibt es statt der "vorhanden"-Frage direkt Bodenart und Reinigungsmethode. */
-const SVQ_FLOOR_MATERIALS = ["Laminat", "Parkett", "Vinyl", "Fliesen"];
+const SVQ_FLOOR_MATERIALS = ["Laminat", "Parkett", "Vinyl", "Fliesen", "Teppich"];
 const SVQ_FLOOR_METHODS = ["Gesaugt", "Gewischt", "Gesaugt und gewischt"];
 
 /* Objekt-Definitionen: extra kann "quantity" (Anzahl) und/oder "trashBag" (Mülltüten-Option) enthalten. */
@@ -41,6 +41,7 @@ const SVQ_OBJECTS = {
   handrail: { label: "Handlauf / Geländer", extra: [], legacyKey: "handrail" },
   kitchen_surfaces: { label: "Küchenflächen", extra: [], legacyKey: "kitchen" },
   counter: { label: "Tresen", extra: [], legacyKey: "counter" },
+  cabinets: { label: "Schränke", extra: [], legacyKey: "cabinets" },
   treatment_surface: { label: "Behandlungsliege", extra: [], legacyKey: "treatmentTable" },
 };
 
@@ -49,18 +50,18 @@ const SVQ_OBJECTS = {
    Stühle/Tische werden - falls nicht schon Teil der Liste - automatisch als
    letzte Standardfragen ergänzt (siehe svqRoomObjectIds in site-visit-quiz.js). */
 const SVQ_ROOM_TYPES = [
-  { id: "office", label: "Büro", icon: "briefcase", legacyType: "Büro", objects: ["floor", "desks", "windowsills"] },
-  { id: "wc", label: "WC und Sanitärbereich", icon: "shower-head", legacyType: "Sanitär", objects: ["floor", "toilets", "sinks", "mirrors"] },
+  { id: "office", label: "Büro", icon: "briefcase", legacyType: "Büro", objects: ["floor", "desks", "windowsills"], excludeUniversal: ["tables"] },
+  { id: "wc", label: "WC und Sanitärbereich", icon: "shower-head", legacyType: "Sanitär", objects: ["floor", "toilets", "sinks", "mirrors"], excludeUniversal: ["chairs"] },
   { id: "entrance", label: "Eingangsbereich", icon: "door-open", legacyType: "Empfang", objects: ["floor", "counter", "windowsills"] },
   { id: "hallway", label: "Flur", icon: "move-horizontal", legacyType: "Flur", objects: ["floor", "windowsills"] },
   { id: "staircase", label: "Treppenhaus", icon: "footprints", legacyType: "Treppenhaus", objects: ["floor", "handrail"] },
   { id: "treatment_room", label: "Behandlungsraum", icon: "stethoscope", legacyType: "Behandlungsräume", objects: ["floor", "treatment_surface", "sinks"] },
   { id: "waiting_room", label: "Warteraum", icon: "armchair", legacyType: "Sonstiger Raum", objects: ["floor", "chairs", "tables"] },
   { id: "kitchen", label: "Küche", icon: "cooking-pot", legacyType: "Küche", objects: ["floor", "kitchen_surfaces", "sinks"] },
-  { id: "break_room", label: "Aufenthaltsraum", icon: "coffee", legacyType: "Sonstiger Raum", objects: ["floor", "kitchen_surfaces"] },
-  { id: "storage_room", label: "Lagerraum", icon: "warehouse", legacyType: "Lager", objects: ["floor", "doors"] },
-  { id: "changing_room", label: "Umkleideraum", icon: "shirt", legacyType: "Sonstiger Raum", objects: ["floor", "mirrors"] },
-  { id: "meeting_room", label: "Besprechungsraum", icon: "presentation", legacyType: "Sonstiger Raum", objects: ["floor", "tables", "chairs"] },
+  { id: "break_room", label: "Aufenthaltsraum", icon: "coffee", legacyType: "Sonstiger Raum", objects: ["floor"] },
+  { id: "storage_room", label: "Lagerraum", icon: "warehouse", legacyType: "Lager", objects: ["floor"], excludeUniversal: ["chairs", "tables"] },
+  { id: "changing_room", label: "Umkleideraum", icon: "shirt", legacyType: "Sonstiger Raum", objects: ["floor", "cabinets"], excludeUniversal: ["chairs", "tables"] },
+  { id: "meeting_room", label: "Besprechungsraum", icon: "presentation", legacyType: "Sonstiger Raum", objects: ["floor", "windowsills", "tables", "chairs"] },
   { id: "sales_room", label: "Verkaufsraum", icon: "store", legacyType: "Sonstiger Raum", objects: ["floor", "counter", "windowsills"] },
   { id: "custom", label: "Individueller Raum", icon: "sparkles", legacyType: "Sonstiger Raum", objects: [] },
 ];
