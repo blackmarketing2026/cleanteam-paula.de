@@ -35,9 +35,10 @@ function offer_cleaning_task_label(string $key): string
 {
     $labels = [
         'washbasin' => 'Waschbecken',
-        'toilet' => 'Toiletten',
+        'toilet' => 'WC',
         'mirror' => 'Spiegel',
         'floor' => 'Boden',
+        'door' => 'Tür',
         'desk' => 'Schreibtische',
         'window' => 'Fenster',
         'surface' => 'Oberflächen',
@@ -60,7 +61,7 @@ function offer_cleaning_item(array $item): ?array
 
     return [
         'key' => $key,
-        'label' => trim((string) ($item['label'] ?? '')) ?: offer_cleaning_task_label($key),
+        'label' => offer_cleaning_task_label($key),
         'frequency' => $frequency,
         'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
     ];
@@ -73,7 +74,7 @@ function offer_legacy_cleaning_items_from_room(array $room): array
         $items[] = ['key' => 'washbasin', 'label' => 'Waschbecken', 'frequency' => 'Täglich', 'customFrequency' => ''];
     }
     if (offer_int($room['toilets'] ?? 0) > 0) {
-        $items[] = ['key' => 'toilet', 'label' => 'Toiletten', 'frequency' => 'Täglich', 'customFrequency' => ''];
+        $items[] = ['key' => 'toilet', 'label' => 'WC', 'frequency' => 'Täglich', 'customFrequency' => ''];
     }
     if (offer_int($room['mirrors'] ?? 0) > 0) {
         $items[] = ['key' => 'mirror', 'label' => 'Spiegel', 'frequency' => 'Täglich', 'customFrequency' => ''];
@@ -208,7 +209,6 @@ function offer_rooms_from_floor(array $floor): array
 function offer_room_details(array $room): string
 {
     $parts = [
-        offer_int($room['squareMeters'] ?? 0) > 0 ? offer_int($room['squareMeters']) . ' m²' : '',
         (string) ($room['floorCondition'] ?? ''),
     ];
 

@@ -62,9 +62,10 @@ function cleaning_task_label(string $key): string
 {
     $labels = [
         'washbasin' => 'Waschbecken',
-        'toilet' => 'Toiletten',
+        'toilet' => 'WC',
         'mirror' => 'Spiegel',
         'floor' => 'Boden',
+        'door' => 'Tür',
         'desk' => 'Schreibtische',
         'window' => 'Fenster',
         'surface' => 'Oberflächen',
@@ -87,7 +88,7 @@ function normalize_cleaning_item(array $item): ?array
 
     return [
         'key' => $key,
-        'label' => trim((string) ($item['label'] ?? '')) ?: cleaning_task_label($key),
+        'label' => cleaning_task_label($key),
         'frequency' => $frequency,
         'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
     ];
@@ -100,7 +101,7 @@ function legacy_cleaning_items_from_room(array $room): array
         $items[] = ['key' => 'washbasin', 'label' => 'Waschbecken', 'frequency' => 'Täglich', 'customFrequency' => ''];
     }
     if (visit_int($room['toilets'] ?? 0) > 0) {
-        $items[] = ['key' => 'toilet', 'label' => 'Toiletten', 'frequency' => 'Täglich', 'customFrequency' => ''];
+        $items[] = ['key' => 'toilet', 'label' => 'WC', 'frequency' => 'Täglich', 'customFrequency' => ''];
     }
     if (visit_int($room['mirrors'] ?? 0) > 0) {
         $items[] = ['key' => 'mirror', 'label' => 'Spiegel', 'frequency' => 'Täglich', 'customFrequency' => ''];

@@ -603,9 +603,10 @@ function site_visit_pdf_cleaning_task_label(string $key): string
 {
     $labels = [
         'washbasin' => 'Waschbecken',
-        'toilet' => 'Toiletten',
+        'toilet' => 'WC',
         'mirror' => 'Spiegel',
         'floor' => 'Boden',
+        'door' => 'Tür',
         'desk' => 'Schreibtische',
         'window' => 'Fenster',
         'surface' => 'Oberflächen',
@@ -628,7 +629,7 @@ function site_visit_pdf_cleaning_item(array $item): ?array
 
     return [
         'key' => $key,
-        'label' => trim((string) ($item['label'] ?? '')) ?: site_visit_pdf_cleaning_task_label($key),
+        'label' => site_visit_pdf_cleaning_task_label($key),
         'frequency' => $frequency,
         'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
     ];
@@ -641,7 +642,7 @@ function site_visit_pdf_legacy_cleaning_items_from_room(array $room): array
         $items[] = ['key' => 'washbasin', 'label' => 'Waschbecken', 'frequency' => 'Täglich', 'customFrequency' => ''];
     }
     if (site_visit_pdf_int($room['toilets'] ?? 0) > 0) {
-        $items[] = ['key' => 'toilet', 'label' => 'Toiletten', 'frequency' => 'Täglich', 'customFrequency' => ''];
+        $items[] = ['key' => 'toilet', 'label' => 'WC', 'frequency' => 'Täglich', 'customFrequency' => ''];
     }
     if (site_visit_pdf_int($room['mirrors'] ?? 0) > 0) {
         $items[] = ['key' => 'mirror', 'label' => 'Spiegel', 'frequency' => 'Täglich', 'customFrequency' => ''];
@@ -776,7 +777,6 @@ function site_visit_pdf_rooms_from_floor(array $floor): array
 function site_visit_pdf_room_details(array $room): string
 {
     $parts = [
-        site_visit_pdf_int($room['squareMeters'] ?? 0) > 0 ? site_visit_pdf_int($room['squareMeters']) . ' m²' : '',
         (string) ($room['floorCondition'] ?? ''),
     ];
 

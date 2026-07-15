@@ -727,9 +727,10 @@ const CLEANING_FREQUENCIES = [
 
 const CLEANING_TASKS = [
   { key: "washbasin", label: "Waschbecken" },
-  { key: "toilet", label: "Toiletten" },
+  { key: "toilet", label: "WC" },
   { key: "mirror", label: "Spiegel" },
   { key: "floor", label: "Boden" },
+  { key: "door", label: "Tür" },
   { key: "desk", label: "Schreibtische" },
   { key: "window", label: "Fenster" },
   { key: "surface", label: "Oberflächen" },
@@ -738,8 +739,20 @@ const CLEANING_TASKS = [
   { key: "handrail", label: "Handlauf / Geländer" },
 ];
 
+const SANITARY_CLEANING_TASK_KEYS = ["mirror", "floor", "door", "toilet"];
+
 function cleaningTaskLabel(key) {
   return CLEANING_TASKS.find((task) => task.key === key)?.label || key;
+}
+
+function cleaningTasksForRoomType(roomType) {
+  if (roomType === "Sanitär") {
+    return SANITARY_CLEANING_TASK_KEYS
+      .map((key) => CLEANING_TASKS.find((task) => task.key === key))
+      .filter(Boolean);
+  }
+
+  return CLEANING_TASKS;
 }
 
 function normalizeCleaningFrequency(value) {
@@ -750,7 +763,7 @@ function normalizeCleaningItem(item = {}) {
   const key = item.key || item.type || "";
   return {
     key,
-    label: item.label || cleaningTaskLabel(key),
+    label: cleaningTaskLabel(key),
     frequency: normalizeCleaningFrequency(item.frequency),
     customFrequency: item.customFrequency || "",
   };
@@ -762,7 +775,7 @@ function legacyCleaningItemsFromRoom(room = {}) {
     items.push({ key: "washbasin", label: "Waschbecken", frequency: "Täglich" });
   }
   if (Number(room.toilets) > 0) {
-    items.push({ key: "toilet", label: "Toiletten", frequency: "Täglich" });
+    items.push({ key: "toilet", label: "WC", frequency: "Täglich" });
   }
   if (Number(room.mirrors) > 0) {
     items.push({ key: "mirror", label: "Spiegel", frequency: "Täglich" });
@@ -882,7 +895,6 @@ function formatRoomQuantity(room) {
 
 function roomDetailParts(room) {
   const parts = [
-    room.squareMeters > 0 ? `${room.squareMeters} m²` : "",
     room.floorCondition ? room.floorCondition : "",
   ];
 
@@ -1055,7 +1067,7 @@ function cleaningTaskMarkup(task, items) {
   const customFrequency = item?.customFrequency || "";
 
   return `
-    <div class="cleaning-task-row">
+    <div class="cleaning-task-row" data-cleaning-task="${escapeHtml(task.key)}">
       <label class="checkbox-field">
         <input name="cleaningItem" type="checkbox" value="${escapeHtml(task.key)}" data-cleaning-key="${escapeHtml(task.key)}"${checked} />
         ${escapeHtml(task.label)}
@@ -1077,17 +1089,32 @@ function cleaningTaskMarkup(task, items) {
 }
 
 function syncCleaningTaskSections(roomSection) {
+  const roomType = roomSection.querySelector('[name="roomType"]')?.value || "";
+  const visibleTasks = cleaningTasksForRoomType(roomType);
+  const visibleKeys = new Set(visibleTasks.map((task) => task.key));
+  const visibleOrder = new Map(visibleTasks.map((task, index) => [task.key, index + 1]));
+
   roomSection.querySelectorAll('[name="cleaningItem"]').forEach((checkbox) => {
     const key = checkbox.dataset.cleaningKey;
+    const row = checkbox.closest(".cleaning-task-row");
     const frequencySection = roomSection.querySelector(`[data-cleaning-frequency="${key}"]`);
     const frequencySelect = roomSection.querySelector(`[name="cleaningFrequency"][data-cleaning-key="${key}"]`);
     const customField = roomSection.querySelector(`[data-cleaning-custom="${key}"]`);
+    const visible = visibleKeys.has(key);
+
+    if (row) {
+      row.hidden = !visible;
+      row.style.order = visible ? String(visibleOrder.get(key) || 1) : "";
+    }
+    if (!visible) {
+      checkbox.checked = false;
+    }
 
     if (frequencySection) {
-      frequencySection.hidden = !checkbox.checked;
+      frequencySection.hidden = !visible || !checkbox.checked;
     }
     if (customField && frequencySelect) {
-      customField.hidden = !checkbox.checked || frequencySelect.value !== "Individuell";
+      customField.hidden = !visible || !checkbox.checked || frequencySelect.value !== "Individuell";
     }
   });
 }
@@ -1143,7 +1170,6 @@ function addSiteVisitRoom(floorSection, values = {}, options = {}) {
           <option value="Sonstiger Raum"${optionSelected("Sonstiger Raum", room.roomType)}>Sonstiger Raum</option>
         </select>
       </label>
-      ${counterMarkup("roomSquareMeters", "Raumgröße", room.squareMeters, { suffix: "m²" })}
       <label>
         Bodenart
         <select name="roomFloorCondition">
@@ -1183,23 +1209,24 @@ function collectSiteVisitFloors() {
     const field = (name) => section.querySelector(`[name="${name}"]`);
     const rooms = [...section.querySelectorAll(".room-section")].map((roomSection, roomIndex) => {
       const roomField = (name) => roomSection.querySelector(`[name="${name}"]`);
-      const roomCounter = (name) => Number(roomField(name)?.value) || 0;
-      const cleaningItems = [...roomSection.querySelectorAll('[name="cleaningItem"]:checked')].map((checkbox) => {
-        const key = checkbox.value;
-        const frequency = roomSection.querySelector(`[name="cleaningFrequency"][data-cleaning-key="${key}"]`)?.value || "Täglich";
-        const customFrequency = roomSection.querySelector(`[name="cleaningCustomFrequency"][data-cleaning-key="${key}"]`)?.value.trim() || "";
-        return {
-          key,
-          label: cleaningTaskLabel(key),
-          frequency,
-          customFrequency: frequency === "Individuell" ? customFrequency : "",
-        };
-      });
+      const cleaningItems = [...roomSection.querySelectorAll('[name="cleaningItem"]:checked')]
+        .filter((checkbox) => !checkbox.closest(".cleaning-task-row")?.hidden)
+        .map((checkbox) => {
+          const key = checkbox.value;
+          const frequency = roomSection.querySelector(`[name="cleaningFrequency"][data-cleaning-key="${key}"]`)?.value || "Täglich";
+          const customFrequency = roomSection.querySelector(`[name="cleaningCustomFrequency"][data-cleaning-key="${key}"]`)?.value.trim() || "";
+          return {
+            key,
+            label: cleaningTaskLabel(key),
+            frequency,
+            customFrequency: frequency === "Individuell" ? customFrequency : "",
+          };
+        });
       return {
         name: roomField("roomName").value.trim() || `Raum ${roomIndex + 1}`,
         roomType: roomField("roomType").value,
         quantity: 1,
-        squareMeters: roomCounter("roomSquareMeters"),
+        squareMeters: 0,
         cleaningItems,
         sinks: 0,
         mirrors: 0,
@@ -2578,6 +2605,10 @@ function handleSiteVisitFloorInput(event) {
     if (floorSection) {
       renumberSiteVisitRooms(floorSection);
     }
+    const roomSection = event.target.closest(".room-section");
+    if (roomSection) {
+      syncCleaningTaskSections(roomSection);
+    }
   }
   if (event.target.matches('[name="cleaningItem"], [name="cleaningFrequency"]')) {
     const roomSection = event.target.closest(".room-section");
@@ -2754,6 +2785,7 @@ function bindEvents() {
   document.addEventListener("click", handleDashboardAction);
   els.siteVisitFloors.addEventListener("click", handleSiteVisitFloorAction);
   els.siteVisitFloors.addEventListener("input", handleSiteVisitFloorInput);
+  els.siteVisitFloors.addEventListener("change", handleSiteVisitFloorInput);
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
   els.offerSiteVisit.addEventListener("change", handleOfferSiteVisitChange);
