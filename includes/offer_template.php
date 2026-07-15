@@ -139,10 +139,6 @@ function offer_cleaning_item_text(array $item, array $room = []): string
 
     $details = [$frequency];
     if (($item['key'] ?? '') === 'floor') {
-        $floorCondition = trim((string) ($room['floorCondition'] ?? ''));
-        if ($floorCondition !== '') {
-            $details[] = $floorCondition;
-        }
         if (trim((string) ($item['method'] ?? '')) !== '') {
             $details[] = (string) $item['method'];
         }

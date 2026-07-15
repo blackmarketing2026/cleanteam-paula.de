@@ -838,9 +838,6 @@ function cleaningItemText(item, room = {}) {
   const details = [cleaningItemFrequencyText(item)];
 
   if (item.key === "floor") {
-    if (room.floorCondition) {
-      details.push(room.floorCondition);
-    }
     if (item.method) {
       details.push(item.method);
     }
@@ -866,7 +863,7 @@ function normalizeRoom(room = {}, index = 0) {
     desks: Number(room.desks) || 0,
     windows: Number(room.windows) || 0,
     cleaningType: normalizeCleaningType(room.cleaningType),
-    floorCondition: room.floorCondition || "Teppich",
+    floorCondition: room.floorCondition || "",
     extraAgreements: room.extraAgreements || "",
     notes: room.notes || room.areaNotes || "",
   };
@@ -1186,7 +1183,7 @@ function cleaningTaskMarkup(task, items) {
       </label>
       <div class="cleaning-frequency" data-cleaning-frequency="${escapeHtml(task.key)}" hidden>
         <label>
-          Wie oft soll das gereinigt werden?
+          Intervall
           <select name="cleaningFrequency" data-cleaning-key="${escapeHtml(task.key)}">
             ${cleaningFrequencyOptions(frequency)}
           </select>
@@ -1297,18 +1294,7 @@ function addSiteVisitRoom(floorSection, values = {}, options = {}) {
           <option value="Sonstiger Raum"${optionSelected("Sonstiger Raum", room.roomType)}>Sonstiger Raum</option>
         </select>
       </label>
-      <label>
-        Bodenart
-        <select name="roomFloorCondition">
-          <option value="Teppich"${optionSelected("Teppich", room.floorCondition)}>Teppich</option>
-          <option value="Laminat"${optionSelected("Laminat", room.floorCondition)}>Laminat</option>
-          <option value="Parkett"${optionSelected("Parkett", room.floorCondition)}>Parkett</option>
-          <option value="Fliesen"${optionSelected("Fliesen", room.floorCondition)}>Fliesen</option>
-          <option value="Anderer Boden"${optionSelected("Anderer Boden", room.floorCondition)}>Anderer Boden</option>
-        </select>
-      </label>
       <div class="cleaning-task-list span-2">
-        <strong>Was soll gereinigt werden?</strong>
         ${CLEANING_TASKS.map((task) => cleaningTaskMarkup(task, room.cleaningItems)).join("")}
       </div>
       <label class="span-2">
@@ -1375,7 +1361,7 @@ function collectSiteVisitFloors() {
         desks: 0,
         windows: 0,
         cleaningType: cleaningItems.some((item) => item.key === "floor") ? "Nach Rhythmus" : "",
-        floorCondition: roomField("roomFloorCondition").value,
+        floorCondition: "",
         extraAgreements: roomField("roomExtraAgreements").value.trim(),
         notes: roomField("roomNotes").value.trim(),
       };
