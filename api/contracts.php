@@ -21,6 +21,21 @@ function ensure_contracts_terms_accepted_at_column(PDO $pdo): void
     $pdo->exec('ALTER TABLE contracts ADD COLUMN terms_accepted_at DATETIME NULL AFTER representation_note');
 }
 
+function ensure_contracts_authorization_columns(PDO $pdo): void
+{
+    $columns = [
+        'authorization_grantor_name' => 'ALTER TABLE contracts ADD COLUMN authorization_grantor_name VARCHAR(190) NULL AFTER representation_note',
+        'authorization_company_address' => 'ALTER TABLE contracts ADD COLUMN authorization_company_address VARCHAR(255) NULL AFTER authorization_grantor_name',
+    ];
+
+    foreach ($columns as $column => $sql) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM contracts LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
 function ensure_offers_site_visit_id_column(PDO $pdo): void
 {
     $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'site_visit_id'");
@@ -52,6 +67,12 @@ function contract_row_to_json(array $row): array
         'intervalConfirmed' => (bool) $row['interval_confirmed'],
         'authorized' => $row['authorized'] === null ? null : (bool) $row['authorized'],
         'representationNote' => $row['representation_note'],
+        'authorizationGrantorName' => $row['authorization_grantor_name'] ?? null,
+        'authorizationCompanyAddress' => $row['authorization_company_address'] ?? null,
+        'hasAuthorizationDocument' => !empty($row['authorization_grantor_name'])
+            && !empty($row['authorization_company_address'])
+            && isset($row['authorized'])
+            && (int) $row['authorized'] === 0,
         'termsAcceptedAt' => to_iso($row['terms_accepted_at'] ?? null),
         'signedAt' => to_iso($row['signed_at']),
         'signatureDataUrl' => $row['signature_data'],
@@ -83,6 +104,7 @@ function contract_row_to_json(array $row): array
 }
 
 ensure_contracts_terms_accepted_at_column($pdo);
+ensure_contracts_authorization_columns($pdo);
 ensure_offers_site_visit_id_column($pdo);
 
 if ($method === 'GET') {

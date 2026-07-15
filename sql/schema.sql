@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   email VARCHAR(190) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  -- role: admin | role_one
+  role VARCHAR(30) NOT NULL DEFAULT 'role_one',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uniq_users_email (email)
@@ -81,6 +83,8 @@ CREATE TABLE IF NOT EXISTS contracts (
   interval_confirmed TINYINT(1) NOT NULL DEFAULT 0,
   authorized TINYINT(1) NULL,
   representation_note TEXT NULL,
+  authorization_grantor_name VARCHAR(190) NULL,
+  authorization_company_address VARCHAR(255) NULL,
   terms_accepted_at DATETIME NULL,
   signed_at DATETIME NULL,
   signature_data LONGTEXT NULL,
@@ -171,5 +175,7 @@ VALUES
 
 -- Hinweis zum Login: Beim allerersten Login (users-Tabelle ist leer) werden die
 -- eingegebene E-Mail-Adresse und das Passwort automatisch als erstes
--- Admin-Konto angelegt (siehe api/login.php). Es muss hier kein Nutzer
+-- Admin-Konto angelegt (siehe api/login.php). Der User
+-- cleanteam@function-concept.de wird automatisch als Admin gefuehrt,
+-- sobald er in der users-Tabelle existiert. Es muss hier kein Nutzer
 -- manuell per SQL angelegt werden.

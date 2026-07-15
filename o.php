@@ -79,18 +79,23 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
         <section id="screen-vollmacht" class="public-screen wizard-screen">
           <p class="step-indicator">Schritt 3 von 7</p>
-          <h2>Sind Sie berechtigt, Verträge für Ihre Firma abzuschließen?</h2>
-          <div class="form-actions">
-            <button class="ghost-button" id="auth-no" type="button">Nein</button>
+          <h2>Sind Sie berechtigt, diesen Vertrag zu unterschreiben?</h2>
+          <div id="authorization-question-actions" class="form-actions">
+            <button class="ghost-button" id="auth-no" type="button">Nein, Vollmacht erfassen</button>
             <button class="primary-button" id="auth-yes" type="button">Ja, ich bin berechtigt</button>
           </div>
           <div id="representation-field" class="representation-field" hidden>
             <label>
-              In welcher Vertretung handeln Sie? *
-              <textarea id="representation-note" rows="3" placeholder="z. B. Prokurist, Bevollmächtigter, Geschäftsführer einer anderen Gesellschaft …"></textarea>
+              Name des Ansprechpartners, der die Vollmacht erteilt *
+              <input id="authorization-grantor-name" type="text" autocomplete="name" />
+            </label>
+            <label>
+              Firmenadresse *
+              <select id="authorization-address"></select>
             </label>
             <div class="form-actions">
-              <button class="primary-button" id="representation-continue" type="button">Weiter</button>
+              <button class="ghost-button" id="authorization-back" type="button">Zurück</button>
+              <button class="primary-button" id="representation-continue" type="button">Vollmacht speichern</button>
             </div>
           </div>
         </section>

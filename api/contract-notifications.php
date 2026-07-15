@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/contract_notify.php';
 
-require_login();
+require_admin();
 
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];

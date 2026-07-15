@@ -22,8 +22,11 @@ function load_offer(PDO $pdo, string $token): array
     $stmt = $pdo->prepare(
         'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone AS c_phone, c.salutation AS c_salutation,
             c.contact_last_name AS c_contact_last_name, c.address AS c_address, c.house_number AS c_house_number,
-            c.zip AS c_zip, c.city AS c_city
-         FROM offers o INNER JOIN customers c ON c.id = o.customer_id WHERE o.token = :token'
+            c.zip AS c_zip, c.city AS c_city, sv.address AS sv_address
+         FROM offers o
+         INNER JOIN customers c ON c.id = o.customer_id
+         LEFT JOIN site_visits sv ON sv.id = o.site_visit_id
+         WHERE o.token = :token'
     );
     $stmt->execute(['token' => $token]);
     $offer = $stmt->fetch();
@@ -51,6 +54,60 @@ function ensure_contracts_terms_accepted_at_column(PDO $pdo): void
     }
 
     $pdo->exec('ALTER TABLE contracts ADD COLUMN terms_accepted_at DATETIME NULL AFTER representation_note');
+}
+
+function ensure_contracts_authorization_columns(PDO $pdo): void
+{
+    $columns = [
+        'authorization_grantor_name' => 'ALTER TABLE contracts ADD COLUMN authorization_grantor_name VARCHAR(190) NULL AFTER representation_note',
+        'authorization_company_address' => 'ALTER TABLE contracts ADD COLUMN authorization_company_address VARCHAR(255) NULL AFTER authorization_grantor_name',
+    ];
+
+    foreach ($columns as $column => $sql) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM contracts LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
+function ensure_offers_site_visit_id_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'site_visit_id'");
+    if ($stmt->fetch()) {
+        return;
+    }
+
+    $pdo->exec('ALTER TABLE offers ADD COLUMN site_visit_id VARCHAR(64) NULL AFTER customer_id');
+}
+
+function authorization_address_options(array $offer): array
+{
+    $options = [];
+    $seen = [];
+    $customerAddress = trim((string) ($offer['c_address'] ?? '') . ' ' . (string) ($offer['c_house_number'] ?? ''));
+    $customerZipCity = trim((string) ($offer['c_zip'] ?? '') . ' ' . (string) ($offer['c_city'] ?? ''));
+    $customerFullAddress = trim($customerAddress . ($customerZipCity !== '' ? ', ' . $customerZipCity : ''));
+    $siteVisitAddress = trim((string) ($offer['sv_address'] ?? ''));
+
+    foreach ([
+        ['label' => 'Firmenadresse', 'value' => $customerFullAddress],
+        ['label' => 'Objektadresse', 'value' => $siteVisitAddress],
+    ] as $option) {
+        if ($option['value'] === '' || isset($seen[$option['value']])) {
+            continue;
+        }
+
+        $seen[$option['value']] = true;
+        $options[] = $option;
+    }
+
+    return $options;
+}
+
+function authorization_note(string $grantorName, string $companyAddress): string
+{
+    return 'Vollmacht durch ' . $grantorName . ', Firmenadresse: ' . $companyAddress;
 }
 
 function offer_is_expired(array $offer): bool
@@ -86,6 +143,7 @@ function public_state(array $offer, ?array $contract): array
                 'zip' => $offer['c_zip'],
                 'city' => $offer['c_city'],
             ],
+            'authorizationAddressOptions' => authorization_address_options($offer),
         ],
         'contract' => $contract === null ? null : [
             'status' => $contract['status'],
@@ -94,6 +152,12 @@ function public_state(array $offer, ?array $contract): array
             'intervalConfirmed' => (bool) $contract['interval_confirmed'],
             'authorized' => $contract['authorized'] === null ? null : (bool) $contract['authorized'],
             'representationNote' => $contract['representation_note'],
+            'authorizationGrantorName' => $contract['authorization_grantor_name'] ?? null,
+            'authorizationCompanyAddress' => $contract['authorization_company_address'] ?? null,
+            'hasAuthorizationDocument' => !empty($contract['authorization_grantor_name'])
+                && !empty($contract['authorization_company_address'])
+                && isset($contract['authorized'])
+                && (int) $contract['authorized'] === 0,
             'number' => $contract['number'],
             'signedAt' => to_iso($contract['signed_at']),
             'signatureDataUrl' => $contract['signature_data'],
@@ -125,8 +189,10 @@ function require_active_contract(?array $contract): array
     return $contract;
 }
 
+ensure_offers_site_visit_id_column($pdo);
 $offer = load_offer($pdo, $token);
 ensure_contracts_terms_accepted_at_column($pdo);
+ensure_contracts_authorization_columns($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
     $contract = load_contract($pdo, $offer['id']);
@@ -197,20 +263,43 @@ if ($method === 'POST' && $action === 'authorization') {
     $contract = require_active_contract(load_contract($pdo, $offer['id']));
     $body = read_json_body();
     $authorized = (bool) ($body['authorized'] ?? false);
-    $note = trim((string) ($body['representationNote'] ?? ''));
+    $grantorName = trim((string) ($body['authorizationGrantorName'] ?? ''));
+    $companyAddress = trim((string) ($body['authorizationCompanyAddress'] ?? ''));
 
-    if (!$authorized && $note === '') {
-        json_error('Bitte geben Sie an, in welcher Vertretung Sie handeln.', 422);
+    if (!$authorized) {
+        if ($grantorName === '') {
+            json_error('Bitte geben Sie den Ansprechpartner an, der die Vollmacht erteilt.', 422);
+        }
+
+        if ($companyAddress === '') {
+            json_error('Bitte wählen Sie die Firmenadresse aus.', 422);
+        }
+
+        $allowedAddresses = [];
+        foreach (authorization_address_options($offer) as $option) {
+            $allowedAddresses[] = (string) $option['value'];
+        }
+        if ($allowedAddresses !== [] && !in_array($companyAddress, $allowedAddresses, true)) {
+            json_error('Bitte wählen Sie eine gültige Firmenadresse aus.', 422);
+        }
     }
 
     $stmt = $pdo->prepare(
-        "UPDATE contracts SET authorized = :authorized, representation_note = :note, current_step = 'vertragspartner' WHERE id = :id"
+        "UPDATE contracts SET authorized = :authorized, representation_note = :note,
+            authorization_grantor_name = :grantor_name, authorization_company_address = :company_address,
+            current_step = 'vertragspartner' WHERE id = :id"
     );
     $stmt->execute([
         'authorized' => $authorized ? 1 : 0,
-        'note' => $authorized ? null : $note,
+        'note' => $authorized ? null : authorization_note($grantorName, $companyAddress),
+        'grantor_name' => $authorized ? null : $grantorName,
+        'company_address' => $authorized ? null : $companyAddress,
         'id' => $contract['id'],
     ]);
+
+    if (!$authorized) {
+        save_contract_pdf($pdo, $contract['id'], 'authorization', true);
+    }
 
     json_response(public_state($offer, load_contract($pdo, $offer['id'])));
 }

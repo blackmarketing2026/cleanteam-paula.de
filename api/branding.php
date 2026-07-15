@@ -43,7 +43,7 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-    require_login();
+    require_admin();
 
     if (!isset($_FILES['logo']) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
         json_error('Keine Datei hochgeladen.', 422);
@@ -93,7 +93,7 @@ if ($method === 'POST') {
 }
 
 if ($method === 'DELETE') {
-    require_login();
+    require_admin();
 
     $current = load_branding_settings($pdo);
     if ($current['logo_filename'] !== null && $current['logo_filename'] !== '') {

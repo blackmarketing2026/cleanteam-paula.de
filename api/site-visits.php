@@ -33,33 +33,252 @@ function visit_int($value): int
     return max(0, (int) $value);
 }
 
-function normalize_visit_floor(array $floor, int $index): array
+function normalize_cleaning_type(string $cleaning): string
 {
-    $cleaning = trim((string) ($floor['cleaningType'] ?? ''));
-    $condition = trim((string) ($floor['floorCondition'] ?? ''));
-    $areaNotes = trim((string) ($floor['areaNotes'] ?? ($floor['notes'] ?? '')));
-
     if ($cleaning === 'Gesaugt') {
-        $cleaning = 'Nur gesaugt';
+        return 'Nur gesaugt';
     }
     if ($cleaning === 'Gewischt') {
-        $cleaning = 'Nur gewischt';
+        return 'Nur gewischt';
     }
 
-    $allowedCleaning = ['Gesaugt und gewischt', 'Nur gesaugt', 'Nur gewischt', 'Gesaugt', 'Gewischt'];
+    $allowedCleaning = ['Gesaugt und gewischt', 'Nur gesaugt', 'Nur gewischt'];
+    return in_array($cleaning, $allowedCleaning, true) ? $cleaning : 'Gesaugt und gewischt';
+}
+
+function normalize_floor_condition(string $condition): string
+{
     $allowedConditions = ['Teppich', 'Fliesen', 'Laminat', 'Parkett', 'Anderer Boden'];
+    return in_array($condition, $allowedConditions, true) ? $condition : 'Teppich';
+}
+
+function normalize_cleaning_frequency(string $frequency): string
+{
+    $allowedFrequencies = ['Täglich', 'Alle 2 Tage', 'Wöchentlich', '14-täglich', '30-täglich', 'Individuell'];
+    return in_array($frequency, $allowedFrequencies, true) ? $frequency : 'Täglich';
+}
+
+function cleaning_task_label(string $key): string
+{
+    $labels = [
+        'washbasin' => 'Waschbecken',
+        'toilet' => 'Toiletten',
+        'mirror' => 'Spiegel',
+        'floor' => 'Boden',
+        'desk' => 'Schreibtische',
+        'window' => 'Fenster',
+        'surface' => 'Oberflächen',
+        'trash' => 'Abfallbehälter',
+        'kitchen' => 'Küchenflächen',
+        'handrail' => 'Handlauf / Geländer',
+    ];
+
+    return $labels[$key] ?? $key;
+}
+
+function normalize_cleaning_item(array $item): ?array
+{
+    $key = trim((string) ($item['key'] ?? ($item['type'] ?? '')));
+    if ($key === '') {
+        return null;
+    }
+
+    $frequency = normalize_cleaning_frequency(trim((string) ($item['frequency'] ?? '')));
+
+    return [
+        'key' => $key,
+        'label' => trim((string) ($item['label'] ?? '')) ?: cleaning_task_label($key),
+        'frequency' => $frequency,
+        'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
+    ];
+}
+
+function legacy_cleaning_items_from_room(array $room): array
+{
+    $items = [];
+    if (visit_int($room['sinks'] ?? 0) > 0) {
+        $items[] = ['key' => 'washbasin', 'label' => 'Waschbecken', 'frequency' => 'Täglich', 'customFrequency' => ''];
+    }
+    if (visit_int($room['toilets'] ?? 0) > 0) {
+        $items[] = ['key' => 'toilet', 'label' => 'Toiletten', 'frequency' => 'Täglich', 'customFrequency' => ''];
+    }
+    if (visit_int($room['mirrors'] ?? 0) > 0) {
+        $items[] = ['key' => 'mirror', 'label' => 'Spiegel', 'frequency' => 'Täglich', 'customFrequency' => ''];
+    }
+    if (visit_int($room['desks'] ?? 0) > 0) {
+        $items[] = ['key' => 'desk', 'label' => 'Schreibtische', 'frequency' => 'Wöchentlich', 'customFrequency' => ''];
+    }
+    if (visit_int($room['windows'] ?? 0) > 0) {
+        $items[] = ['key' => 'window', 'label' => 'Fenster', 'frequency' => '30-täglich', 'customFrequency' => ''];
+    }
+    if (trim((string) ($room['cleaningType'] ?? '')) !== '') {
+        $items[] = ['key' => 'floor', 'label' => 'Boden', 'frequency' => 'Täglich', 'customFrequency' => ''];
+    }
+
+    return $items;
+}
+
+function cleaning_items_from_room(array $room): array
+{
+    $items = [];
+    $rawItems = $room['cleaningItems'] ?? [];
+    if (is_array($rawItems)) {
+        foreach ($rawItems as $item) {
+            if (is_array($item)) {
+                $normalizedItem = normalize_cleaning_item($item);
+                if ($normalizedItem !== null) {
+                    $items[] = $normalizedItem;
+                }
+            }
+        }
+    }
+
+    return $items !== [] ? $items : legacy_cleaning_items_from_room($room);
+}
+
+function normalize_visit_room(array $room, int $index): array
+{
+    $roomType = trim((string) ($room['roomType'] ?? ''));
+    $allowedTypes = ['Büro', 'Sanitär', 'Küche', 'Flur', 'Treppenhaus', 'Empfang', 'Lager', 'Sonstiger Raum'];
+    $notes = trim((string) ($room['notes'] ?? ($room['areaNotes'] ?? '')));
+
+    return [
+        'name' => trim((string) ($room['name'] ?? '')) ?: 'Raum ' . ($index + 1),
+        'roomType' => in_array($roomType, $allowedTypes, true) ? $roomType : 'Büro',
+        'quantity' => max(1, visit_int($room['quantity'] ?? 1)),
+        'squareMeters' => visit_int($room['squareMeters'] ?? 0),
+        'cleaningItems' => cleaning_items_from_room($room),
+        'sinks' => visit_int($room['sinks'] ?? 0),
+        'mirrors' => visit_int($room['mirrors'] ?? 0),
+        'toilets' => visit_int($room['toilets'] ?? 0),
+        'desks' => visit_int($room['desks'] ?? 0),
+        'windows' => visit_int($room['windows'] ?? 0),
+        'cleaningType' => normalize_cleaning_type(trim((string) ($room['cleaningType'] ?? ''))),
+        'floorCondition' => normalize_floor_condition(trim((string) ($room['floorCondition'] ?? ''))),
+        'extraAgreements' => trim((string) ($room['extraAgreements'] ?? '')),
+        'notes' => $notes,
+    ];
+}
+
+function legacy_rooms_from_floor(array $floor): array
+{
+    $rooms = [];
+    $areaName = trim((string) ($floor['areaName'] ?? ''));
+    $areaNotes = trim((string) ($floor['areaNotes'] ?? ($floor['notes'] ?? '')));
+    $extraAgreements = trim((string) ($floor['extraAgreements'] ?? ''));
+    $cleaningType = normalize_cleaning_type(trim((string) ($floor['cleaningType'] ?? '')));
+    $floorCondition = normalize_floor_condition(trim((string) ($floor['floorCondition'] ?? '')));
+    $sanitaryRooms = visit_int($floor['sanitaryRooms'] ?? 0);
+    $officeRooms = visit_int($floor['officeRooms'] ?? 0);
+
+    if ($sanitaryRooms > 0) {
+        $rooms[] = [
+            'name' => $areaName !== '' && $officeRooms === 0 ? $areaName : 'Sanitärbereich',
+            'roomType' => 'Sanitär',
+            'quantity' => $sanitaryRooms,
+            'squareMeters' => 0,
+            'sinks' => visit_int($floor['sinks'] ?? 0),
+            'mirrors' => visit_int($floor['mirrors'] ?? 0),
+            'toilets' => visit_int($floor['toilets'] ?? 0),
+            'desks' => 0,
+            'windows' => 0,
+            'cleaningType' => $cleaningType,
+            'floorCondition' => $floorCondition,
+            'extraAgreements' => $officeRooms === 0 ? $extraAgreements : '',
+            'notes' => $officeRooms === 0 ? $areaNotes : '',
+        ];
+    }
+
+    if ($officeRooms > 0) {
+        $rooms[] = [
+            'name' => $areaName !== '' && $sanitaryRooms === 0 ? $areaName : 'Bürobereich',
+            'roomType' => 'Büro',
+            'quantity' => $officeRooms,
+            'squareMeters' => 0,
+            'sinks' => 0,
+            'mirrors' => 0,
+            'toilets' => 0,
+            'desks' => visit_int($floor['desks'] ?? 0),
+            'windows' => visit_int($floor['windows'] ?? 0),
+            'cleaningType' => $cleaningType,
+            'floorCondition' => $floorCondition,
+            'extraAgreements' => $extraAgreements,
+            'notes' => $areaNotes,
+        ];
+    }
+
+    if ($rooms === [] && ($areaName !== '' || $areaNotes !== '' || $extraAgreements !== '')) {
+        $rooms[] = [
+            'name' => $areaName !== '' ? $areaName : 'Bereich',
+            'roomType' => 'Sonstiger Raum',
+            'quantity' => 1,
+            'squareMeters' => 0,
+            'sinks' => 0,
+            'mirrors' => 0,
+            'toilets' => 0,
+            'desks' => 0,
+            'windows' => 0,
+            'cleaningType' => $cleaningType,
+            'floorCondition' => $floorCondition,
+            'extraAgreements' => $extraAgreements,
+            'notes' => $areaNotes,
+        ];
+    }
+
+    return $rooms;
+}
+
+function normalize_visit_floor(array $floor, int $index): array
+{
+    $areaNotes = trim((string) ($floor['areaNotes'] ?? ($floor['notes'] ?? '')));
+    $rooms = [];
+    $rawRooms = $floor['rooms'] ?? [];
+    if (is_array($rawRooms) && count($rawRooms) > 0) {
+        foreach ($rawRooms as $roomIndex => $room) {
+            if (is_array($room)) {
+                $rooms[] = normalize_visit_room($room, (int) $roomIndex);
+            }
+        }
+    }
+
+    if ($rooms === []) {
+        $rooms = legacy_rooms_from_floor($floor);
+    }
+
+    $sanitaryRooms = 0;
+    $officeRooms = 0;
+    $sinks = 0;
+    $mirrors = 0;
+    $toilets = 0;
+    $desks = 0;
+    $windows = 0;
+    foreach ($rooms as $room) {
+        $quantity = max(1, visit_int($room['quantity'] ?? 1));
+        if (($room['roomType'] ?? '') === 'Sanitär') {
+            $sanitaryRooms += $quantity;
+        }
+        if (($room['roomType'] ?? '') === 'Büro') {
+            $officeRooms += $quantity;
+        }
+        $sinks += visit_int($room['sinks'] ?? 0);
+        $mirrors += visit_int($room['mirrors'] ?? 0);
+        $toilets += visit_int($room['toilets'] ?? 0);
+        $desks += visit_int($room['desks'] ?? 0);
+        $windows += visit_int($room['windows'] ?? 0);
+    }
 
     return [
         'name' => trim((string) ($floor['name'] ?? '')) ?: 'Etage ' . ($index + 1),
-        'sanitaryRooms' => visit_int($floor['sanitaryRooms'] ?? 0),
-        'sinks' => visit_int($floor['sinks'] ?? 0),
-        'mirrors' => visit_int($floor['mirrors'] ?? 0),
-        'toilets' => visit_int($floor['toilets'] ?? 0),
-        'officeRooms' => visit_int($floor['officeRooms'] ?? 0),
-        'desks' => visit_int($floor['desks'] ?? 0),
-        'windows' => visit_int($floor['windows'] ?? 0),
-        'cleaningType' => in_array($cleaning, $allowedCleaning, true) ? $cleaning : 'Gesaugt und gewischt',
-        'floorCondition' => in_array($condition, $allowedConditions, true) ? $condition : 'Teppich',
+        'rooms' => $rooms,
+        'sanitaryRooms' => $sanitaryRooms,
+        'sinks' => $sinks,
+        'mirrors' => $mirrors,
+        'toilets' => $toilets,
+        'officeRooms' => $officeRooms,
+        'desks' => $desks,
+        'windows' => $windows,
+        'cleaningType' => normalize_cleaning_type(trim((string) ($floor['cleaningType'] ?? ''))),
+        'floorCondition' => normalize_floor_condition(trim((string) ($floor['floorCondition'] ?? ''))),
         'areaName' => trim((string) ($floor['areaName'] ?? '')),
         'extraAgreements' => trim((string) ($floor['extraAgreements'] ?? '')),
         'areaNotes' => $areaNotes,
@@ -73,6 +292,12 @@ function site_visit_to_json(array $row): array
     if (!is_array($floors)) {
         $floors = [];
     }
+    $normalizedFloors = [];
+    foreach ($floors as $index => $floor) {
+        if (is_array($floor)) {
+            $normalizedFloors[] = normalize_visit_floor($floor, (int) $index);
+        }
+    }
 
     return [
         'id' => $row['id'],
@@ -82,7 +307,7 @@ function site_visit_to_json(array $row): array
         'address' => $row['address'],
         'onsiteContact' => $row['onsite_contact'],
         'squareMeters' => (int) $row['square_meters'],
-        'floors' => $floors,
+        'floors' => $normalizedFloors,
         'notes' => $row['notes'],
         'createdAt' => to_iso($row['created_at']),
     ];
@@ -113,7 +338,7 @@ if ($method === 'POST') {
     }
 
     if (!is_array($floors) || count($floors) === 0) {
-        json_error('Bitte mindestens eine Etage öffnen und ausfüllen.', 422);
+        json_error('Bitte mindestens eine Etage hinzufügen und ausfüllen.', 422);
     }
 
     $normalizedFloors = [];
@@ -121,11 +346,25 @@ if ($method === 'POST') {
         if (!is_array($floor)) {
             continue;
         }
-        $normalizedFloors[] = normalize_visit_floor($floor, (int) $index);
+        $normalizedFloor = normalize_visit_floor($floor, (int) $index);
+        if (count($normalizedFloor['rooms']) === 0) {
+            json_error('Bitte pro Etage mindestens einen Raum hinzufügen.', 422);
+        }
+        foreach ($normalizedFloor['rooms'] as $room) {
+            if (!isset($room['cleaningItems']) || !is_array($room['cleaningItems']) || count($room['cleaningItems']) === 0) {
+                json_error('Bitte pro Raum mindestens einen Reinigungspunkt auswählen.', 422);
+            }
+            foreach ($room['cleaningItems'] as $cleaningItem) {
+                if (($cleaningItem['frequency'] ?? '') === 'Individuell' && trim((string) ($cleaningItem['customFrequency'] ?? '')) === '') {
+                    json_error('Bitte bei individuellem Rhythmus eine Angabe eintragen.', 422);
+                }
+            }
+        }
+        $normalizedFloors[] = $normalizedFloor;
     }
 
     if (count($normalizedFloors) === 0) {
-        json_error('Bitte mindestens eine Etage öffnen und ausfüllen.', 422);
+        json_error('Bitte mindestens eine Etage hinzufügen und ausfüllen.', 422);
     }
 
     $id = generate_id('visit');

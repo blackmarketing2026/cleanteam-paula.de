@@ -96,7 +96,7 @@ if (!$customer) {
 
 $documentAudience = $isPublicTokenAccess
     ? 'customer'
-    : (in_array($document, ['customer', 'cleanteam', 'site_visit'], true) ? $document : 'cleanteam');
+    : (in_array($document, ['customer', 'cleanteam', 'site_visit', 'authorization'], true) ? $document : 'cleanteam');
 
 if ($format === 'pdf') {
     if ($contract === null) {

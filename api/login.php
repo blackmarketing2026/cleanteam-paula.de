@@ -15,21 +15,35 @@ if ($email === '' || $password === '') {
 }
 
 $pdo = db();
+$pdo->exec("CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  email VARCHAR(190) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(30) NOT NULL DEFAULT 'role_one',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uniq_users_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+ensure_users_role_column($pdo);
+
 $userCount = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
 
 if ($userCount === 0) {
     // Erster Start: die zuerst eingegebenen Zugangsdaten werden zum Admin-Konto.
-    $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, created_at) VALUES (:email, :hash, UTC_TIMESTAMP())');
+    $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, role, created_at) VALUES (:email, :hash, :role, UTC_TIMESTAMP())');
     $stmt->execute([
         'email' => $email,
         'hash' => password_hash($password, PASSWORD_DEFAULT),
+        'role' => USER_ROLE_ADMIN,
     ]);
 
-    login_user((int) $pdo->lastInsertId());
-    json_response(['ok' => true, 'email' => $email, 'bootstrapped' => true]);
+    $userId = (int) $pdo->lastInsertId();
+    login_user($userId);
+    $user = current_user();
+    json_response(['ok' => true, 'user' => $user, 'email' => $email, 'bootstrapped' => true]);
 }
 
-$stmt = $pdo->prepare('SELECT id, email, password_hash FROM users WHERE email = :email');
+$stmt = $pdo->prepare('SELECT id, email, password_hash, role FROM users WHERE email = :email');
 $stmt->execute(['email' => $email]);
 $user = $stmt->fetch();
 
@@ -38,4 +52,5 @@ if (!$user || !password_verify($password, $user['password_hash'])) {
 }
 
 login_user((int) $user['id']);
-json_response(['ok' => true, 'email' => $user['email']]);
+$currentUser = current_user();
+json_response(['ok' => true, 'user' => $currentUser, 'email' => $user['email']]);

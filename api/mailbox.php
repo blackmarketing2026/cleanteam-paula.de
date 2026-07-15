@@ -9,6 +9,12 @@ require_once __DIR__ . '/../includes/SmtpMailer.php';
 require_login();
 
 $pdo = db();
+$currentUser = current_user();
+if ($currentUser === null) {
+    logout_user();
+    json_error('Nicht angemeldet.', 401);
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = (string) ($_GET['action'] ?? '');
 
@@ -179,22 +185,41 @@ function mailbox_extract_body($conn, int $msgNo): array
 
 if ($method === 'GET' && $action === 'settings') {
     $settings = load_mailbox_settings($pdo);
-    json_response([
+    $configured = $settings['host'] !== '' && $settings['username'] !== '' && ($settings['password_encrypted'] ?? '') !== '';
+    $response = [
+        'username' => $settings['username'],
+        'signature' => $settings['signature'] ?? '',
+        'configured' => $configured,
+        'canManageSettings' => $currentUser['isAdmin'],
+        'updatedAt' => to_iso($settings['updated_at']),
+    ];
+
+    if (!$currentUser['isAdmin']) {
+        json_response($response + [
+            'host' => '',
+            'imapPort' => 993,
+            'imapEncryption' => 'ssl',
+            'smtpPort' => 587,
+            'smtpEncryption' => 'tls',
+            'hasPassword' => false,
+            'fromName' => '',
+        ]);
+    }
+
+    json_response($response + [
         'host' => $settings['host'],
         'imapPort' => (int) $settings['imap_port'],
         'imapEncryption' => $settings['imap_encryption'],
         'smtpPort' => (int) $settings['smtp_port'],
         'smtpEncryption' => $settings['smtp_encryption'],
-        'username' => $settings['username'],
         'hasPassword' => ($settings['password_encrypted'] ?? '') !== '',
         'fromName' => $settings['from_name'],
-        'signature' => $settings['signature'] ?? '',
-        'configured' => $settings['host'] !== '' && $settings['username'] !== '' && ($settings['password_encrypted'] ?? '') !== '',
-        'updatedAt' => to_iso($settings['updated_at']),
     ]);
 }
 
 if ($method === 'POST' && $action === 'settings') {
+    require_admin();
+
     $body = read_json_body();
     $host = trim((string) ($body['host'] ?? ''));
     $imapPort = (int) ($body['imapPort'] ?? 993);

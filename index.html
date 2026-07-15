@@ -125,6 +125,10 @@
               <i data-lucide="image" aria-hidden="true"></i>
               <span>Logo</span>
             </button>
+            <button class="nav-link" type="button" data-view="settings-users">
+              <i data-lucide="shield-check" aria-hidden="true"></i>
+              <span>User & Rollen</span>
+            </button>
           </div>
         </nav>
         <button id="logout-button" class="ghost-button sidebar-logout" type="button">
@@ -374,11 +378,11 @@
                   </div>
                   <button id="add-site-visit-floor" class="secondary-button" type="button" data-action="add-site-visit-floor">
                     <i data-lucide="plus" aria-hidden="true"></i>
-                    Eine Etage öffnen
+                    Etage hinzufügen
                   </button>
                 </div>
                 <div id="site-visit-floors" class="floor-list">
-                  <div class="empty-state floor-empty-state">Noch keine Etage geöffnet.</div>
+                  <div class="empty-state floor-empty-state">Noch keine Etage hinzugefügt.</div>
                 </div>
               </div>
 
@@ -598,9 +602,14 @@
           </div>
 
           <div id="mailbox-not-configured" class="panel empty-state" hidden>
-            Postfach ist noch nicht eingerichtet. Bitte unter
-            <button id="mailbox-goto-settings" class="ghost-button" type="button" style="display:inline-flex;">Postfach-Einstellungen</button>
-            Host, Benutzername und Passwort hinterlegen.
+            <span id="mailbox-not-configured-admin-text">
+              Postfach ist noch nicht eingerichtet. Bitte unter
+              <button id="mailbox-goto-settings" class="ghost-button" type="button" style="display:inline-flex;">Postfach-Einstellungen</button>
+              Host, Benutzername und Passwort hinterlegen.
+            </span>
+            <span id="mailbox-not-configured-user-text" hidden>
+              Postfach ist noch nicht eingerichtet. Bitte wenden Sie sich an einen Admin.
+            </span>
           </div>
 
           <div id="mailbox-configured" class="contract-layout" hidden>
@@ -670,7 +679,7 @@
             </section>
           </div>
 
-          <section class="panel form-panel" aria-labelledby="mailbox-settings-heading">
+          <section id="mailbox-settings-panel" class="panel form-panel" aria-labelledby="mailbox-settings-heading">
             <div class="panel-header">
               <div>
                 <h4 id="mailbox-settings-heading">Postfach-Einstellungen</h4>
@@ -864,6 +873,55 @@
             <p class="muted">PNG, JPG oder WEBP, maximal 2 MB.</p>
           </section>
         </section>
+
+        <section id="settings-users-view" class="view" aria-labelledby="settings-users-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="settings-users-heading">User & Rollen</h3>
+              <p class="muted">Neue Dashboard-User anlegen und festlegen, ob sie Admin oder Rolle 1 sind.</p>
+            </div>
+          </div>
+
+          <section class="panel form-panel" aria-labelledby="user-form-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="user-form-heading">User hinzufügen</h4>
+              </div>
+            </div>
+            <form id="user-form" class="form-grid">
+              <label>
+                E-Mail-Adresse *
+                <input id="user-email" type="email" required placeholder="name@cleanteam.de" />
+              </label>
+              <label>
+                Passwort *
+                <input id="user-password" type="password" required minlength="6" autocomplete="new-password" placeholder="Mindestens 6 Zeichen" />
+              </label>
+              <label>
+                Rolle *
+                <select id="user-role" required>
+                  <option value="role_one">Rolle 1</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <div class="form-actions">
+                <button class="primary-button" type="submit">
+                  <i data-lucide="user-plus" aria-hidden="true"></i>
+                  User anlegen
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel form-panel" aria-labelledby="user-list-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="user-list-heading">Bestehende User</h4>
+              </div>
+            </div>
+            <div id="user-list" class="user-management-list"></div>
+          </section>
+        </section>
       </section>
     </main>
 
@@ -887,6 +945,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=no-login-flash-20260714-1"></script>
+    <script src="app.js?v=roles-admin-20260715-1"></script>
   </body>
 </html>

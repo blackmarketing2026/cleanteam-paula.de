@@ -16,8 +16,11 @@ const els = {
   intervalCheckText: document.querySelector("#interval-check-text"),
   authYes: document.querySelector("#auth-yes"),
   authNo: document.querySelector("#auth-no"),
+  authorizationQuestionActions: document.querySelector("#authorization-question-actions"),
   representationField: document.querySelector("#representation-field"),
-  representationNote: document.querySelector("#representation-note"),
+  authorizationGrantorName: document.querySelector("#authorization-grantor-name"),
+  authorizationAddress: document.querySelector("#authorization-address"),
+  authorizationBack: document.querySelector("#authorization-back"),
   representationContinue: document.querySelector("#representation-continue"),
   partnerDetails: document.querySelector("#partner-details"),
   serviceDetails: document.querySelector("#service-details"),
@@ -132,6 +135,28 @@ function renderIntervalCheck() {
   els.intervalCheckText.textContent = `Wie besprochen reinigen wir im Intervall „${state.offer.interval}“. Ist das korrekt?`;
 }
 
+function renderAuthorizationAddressOptions() {
+  const options = state.offer?.authorizationAddressOptions || [];
+  els.authorizationAddress.innerHTML = options.length
+    ? options
+        .map((option) => {
+          const label = `${option.label}: ${option.value}`;
+          return `<option value="${escapeHtml(option.value)}">${escapeHtml(label)}</option>`;
+        })
+        .join("")
+    : `<option value="">Keine Firmenadresse verfügbar</option>`;
+  els.authorizationAddress.disabled = options.length === 0;
+}
+
+function showAuthorizationForm(visible) {
+  els.authorizationQuestionActions.hidden = visible;
+  els.representationField.hidden = !visible;
+  if (visible) {
+    renderAuthorizationAddressOptions();
+    els.authorizationGrantorName.focus();
+  }
+}
+
 function renderPartnerDetails() {
   const offer = state.offer;
   renderDefinitionList(els.partnerDetails, [
@@ -205,6 +230,10 @@ function routeToState(data) {
       break;
     case "intervall":
       renderIntervalCheck();
+      break;
+    case "vollmacht":
+      renderAuthorizationAddressOptions();
+      showAuthorizationForm(false);
       break;
     case "vertragspartner":
       renderPartnerDetails();
@@ -324,22 +353,36 @@ function bindEvents() {
   });
 
   els.authYes.addEventListener("click", () => {
-    els.representationField.hidden = true;
+    showAuthorizationForm(false);
     handleAction("authorization", { authorized: true });
   });
 
   els.authNo.addEventListener("click", () => {
-    els.representationField.hidden = false;
-    els.representationNote.focus();
+    showAuthorizationForm(true);
+  });
+
+  els.authorizationBack.addEventListener("click", () => {
+    showAuthorizationForm(false);
   });
 
   els.representationContinue.addEventListener("click", () => {
-    const note = els.representationNote.value.trim();
-    if (!note) {
-      showToast("Bitte geben Sie an, in welcher Vertretung Sie handeln.");
+    const grantorName = els.authorizationGrantorName.value.trim();
+    const companyAddress = els.authorizationAddress.value.trim();
+    if (!grantorName) {
+      showToast("Bitte geben Sie den Ansprechpartner an, der die Vollmacht erteilt.");
+      els.authorizationGrantorName.focus();
       return;
     }
-    handleAction("authorization", { authorized: false, representationNote: note });
+    if (!companyAddress) {
+      showToast("Bitte wählen Sie die Firmenadresse aus.");
+      els.authorizationAddress.focus();
+      return;
+    }
+    handleAction("authorization", {
+      authorized: false,
+      authorizationGrantorName: grantorName,
+      authorizationCompanyAddress: companyAddress,
+    });
   });
 
   els.clearSignature.addEventListener("click", clearSignaturePad);

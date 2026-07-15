@@ -11,13 +11,18 @@ if ($userId === null) {
     json_response(['loggedIn' => false]);
 }
 
-$stmt = db()->prepare('SELECT email FROM users WHERE id = :id');
-$stmt->execute(['id' => $userId]);
-$user = $stmt->fetch();
+$user = current_user();
 
 if (!$user) {
     logout_user();
     json_response(['loggedIn' => false]);
 }
 
-json_response(['loggedIn' => true, 'email' => $user['email']]);
+json_response([
+    'loggedIn' => true,
+    'email' => $user['email'],
+    'user' => $user,
+    'role' => $user['role'],
+    'roleLabel' => $user['roleLabel'],
+    'isAdmin' => $user['isAdmin'],
+]);

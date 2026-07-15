@@ -539,6 +539,9 @@ function contract_pdf_filename(array $contract, string $audience): string
     if ($audience === 'site_visit') {
         return 'Begehung-' . trim($safeNumber, '-') . '.pdf';
     }
+    if ($audience === 'authorization') {
+        return 'Vollmacht-' . trim($safeNumber, '-') . '.pdf';
+    }
 
     $suffix = $audience === 'cleanteam' ? 'CleanTeam' : 'Kunde';
     return 'Vertrag-' . trim($safeNumber, '-') . '-' . $suffix . '.pdf';
@@ -546,13 +549,246 @@ function contract_pdf_filename(array $contract, string $audience): string
 
 function normalize_contract_pdf_audience(string $audience): string
 {
-    return in_array($audience, ['cleanteam', 'customer', 'site_visit'], true) ? $audience : 'customer';
+    return in_array($audience, ['cleanteam', 'customer', 'site_visit', 'authorization'], true) ? $audience : 'customer';
+}
+
+function contract_authorization_grantor_name(array $contract): string
+{
+    return trim((string) ($contract['authorization_grantor_name'] ?? ''));
+}
+
+function contract_authorization_company_address(array $contract): string
+{
+    return trim((string) ($contract['authorization_company_address'] ?? ''));
+}
+
+function contract_has_authorization_details(array $contract): bool
+{
+    return isset($contract['authorized'])
+        && (int) $contract['authorized'] === 0
+        && contract_authorization_grantor_name($contract) !== ''
+        && contract_authorization_company_address($contract) !== '';
 }
 
 function site_visit_floors_from_row(array $siteVisit): array
 {
     $floors = json_decode((string) ($siteVisit['floors_json'] ?? '[]'), true);
     return is_array($floors) ? $floors : [];
+}
+
+function site_visit_pdf_int($value): int
+{
+    return max(0, (int) $value);
+}
+
+function site_visit_pdf_cleaning_type(?string $value): string
+{
+    if ($value === 'Gesaugt') {
+        return 'Nur gesaugt';
+    }
+    if ($value === 'Gewischt') {
+        return 'Nur gewischt';
+    }
+
+    return $value !== null && $value !== '' ? $value : 'Gesaugt und gewischt';
+}
+
+function site_visit_pdf_cleaning_frequency(?string $frequency): string
+{
+    $allowedFrequencies = ['Täglich', 'Alle 2 Tage', 'Wöchentlich', '14-täglich', '30-täglich', 'Individuell'];
+    return $frequency !== null && in_array($frequency, $allowedFrequencies, true) ? $frequency : 'Täglich';
+}
+
+function site_visit_pdf_cleaning_task_label(string $key): string
+{
+    $labels = [
+        'washbasin' => 'Waschbecken',
+        'toilet' => 'Toiletten',
+        'mirror' => 'Spiegel',
+        'floor' => 'Boden',
+        'desk' => 'Schreibtische',
+        'window' => 'Fenster',
+        'surface' => 'Oberflächen',
+        'trash' => 'Abfallbehälter',
+        'kitchen' => 'Küchenflächen',
+        'handrail' => 'Handlauf / Geländer',
+    ];
+
+    return $labels[$key] ?? $key;
+}
+
+function site_visit_pdf_cleaning_item(array $item): ?array
+{
+    $key = trim((string) ($item['key'] ?? ($item['type'] ?? '')));
+    if ($key === '') {
+        return null;
+    }
+
+    $frequency = site_visit_pdf_cleaning_frequency(trim((string) ($item['frequency'] ?? '')));
+
+    return [
+        'key' => $key,
+        'label' => trim((string) ($item['label'] ?? '')) ?: site_visit_pdf_cleaning_task_label($key),
+        'frequency' => $frequency,
+        'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
+    ];
+}
+
+function site_visit_pdf_legacy_cleaning_items_from_room(array $room): array
+{
+    $items = [];
+    if (site_visit_pdf_int($room['sinks'] ?? 0) > 0) {
+        $items[] = ['key' => 'washbasin', 'label' => 'Waschbecken', 'frequency' => 'Täglich', 'customFrequency' => ''];
+    }
+    if (site_visit_pdf_int($room['toilets'] ?? 0) > 0) {
+        $items[] = ['key' => 'toilet', 'label' => 'Toiletten', 'frequency' => 'Täglich', 'customFrequency' => ''];
+    }
+    if (site_visit_pdf_int($room['mirrors'] ?? 0) > 0) {
+        $items[] = ['key' => 'mirror', 'label' => 'Spiegel', 'frequency' => 'Täglich', 'customFrequency' => ''];
+    }
+    if (site_visit_pdf_int($room['desks'] ?? 0) > 0) {
+        $items[] = ['key' => 'desk', 'label' => 'Schreibtische', 'frequency' => 'Wöchentlich', 'customFrequency' => ''];
+    }
+    if (site_visit_pdf_int($room['windows'] ?? 0) > 0) {
+        $items[] = ['key' => 'window', 'label' => 'Fenster', 'frequency' => '30-täglich', 'customFrequency' => ''];
+    }
+    if (trim((string) ($room['cleaningType'] ?? '')) !== '') {
+        $items[] = ['key' => 'floor', 'label' => 'Boden', 'frequency' => 'Täglich', 'customFrequency' => ''];
+    }
+
+    return $items;
+}
+
+function site_visit_pdf_cleaning_items_from_room(array $room): array
+{
+    $items = [];
+    if (isset($room['cleaningItems']) && is_array($room['cleaningItems'])) {
+        foreach ($room['cleaningItems'] as $item) {
+            if (is_array($item)) {
+                $normalizedItem = site_visit_pdf_cleaning_item($item);
+                if ($normalizedItem !== null) {
+                    $items[] = $normalizedItem;
+                }
+            }
+        }
+    }
+
+    return $items !== [] ? $items : site_visit_pdf_legacy_cleaning_items_from_room($room);
+}
+
+function site_visit_pdf_cleaning_item_text(array $item): string
+{
+    $frequency = $item['frequency'] === 'Individuell'
+        ? (trim((string) ($item['customFrequency'] ?? '')) ?: 'Individuell')
+        : $item['frequency'];
+
+    return $item['label'] . ': ' . $frequency;
+}
+
+function site_visit_pdf_normalize_room(array $room, int $index = 0): array
+{
+    return [
+        'name' => trim((string) ($room['name'] ?? '')) ?: 'Raum ' . ($index + 1),
+        'roomType' => trim((string) ($room['roomType'] ?? '')) ?: 'Büro',
+        'quantity' => max(1, site_visit_pdf_int($room['quantity'] ?? 1)),
+        'squareMeters' => site_visit_pdf_int($room['squareMeters'] ?? 0),
+        'cleaningItems' => site_visit_pdf_cleaning_items_from_room($room),
+        'sinks' => site_visit_pdf_int($room['sinks'] ?? 0),
+        'mirrors' => site_visit_pdf_int($room['mirrors'] ?? 0),
+        'toilets' => site_visit_pdf_int($room['toilets'] ?? 0),
+        'desks' => site_visit_pdf_int($room['desks'] ?? 0),
+        'windows' => site_visit_pdf_int($room['windows'] ?? 0),
+        'cleaningType' => site_visit_pdf_cleaning_type(trim((string) ($room['cleaningType'] ?? ''))),
+        'floorCondition' => trim((string) ($room['floorCondition'] ?? '')) ?: 'Teppich',
+        'extraAgreements' => trim((string) ($room['extraAgreements'] ?? '')),
+        'notes' => trim((string) ($room['notes'] ?? ($room['areaNotes'] ?? ''))),
+    ];
+}
+
+function site_visit_pdf_legacy_rooms_from_floor(array $floor): array
+{
+    $rooms = [];
+    $areaName = trim((string) ($floor['areaName'] ?? ''));
+    $areaNotes = trim((string) ($floor['areaNotes'] ?? ($floor['notes'] ?? '')));
+    $extraAgreements = trim((string) ($floor['extraAgreements'] ?? ''));
+    $cleaningType = site_visit_pdf_cleaning_type(trim((string) ($floor['cleaningType'] ?? '')));
+    $floorCondition = trim((string) ($floor['floorCondition'] ?? '')) ?: 'Teppich';
+    $sanitaryRooms = site_visit_pdf_int($floor['sanitaryRooms'] ?? 0);
+    $officeRooms = site_visit_pdf_int($floor['officeRooms'] ?? 0);
+
+    if ($sanitaryRooms > 0) {
+        $rooms[] = site_visit_pdf_normalize_room([
+            'name' => $areaName !== '' && $officeRooms === 0 ? $areaName : 'Sanitärbereich',
+            'roomType' => 'Sanitär',
+            'quantity' => $sanitaryRooms,
+            'sinks' => $floor['sinks'] ?? 0,
+            'mirrors' => $floor['mirrors'] ?? 0,
+            'toilets' => $floor['toilets'] ?? 0,
+            'cleaningType' => $cleaningType,
+            'floorCondition' => $floorCondition,
+            'extraAgreements' => $officeRooms === 0 ? $extraAgreements : '',
+            'notes' => $officeRooms === 0 ? $areaNotes : '',
+        ]);
+    }
+
+    if ($officeRooms > 0) {
+        $rooms[] = site_visit_pdf_normalize_room([
+            'name' => $areaName !== '' && $sanitaryRooms === 0 ? $areaName : 'Bürobereich',
+            'roomType' => 'Büro',
+            'quantity' => $officeRooms,
+            'desks' => $floor['desks'] ?? 0,
+            'windows' => $floor['windows'] ?? 0,
+            'cleaningType' => $cleaningType,
+            'floorCondition' => $floorCondition,
+            'extraAgreements' => $extraAgreements,
+            'notes' => $areaNotes,
+        ]);
+    }
+
+    if ($rooms === [] && ($areaName !== '' || $areaNotes !== '' || $extraAgreements !== '')) {
+        $rooms[] = site_visit_pdf_normalize_room([
+            'name' => $areaName !== '' ? $areaName : 'Bereich',
+            'roomType' => 'Sonstiger Raum',
+            'cleaningType' => $cleaningType,
+            'floorCondition' => $floorCondition,
+            'extraAgreements' => $extraAgreements,
+            'notes' => $areaNotes,
+        ]);
+    }
+
+    return $rooms;
+}
+
+function site_visit_pdf_rooms_from_floor(array $floor): array
+{
+    $rooms = [];
+    if (isset($floor['rooms']) && is_array($floor['rooms']) && count($floor['rooms']) > 0) {
+        foreach ($floor['rooms'] as $index => $room) {
+            if (is_array($room)) {
+                $rooms[] = site_visit_pdf_normalize_room($room, (int) $index);
+            }
+        }
+    }
+
+    return $rooms !== [] ? $rooms : site_visit_pdf_legacy_rooms_from_floor($floor);
+}
+
+function site_visit_pdf_room_details(array $room): string
+{
+    $parts = [
+        site_visit_pdf_int($room['squareMeters'] ?? 0) > 0 ? site_visit_pdf_int($room['squareMeters']) . ' m²' : '',
+        (string) ($room['floorCondition'] ?? ''),
+    ];
+
+    return implode(' | ', array_filter($parts, function ($part): bool {
+        return trim((string) $part) !== '';
+    }));
+}
+
+function site_visit_pdf_cleaning_items_text(array $room): string
+{
+    $items = site_visit_pdf_cleaning_items_from_room($room);
+    return implode(' | ', array_map('site_visit_pdf_cleaning_item_text', $items));
 }
 
 function render_site_visit_pdf(array $siteVisit, array $offer, array $customer, ?array $contract): string
@@ -575,7 +811,7 @@ function render_site_visit_pdf(array $siteVisit, array $offer, array $customer, 
     $pdf->keyValue('Ansprechpartner vor Ort', (string) ($siteVisit['onsite_contact'] ?? ''));
     $pdf->keyValue('Objektgröße', (int) ($siteVisit['square_meters'] ?? 0) . ' m²');
 
-    $pdf->heading('Etagen und Bereiche');
+    $pdf->heading('Etagen und Räume');
     if ($floors === []) {
         $pdf->paragraph('Keine Etagenangaben vorhanden.');
     }
@@ -586,25 +822,32 @@ function render_site_visit_pdf(array $siteVisit, array $offer, array $customer, 
         }
 
         $name = trim((string) ($floor['name'] ?? '')) ?: 'Etage ' . ($index + 1);
-        $areaNotes = trim((string) ($floor['areaNotes'] ?? ($floor['notes'] ?? '')));
         $pdf->subheading($name);
-        if (trim((string) ($floor['areaName'] ?? '')) !== '') {
-            $pdf->keyValue('Bereich', (string) $floor['areaName']);
+
+        $rooms = site_visit_pdf_rooms_from_floor($floor);
+        if ($rooms === []) {
+            $pdf->paragraph('Keine Räume hinterlegt.');
         }
-        $pdf->keyValue('Sanitärräume', (string) ((int) ($floor['sanitaryRooms'] ?? 0)));
-        $pdf->keyValue('Waschbecken', (string) ((int) ($floor['sinks'] ?? 0)));
-        $pdf->keyValue('Spiegel', (string) ((int) ($floor['mirrors'] ?? 0)));
-        $pdf->keyValue('Toiletten', (string) ((int) ($floor['toilets'] ?? 0)));
-        $pdf->keyValue('Büroräume', (string) ((int) ($floor['officeRooms'] ?? 0)));
-        $pdf->keyValue('Schreibtische', (string) ((int) ($floor['desks'] ?? 0)));
-        $pdf->keyValue('Fenster', (string) ((int) ($floor['windows'] ?? 0)));
-        $pdf->keyValue('Bodenart', (string) ($floor['floorCondition'] ?? ''));
-        $pdf->keyValue('Bodenbehandlung', (string) ($floor['cleaningType'] ?? ''));
-        if (trim((string) ($floor['extraAgreements'] ?? '')) !== '') {
-            $pdf->keyValue('Extra Vereinbarungen', (string) $floor['extraAgreements']);
-        }
-        if ($areaNotes !== '') {
-            $pdf->keyValue('Notiz zum Bereich', $areaNotes);
+
+        foreach ($rooms as $room) {
+            $quantity = site_visit_pdf_int($room['quantity'] ?? 1);
+            $roomTitle = ($quantity > 1 ? $quantity . 'x ' : '') . (string) $room['name'];
+            $pdf->keyValue($roomTitle, (string) $room['roomType']);
+            $details = site_visit_pdf_room_details($room);
+            if ($details !== '') {
+                $pdf->keyValue('Details', $details);
+            }
+            $cleaning = site_visit_pdf_cleaning_items_text($room);
+            if ($cleaning !== '') {
+                $pdf->keyValue('Reinigung', $cleaning);
+            }
+            if (trim((string) ($room['extraAgreements'] ?? '')) !== '') {
+                $pdf->keyValue('Extra Vereinbarungen', (string) $room['extraAgreements']);
+            }
+            if (trim((string) ($room['notes'] ?? '')) !== '') {
+                $pdf->keyValue('Notiz zum Raum', (string) $room['notes']);
+            }
+            $pdf->spacer(2.0);
         }
         $pdf->spacer(4.0);
     }
@@ -614,6 +857,59 @@ function render_site_visit_pdf(array $siteVisit, array $offer, array $customer, 
         $pdf->heading('Allgemeine Notizen');
         $pdf->paragraph($notes);
     }
+
+    return $pdf->output();
+}
+
+function render_authorization_pdf(array $offer, array $customer, array $contract): string
+{
+    if (!contract_has_authorization_details($contract)) {
+        throw new RuntimeException('Zu diesem Vertrag ist keine Vollmacht hinterlegt.');
+    }
+
+    $pdf = new SimplePdfDocument();
+    $contractNumber = (string) ($contract['number'] ?? 'Entwurf');
+    $createdAt = contract_format_date($contract['created_at'] ?? ($offer['created_at'] ?? null));
+    $customerName = contract_customer_display_name($customer);
+    $signatoryName = contract_signatory_display($customer);
+    $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
+    $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
+    $grantorName = contract_authorization_grantor_name($contract);
+    $companyAddress = contract_authorization_company_address($contract);
+
+    $pdf->title('Vollmacht zum Gebäudereinigungsvertrag');
+    $pdf->label('Vollmacht zum Vertrag ' . $contractNumber);
+    $pdf->meta('Erstellt am: ' . $createdAt . ' | Auftraggeber: ' . $customerName);
+
+    $pdf->heading('Vertragsdaten');
+    $pdf->keyValue('Vertragsnummer', $contractNumber);
+    $pdf->keyValue('Auftragnehmer', CONTRACTOR['legal_name']);
+    $pdf->keyValue('Auftraggeber', $customerName);
+    $pdf->keyValue('Auftraggeber-Adresse', $customerAddress . ', ' . $customerZipCity);
+    $pdf->keyValue('Leistung', (string) $offer['service']);
+
+    $pdf->heading('Vollmachtgeber');
+    $pdf->keyValue('Name', $grantorName);
+    $pdf->keyValue('Firmenadresse', $companyAddress);
+
+    $pdf->heading('Bevollmächtigte Person');
+    $pdf->keyValue('Name', $signatoryName);
+    $pdf->keyValue('Firma', $customerName);
+
+    $pdf->heading('Erklärung');
+    $pdf->paragraph(
+        'Hiermit bevollmächtigt die oben genannte Person die bevollmächtigte Person, den Gebäudereinigungsvertrag '
+        . $contractNumber . ' mit ' . CONTRACTOR['legal_name'] . ' für den Auftraggeber rechtsverbindlich zu unterzeichnen.'
+    );
+    $pdf->paragraph(
+        'Dieses Dokument wurde aus den Angaben im digitalen Vertragsassistenten vorbereitet und dient als Vollmachtsdokument '
+        . 'zum oben genannten Vertrag.'
+    );
+
+    $pdf->heading('Unterschrift Vollmachtgeber');
+    $pdf->keyValue('Ort, Datum', '________________________________________');
+    $pdf->keyValue('Name', $grantorName);
+    $pdf->keyValue('Unterschrift', '________________________________________');
 
     return $pdf->output();
 }
@@ -747,6 +1043,10 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->keyValue('Zeitpunkt der Zustimmung', $termsAcceptedTime);
         $pdf->keyValue('AGB-Fassung', LEGAL['agb_version']);
         $pdf->keyValue('AGB-Quelle', LEGAL['agb_url']);
+        if ($contract !== null && contract_has_authorization_details($contract)) {
+            $pdf->keyValue('Vollmachtgeber', contract_authorization_grantor_name($contract));
+            $pdf->keyValue('Vollmacht-Adresse', contract_authorization_company_address($contract));
+        }
         if (!empty($contract['signature_data'])) {
             $pdf->keyValue('Signatur-Prüfsumme', hash('sha256', (string) $contract['signature_data']));
         }
@@ -787,6 +1087,8 @@ function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool 
             throw new RuntimeException('Zu diesem Vertrag ist keine Begehung verknüpft.');
         }
         $content = render_site_visit_pdf($context['siteVisit'], $context['offer'], $context['customer'], $context['contract']);
+    } elseif ($audience === 'authorization') {
+        $content = render_authorization_pdf($context['offer'], $context['customer'], $context['contract']);
     } else {
         $content = render_contract_pdf($context['offer'], $context['customer'], $context['contract'], ['audience' => $audience]);
     }
@@ -830,6 +1132,9 @@ function save_contract_pdfs(PDO $pdo, string $contractId, bool $force = true): v
     $context = contract_pdf_context($pdo, $contractId);
     if ($context !== null && ($context['siteVisit'] ?? null) !== null) {
         save_contract_pdf($pdo, $contractId, 'site_visit', $force);
+    }
+    if ($context !== null && contract_has_authorization_details($context['contract'])) {
+        save_contract_pdf($pdo, $contractId, 'authorization', $force);
     }
 }
 

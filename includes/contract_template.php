@@ -199,6 +199,13 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
     $contractCreatedAt = contract_format_datetime($contract['created_at'] ?? null);
     $agbVersion = h(LEGAL['agb_version']);
     $agbUrl = h(LEGAL['agb_url']);
+    $authorizationGrantor = trim((string) ($contract['authorization_grantor_name'] ?? ''));
+    $authorizationAddress = trim((string) ($contract['authorization_company_address'] ?? ''));
+    $authorizationRows = '';
+    if (($contract['authorized'] ?? null) !== null && (int) $contract['authorized'] === 0 && $authorizationGrantor !== '' && $authorizationAddress !== '') {
+        $authorizationRows = '<dt>Vollmachtgeber</dt><dd>' . h($authorizationGrantor) . '</dd>'
+            . '<dt>Vollmacht-Adresse</dt><dd>' . h($authorizationAddress) . '</dd>';
+    }
 
     return <<<HTML
 <section class="signature-protocol">
@@ -218,6 +225,7 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
     <dt>Zeitpunkt der Zustimmung</dt><dd>{$termsAcceptedTime}</dd>
     <dt>AGB-Fassung</dt><dd>{$agbVersion}</dd>
     <dt>AGB-Quelle</dt><dd>{$agbUrl}</dd>
+    {$authorizationRows}
   </dl>
 </section>
 HTML;

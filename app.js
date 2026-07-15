@@ -23,6 +23,15 @@ const CONTRACT_STATUS_LABELS = {
 
 const state = {
   data: { customers: [], siteVisits: [], offers: [], contracts: [] },
+  session: {
+    email: "",
+    role: "role_one",
+    roleLabel: "Rolle 1",
+    isAdmin: false,
+  },
+  users: [],
+  userRoles: {},
+  currentUserId: null,
   currentView: "overview",
   selectedContractId: null,
   pendingOfferSiteVisitId: null,
@@ -98,6 +107,8 @@ const els = {
   smtpFromEmail: document.querySelector("#smtp-from-email"),
   sendTestMail: document.querySelector("#send-test-mail"),
   mailboxNotConfigured: document.querySelector("#mailbox-not-configured"),
+  mailboxNotConfiguredAdminText: document.querySelector("#mailbox-not-configured-admin-text"),
+  mailboxNotConfiguredUserText: document.querySelector("#mailbox-not-configured-user-text"),
   mailboxConfigured: document.querySelector("#mailbox-configured"),
   mailboxGotoSettings: document.querySelector("#mailbox-goto-settings"),
   mailboxAccountLabel: document.querySelector("#mailbox-account-label"),
@@ -111,6 +122,7 @@ const els = {
   mailboxComposeSubject: document.querySelector("#mailbox-compose-subject"),
   mailboxComposeBody: document.querySelector("#mailbox-compose-body"),
   mailboxSettingsForm: document.querySelector("#mailbox-settings-form"),
+  mailboxSettingsPanel: document.querySelector("#mailbox-settings-panel"),
   mailboxHost: document.querySelector("#mailbox-host"),
   mailboxImapPort: document.querySelector("#mailbox-imap-port"),
   mailboxImapEncryption: document.querySelector("#mailbox-imap-encryption"),
@@ -133,6 +145,11 @@ const els = {
   logoPreview: document.querySelector("#logo-preview"),
   logoFileInput: document.querySelector("#logo-file-input"),
   logoRemove: document.querySelector("#logo-remove"),
+  userForm: document.querySelector("#user-form"),
+  userEmail: document.querySelector("#user-email"),
+  userPassword: document.querySelector("#user-password"),
+  userRole: document.querySelector("#user-role"),
+  userList: document.querySelector("#user-list"),
   brandMarks: document.querySelectorAll(".brand-mark"),
   toast: document.querySelector("#toast"),
   metricCustomers: document.querySelector("#metric-customers"),
@@ -158,6 +175,7 @@ const titles = {
   "settings-smtp": "SMTP-Server-Einstellungen",
   "settings-notify": "Vertragsbenachrichtigungen-Einstellungen",
   "settings-logo": "Logo-Einstellungen",
+  "settings-users": "User & Rollen",
 };
 
 let currentLogoUrl = null;
@@ -314,6 +332,43 @@ function showToast(message) {
   }, 3200);
 }
 
+function isAdmin() {
+  return Boolean(state.session?.isAdmin);
+}
+
+function applyRolePermissions() {
+  const canManageSettings = isAdmin();
+
+  els.settingsGroupToggle.hidden = !canManageSettings;
+  if (!canManageSettings) {
+    setSettingsGroupExpanded(false);
+  }
+
+  if (els.mailboxSettingsPanel) {
+    els.mailboxSettingsPanel.hidden = !canManageSettings;
+  }
+  if (els.mailboxGotoSettings) {
+    els.mailboxGotoSettings.hidden = !canManageSettings;
+  }
+  if (els.mailboxNotConfiguredAdminText) {
+    els.mailboxNotConfiguredAdminText.hidden = !canManageSettings;
+  }
+  if (els.mailboxNotConfiguredUserText) {
+    els.mailboxNotConfiguredUserText.hidden = canManageSettings;
+  }
+}
+
+function applySession(session = {}) {
+  const user = session.user || session;
+  state.session = {
+    email: user.email || "",
+    role: user.role || "role_one",
+    roleLabel: user.roleLabel || (user.role === "admin" ? "Admin" : "Rolle 1"),
+    isAdmin: Boolean(user.isAdmin || user.role === "admin"),
+  };
+  applyRolePermissions();
+}
+
 function refreshIcons() {
   if (window.lucide) {
     window.lucide.createIcons();
@@ -321,11 +376,22 @@ function refreshIcons() {
 }
 
 function showLogin() {
+  state.session = {
+    email: "",
+    role: "role_one",
+    roleLabel: "Rolle 1",
+    isAdmin: false,
+  };
   els.loginScreen.hidden = false;
   els.appShell.hidden = true;
 }
 
-function showApp() {
+function showApp(session) {
+  if (session) {
+    applySession(session);
+  } else {
+    applyRolePermissions();
+  }
   els.loginScreen.hidden = true;
   els.appShell.hidden = false;
   loadAll();
@@ -352,6 +418,11 @@ function setOffersGroupExpanded(expanded) {
 }
 
 function switchView(view) {
+  if (view.startsWith("settings-") && !isAdmin()) {
+    showToast("Nur Admins können die Einstellungen öffnen.");
+    view = "overview";
+  }
+
   state.currentView = view;
   els.viewTitle.textContent = titles[view];
 
@@ -395,6 +466,10 @@ function switchView(view) {
 
   if (view === "settings-notify") {
     loadContractNotifySettings();
+  }
+
+  if (view === "settings-users") {
+    loadUsers();
   }
 
   if (view === "mailbox") {
@@ -641,6 +716,185 @@ function normalizeCleaningType(value) {
   return value || "Gesaugt und gewischt";
 }
 
+const CLEANING_FREQUENCIES = [
+  "Täglich",
+  "Alle 2 Tage",
+  "Wöchentlich",
+  "14-täglich",
+  "30-täglich",
+  "Individuell",
+];
+
+const CLEANING_TASKS = [
+  { key: "washbasin", label: "Waschbecken" },
+  { key: "toilet", label: "Toiletten" },
+  { key: "mirror", label: "Spiegel" },
+  { key: "floor", label: "Boden" },
+  { key: "desk", label: "Schreibtische" },
+  { key: "window", label: "Fenster" },
+  { key: "surface", label: "Oberflächen" },
+  { key: "trash", label: "Abfallbehälter" },
+  { key: "kitchen", label: "Küchenflächen" },
+  { key: "handrail", label: "Handlauf / Geländer" },
+];
+
+function cleaningTaskLabel(key) {
+  return CLEANING_TASKS.find((task) => task.key === key)?.label || key;
+}
+
+function normalizeCleaningFrequency(value) {
+  return CLEANING_FREQUENCIES.includes(value) ? value : "Täglich";
+}
+
+function normalizeCleaningItem(item = {}) {
+  const key = item.key || item.type || "";
+  return {
+    key,
+    label: item.label || cleaningTaskLabel(key),
+    frequency: normalizeCleaningFrequency(item.frequency),
+    customFrequency: item.customFrequency || "",
+  };
+}
+
+function legacyCleaningItemsFromRoom(room = {}) {
+  const items = [];
+  if (Number(room.sinks) > 0) {
+    items.push({ key: "washbasin", label: "Waschbecken", frequency: "Täglich" });
+  }
+  if (Number(room.toilets) > 0) {
+    items.push({ key: "toilet", label: "Toiletten", frequency: "Täglich" });
+  }
+  if (Number(room.mirrors) > 0) {
+    items.push({ key: "mirror", label: "Spiegel", frequency: "Täglich" });
+  }
+  if (Number(room.desks) > 0) {
+    items.push({ key: "desk", label: "Schreibtische", frequency: "Wöchentlich" });
+  }
+  if (Number(room.windows) > 0) {
+    items.push({ key: "window", label: "Fenster", frequency: "30-täglich" });
+  }
+  if (room.cleaningType) {
+    items.push({ key: "floor", label: "Boden", frequency: "Täglich" });
+  }
+
+  return items.map(normalizeCleaningItem);
+}
+
+function cleaningItemsForDisplay(room = {}) {
+  if (Array.isArray(room.cleaningItems) && room.cleaningItems.length > 0) {
+    return room.cleaningItems.map(normalizeCleaningItem).filter((item) => item.key);
+  }
+
+  return legacyCleaningItemsFromRoom(room);
+}
+
+function cleaningItemFrequencyText(item) {
+  if (item.frequency === "Individuell") {
+    return item.customFrequency || "Individuell";
+  }
+
+  return item.frequency;
+}
+
+function normalizeRoom(room = {}, index = 0) {
+  return {
+    name: room.name || `Raum ${index + 1}`,
+    roomType: room.roomType || "Büro",
+    quantity: Math.max(1, Number(room.quantity) || 1),
+    squareMeters: Number(room.squareMeters) || 0,
+    cleaningItems: cleaningItemsForDisplay(room),
+    sinks: Number(room.sinks) || 0,
+    mirrors: Number(room.mirrors) || 0,
+    toilets: Number(room.toilets) || 0,
+    desks: Number(room.desks) || 0,
+    windows: Number(room.windows) || 0,
+    cleaningType: normalizeCleaningType(room.cleaningType),
+    floorCondition: room.floorCondition || "Teppich",
+    extraAgreements: room.extraAgreements || "",
+    notes: room.notes || room.areaNotes || "",
+  };
+}
+
+function legacyRoomsFromFloor(floor = {}) {
+  const rooms = [];
+  const areaName = floor.areaName || "";
+  const areaNotes = floor.areaNotes || floor.notes || "";
+  const extraAgreements = floor.extraAgreements || "";
+  const cleaningType = normalizeCleaningType(floor.cleaningType);
+  const floorCondition = floor.floorCondition || "Teppich";
+  const sanitaryRooms = Number(floor.sanitaryRooms) || 0;
+  const officeRooms = Number(floor.officeRooms) || 0;
+
+  if (sanitaryRooms > 0) {
+    rooms.push(normalizeRoom({
+      name: areaName && officeRooms === 0 ? areaName : "Sanitärbereich",
+      roomType: "Sanitär",
+      quantity: sanitaryRooms,
+      sinks: floor.sinks,
+      mirrors: floor.mirrors,
+      toilets: floor.toilets,
+      cleaningType,
+      floorCondition,
+      extraAgreements: officeRooms === 0 ? extraAgreements : "",
+      notes: officeRooms === 0 ? areaNotes : "",
+    }));
+  }
+
+  if (officeRooms > 0) {
+    rooms.push(normalizeRoom({
+      name: areaName && sanitaryRooms === 0 ? areaName : "Bürobereich",
+      roomType: "Büro",
+      quantity: officeRooms,
+      desks: floor.desks,
+      windows: floor.windows,
+      cleaningType,
+      floorCondition,
+      extraAgreements,
+      notes: areaNotes,
+    }));
+  }
+
+  if (rooms.length === 0 && (areaName || areaNotes || extraAgreements)) {
+    rooms.push(normalizeRoom({
+      name: areaName || "Bereich",
+      roomType: "Sonstiger Raum",
+      cleaningType,
+      floorCondition,
+      extraAgreements,
+      notes: areaNotes,
+    }));
+  }
+
+  return rooms;
+}
+
+function floorRoomsForDisplay(floor = {}) {
+  if (Array.isArray(floor.rooms) && floor.rooms.length > 0) {
+    return floor.rooms.map(normalizeRoom);
+  }
+
+  return legacyRoomsFromFloor(floor);
+}
+
+function formatRoomQuantity(room) {
+  return Number(room.quantity) > 1 ? `${Number(room.quantity)}x ` : "";
+}
+
+function roomDetailParts(room) {
+  const parts = [
+    room.squareMeters > 0 ? `${room.squareMeters} m²` : "",
+    room.floorCondition ? room.floorCondition : "",
+  ];
+
+  return parts.filter(Boolean);
+}
+
+function cleaningItemsText(room) {
+  return cleaningItemsForDisplay(room)
+    .map((item) => `${item.label}: ${cleaningItemFrequencyText(item)}`)
+    .join(" · ");
+}
+
 function counterMarkup(name, label, value, options = {}) {
   const min = Number(options.min ?? 0);
   const step = Number(options.step ?? 1);
@@ -673,28 +927,32 @@ function ensureSiteVisitFloorEmptyState() {
     return;
   }
 
-  els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage geöffnet.</div>`;
+  els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage hinzugefügt.</div>`;
 }
 
 function renumberSiteVisitFloors() {
   els.siteVisitFloors.querySelectorAll(".floor-section").forEach((section, index) => {
     const name = section.querySelector('[name="floorName"]').value.trim();
     section.querySelector("legend").textContent = name || `Etage ${index + 1}`;
+    renumberSiteVisitRooms(section);
   });
 }
 
-function syncFloorConditionalSections(section) {
-  const value = (name) => Number(section.querySelector(`[name="${name}"]`)?.value) || 0;
-  const sanitaryDetails = section.querySelector('[data-conditional-section="sanitary"]');
-  const officeDetails = section.querySelector('[data-conditional-section="office"]');
+function renumberSiteVisitRooms(floorSection) {
+  floorSection.querySelectorAll(".room-section").forEach((section, index) => {
+    const name = section.querySelector('[name="roomName"]')?.value.trim();
+    const type = section.querySelector('[name="roomType"]')?.value || "Raum";
+    section.querySelector("legend").textContent = name || `${type} ${index + 1}`;
+  });
+}
 
-  if (sanitaryDetails) {
-    sanitaryDetails.hidden = value("sanitaryRooms") <= 0;
+function ensureFloorRoomEmptyState(floorSection) {
+  const roomList = floorSection.querySelector(".room-list");
+  if (!roomList || roomList.querySelector(".room-section")) {
+    return;
   }
 
-  if (officeDetails) {
-    officeDetails.hidden = value("officeRooms") <= 0;
-  }
+  roomList.innerHTML = `<div class="empty-state room-empty-state">Noch kein Raum hinzugefügt.</div>`;
 }
 
 function findCounterInput(button) {
@@ -723,7 +981,7 @@ function updateCounterControl(input, value) {
 
   const floorSection = input.closest(".floor-section");
   if (floorSection) {
-    syncFloorConditionalSections(floorSection);
+    renumberSiteVisitRooms(floorSection);
   }
 }
 
@@ -745,18 +1003,7 @@ function addSiteVisitFloor(values = {}) {
 
   const floor = {
     name: values.name || "",
-    sanitaryRooms: Number(values.sanitaryRooms) || 0,
-    sinks: Number(values.sinks) || 0,
-    mirrors: Number(values.mirrors) || 0,
-    toilets: Number(values.toilets) || 0,
-    officeRooms: Number(values.officeRooms) || 0,
-    desks: Number(values.desks) || 0,
-    windows: Number(values.windows) || 0,
-    cleaningType: normalizeCleaningType(values.cleaningType),
-    floorCondition: values.floorCondition || "Teppich",
-    areaName: values.areaName || "",
-    extraAgreements: values.extraAgreements || "",
-    areaNotes: values.areaNotes || values.notes || "",
+    rooms: floorRoomsForDisplay(values),
   };
 
   const section = document.createElement("fieldset");
@@ -774,77 +1021,215 @@ function addSiteVisitFloor(values = {}) {
         Etagenname
         <input name="floorName" type="text" placeholder="z. B. Erdgeschoss, 1. OG" value="${escapeHtml(floor.name)}" />
       </label>
-      ${counterMarkup("sanitaryRooms", "Sanitärräume", floor.sanitaryRooms)}
-      <div class="conditional-fields span-2" data-conditional-section="sanitary" hidden>
-        ${counterMarkup("sinks", "Anzahl der Waschbecken", floor.sinks)}
-        ${counterMarkup("mirrors", "Anzahl der Spiegel", floor.mirrors)}
-        ${counterMarkup("toilets", "Anzahl der Toiletten", floor.toilets)}
+      <div class="room-builder span-2">
+        <div class="floor-section-toolbar">
+          <strong>Räume</strong>
+          <button class="secondary-button" type="button" data-action="add-site-visit-room">
+            <i data-lucide="plus" aria-hidden="true"></i>
+            Raum hinzufügen
+          </button>
+        </div>
+        <div class="room-list"></div>
       </div>
-      ${counterMarkup("officeRooms", "Büro-Räume", floor.officeRooms)}
-      <div class="conditional-fields span-2" data-conditional-section="office" hidden>
-        ${counterMarkup("desks", "Anzahl der Schreibtische", floor.desks)}
-        ${counterMarkup("windows", "Anzahl der Fenster", floor.windows)}
-        <label>
-          Bodenart
-          <select name="floorCondition">
-            <option value="Teppich"${optionSelected("Teppich", floor.floorCondition)}>Teppich</option>
-            <option value="Laminat"${optionSelected("Laminat", floor.floorCondition)}>Laminat</option>
-            <option value="Parkett"${optionSelected("Parkett", floor.floorCondition)}>Parkett</option>
-            <option value="Fliesen"${optionSelected("Fliesen", floor.floorCondition)}>Fliesen</option>
-          </select>
-        </label>
-        <label>
-          Wie soll der Boden behandelt werden?
-          <select name="cleaningType">
-            <option value="Gesaugt und gewischt"${optionSelected("Gesaugt und gewischt", floor.cleaningType)}>Gesaugt und gewischt</option>
-            <option value="Nur gesaugt"${optionSelected("Nur gesaugt", floor.cleaningType)}>Nur gesaugt</option>
-            <option value="Nur gewischt"${optionSelected("Nur gewischt", floor.cleaningType)}>Nur gewischt</option>
-          </select>
-        </label>
-      </div>
-      <label>
-        Bereich
-        <input name="areaName" type="text" placeholder="z. B. Empfang, Flur, Küche" value="${escapeHtml(floor.areaName)}" />
-      </label>
-      <label class="span-2">
-        Extra Vereinbarungen
-        <textarea name="extraAgreements" rows="3" placeholder="Besondere Absprachen für diesen Bereich">${escapeHtml(floor.extraAgreements)}</textarea>
-      </label>
-      <label class="span-2">
-        Notiz zu dem Bereich
-        <textarea name="areaNotes" rows="3" placeholder="Notizen zu diesem Bereich">${escapeHtml(floor.areaNotes)}</textarea>
-      </label>
     </div>
   `;
 
   els.siteVisitFloors.appendChild(section);
+  const rooms = floor.rooms.length ? floor.rooms : [{}];
+  rooms.forEach((room) => addSiteVisitRoom(section, room, { focus: false }));
   renumberSiteVisitFloors();
-  syncFloorConditionalSections(section);
   refreshIcons();
   section.querySelector('[name="floorName"]').focus();
+}
+
+function cleaningFrequencyOptions(selectedFrequency) {
+  return CLEANING_FREQUENCIES
+    .map((frequency) => `<option value="${escapeHtml(frequency)}"${optionSelected(frequency, selectedFrequency)}>${escapeHtml(frequency)}</option>`)
+    .join("");
+}
+
+function cleaningTaskMarkup(task, items) {
+  const item = items.find((entry) => entry.key === task.key);
+  const checked = item ? " checked" : "";
+  const frequency = item?.frequency || "Täglich";
+  const customFrequency = item?.customFrequency || "";
+
+  return `
+    <div class="cleaning-task-row">
+      <label class="checkbox-field">
+        <input name="cleaningItem" type="checkbox" value="${escapeHtml(task.key)}" data-cleaning-key="${escapeHtml(task.key)}"${checked} />
+        ${escapeHtml(task.label)}
+      </label>
+      <div class="cleaning-frequency" data-cleaning-frequency="${escapeHtml(task.key)}" hidden>
+        <label>
+          Wie oft soll das gereinigt werden?
+          <select name="cleaningFrequency" data-cleaning-key="${escapeHtml(task.key)}">
+            ${cleaningFrequencyOptions(frequency)}
+          </select>
+        </label>
+        <label data-cleaning-custom="${escapeHtml(task.key)}" hidden>
+          Individueller Rhythmus
+          <input name="cleaningCustomFrequency" type="text" data-cleaning-key="${escapeHtml(task.key)}" placeholder="z. B. 2x pro Woche" value="${escapeHtml(customFrequency)}" />
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function syncCleaningTaskSections(roomSection) {
+  roomSection.querySelectorAll('[name="cleaningItem"]').forEach((checkbox) => {
+    const key = checkbox.dataset.cleaningKey;
+    const frequencySection = roomSection.querySelector(`[data-cleaning-frequency="${key}"]`);
+    const frequencySelect = roomSection.querySelector(`[name="cleaningFrequency"][data-cleaning-key="${key}"]`);
+    const customField = roomSection.querySelector(`[data-cleaning-custom="${key}"]`);
+
+    if (frequencySection) {
+      frequencySection.hidden = !checkbox.checked;
+    }
+    if (customField && frequencySelect) {
+      customField.hidden = !checkbox.checked || frequencySelect.value !== "Individuell";
+    }
+  });
+}
+
+function addSiteVisitRoom(floorSection, values = {}, options = {}) {
+  const roomList = floorSection.querySelector(".room-list");
+  const emptyState = roomList.querySelector(".room-empty-state");
+  if (emptyState) {
+    emptyState.remove();
+  }
+
+  const room = {
+    name: values.name || "",
+    roomType: values.roomType || "Büro",
+    squareMeters: Number(values.squareMeters) || 0,
+    cleaningItems: cleaningItemsForDisplay(values),
+    sinks: Number(values.sinks) || 0,
+    mirrors: Number(values.mirrors) || 0,
+    toilets: Number(values.toilets) || 0,
+    desks: Number(values.desks) || 0,
+    windows: Number(values.windows) || 0,
+    cleaningType: normalizeCleaningType(values.cleaningType),
+    floorCondition: values.floorCondition || "Teppich",
+    extraAgreements: values.extraAgreements || "",
+    notes: values.notes || values.areaNotes || "",
+  };
+
+  const section = document.createElement("fieldset");
+  section.className = "room-section";
+  section.innerHTML = `
+    <legend>Raum</legend>
+    <div class="floor-section-toolbar">
+      <button class="ghost-button" type="button" data-action="remove-site-visit-room">
+        <i data-lucide="x" aria-hidden="true"></i>
+        Raum entfernen
+      </button>
+    </div>
+    <div class="form-grid">
+      <label>
+        Raumname
+        <input name="roomName" type="text" placeholder="z. B. Büro 1, WC Damen, Flur" value="${escapeHtml(room.name)}" />
+      </label>
+      <label>
+        Raumart
+        <select name="roomType">
+          <option value="Büro"${optionSelected("Büro", room.roomType)}>Büro</option>
+          <option value="Sanitär"${optionSelected("Sanitär", room.roomType)}>Sanitär</option>
+          <option value="Küche"${optionSelected("Küche", room.roomType)}>Küche</option>
+          <option value="Flur"${optionSelected("Flur", room.roomType)}>Flur</option>
+          <option value="Treppenhaus"${optionSelected("Treppenhaus", room.roomType)}>Treppenhaus</option>
+          <option value="Empfang"${optionSelected("Empfang", room.roomType)}>Empfang</option>
+          <option value="Lager"${optionSelected("Lager", room.roomType)}>Lager</option>
+          <option value="Sonstiger Raum"${optionSelected("Sonstiger Raum", room.roomType)}>Sonstiger Raum</option>
+        </select>
+      </label>
+      ${counterMarkup("roomSquareMeters", "Raumgröße", room.squareMeters, { suffix: "m²" })}
+      <label>
+        Bodenart
+        <select name="roomFloorCondition">
+          <option value="Teppich"${optionSelected("Teppich", room.floorCondition)}>Teppich</option>
+          <option value="Laminat"${optionSelected("Laminat", room.floorCondition)}>Laminat</option>
+          <option value="Parkett"${optionSelected("Parkett", room.floorCondition)}>Parkett</option>
+          <option value="Fliesen"${optionSelected("Fliesen", room.floorCondition)}>Fliesen</option>
+          <option value="Anderer Boden"${optionSelected("Anderer Boden", room.floorCondition)}>Anderer Boden</option>
+        </select>
+      </label>
+      <div class="cleaning-task-list span-2">
+        <strong>Was soll gereinigt werden?</strong>
+        ${CLEANING_TASKS.map((task) => cleaningTaskMarkup(task, room.cleaningItems)).join("")}
+      </div>
+      <label class="span-2">
+        Extra Vereinbarungen
+        <textarea name="roomExtraAgreements" rows="2" placeholder="Besondere Absprachen für diesen Raum">${escapeHtml(room.extraAgreements)}</textarea>
+      </label>
+      <label class="span-2">
+        Notiz zum Raum
+        <textarea name="roomNotes" rows="2" placeholder="Notizen zu diesem Raum">${escapeHtml(room.notes)}</textarea>
+      </label>
+    </div>
+  `;
+
+  roomList.appendChild(section);
+  syncCleaningTaskSections(section);
+  renumberSiteVisitRooms(floorSection);
+  refreshIcons();
+  if (options.focus !== false) {
+    section.querySelector('[name="roomName"]').focus();
+  }
 }
 
 function collectSiteVisitFloors() {
   return [...els.siteVisitFloors.querySelectorAll(".floor-section")].map((section, index) => {
     const field = (name) => section.querySelector(`[name="${name}"]`);
-    const counter = (name) => Number(field(name)?.value) || 0;
-    const sanitaryRooms = counter("sanitaryRooms");
-    const officeRooms = counter("officeRooms");
+    const rooms = [...section.querySelectorAll(".room-section")].map((roomSection, roomIndex) => {
+      const roomField = (name) => roomSection.querySelector(`[name="${name}"]`);
+      const roomCounter = (name) => Number(roomField(name)?.value) || 0;
+      const cleaningItems = [...roomSection.querySelectorAll('[name="cleaningItem"]:checked')].map((checkbox) => {
+        const key = checkbox.value;
+        const frequency = roomSection.querySelector(`[name="cleaningFrequency"][data-cleaning-key="${key}"]`)?.value || "Täglich";
+        const customFrequency = roomSection.querySelector(`[name="cleaningCustomFrequency"][data-cleaning-key="${key}"]`)?.value.trim() || "";
+        return {
+          key,
+          label: cleaningTaskLabel(key),
+          frequency,
+          customFrequency: frequency === "Individuell" ? customFrequency : "",
+        };
+      });
+      return {
+        name: roomField("roomName").value.trim() || `Raum ${roomIndex + 1}`,
+        roomType: roomField("roomType").value,
+        quantity: 1,
+        squareMeters: roomCounter("roomSquareMeters"),
+        cleaningItems,
+        sinks: 0,
+        mirrors: 0,
+        toilets: 0,
+        desks: 0,
+        windows: 0,
+        cleaningType: cleaningItems.some((item) => item.key === "floor") ? "Nach Rhythmus" : "",
+        floorCondition: roomField("roomFloorCondition").value,
+        extraAgreements: roomField("roomExtraAgreements").value.trim(),
+        notes: roomField("roomNotes").value.trim(),
+      };
+    });
+    const sanitaryRooms = rooms.filter((room) => room.roomType === "Sanitär").length;
+    const officeRooms = rooms.filter((room) => room.roomType === "Büro").length;
     return {
       name: field("floorName").value.trim() || `Etage ${index + 1}`,
+      rooms,
       sanitaryRooms,
-      sinks: sanitaryRooms > 0 ? counter("sinks") : 0,
-      mirrors: sanitaryRooms > 0 ? counter("mirrors") : 0,
-      toilets: sanitaryRooms > 0 ? counter("toilets") : 0,
+      sinks: 0,
+      mirrors: 0,
+      toilets: 0,
       officeRooms,
-      desks: officeRooms > 0 ? counter("desks") : 0,
-      windows: officeRooms > 0 ? counter("windows") : 0,
-      cleaningType: field("cleaningType")?.value || "Gesaugt und gewischt",
-      floorCondition: field("floorCondition")?.value || "Teppich",
-      areaName: field("areaName").value.trim(),
-      extraAgreements: field("extraAgreements").value.trim(),
-      areaNotes: field("areaNotes").value.trim(),
-      notes: field("areaNotes").value.trim(),
+      desks: 0,
+      windows: 0,
+      cleaningType: rooms[0]?.cleaningType || "Gesaugt und gewischt",
+      floorCondition: rooms[0]?.floorCondition || "Teppich",
+      areaName: rooms[0]?.name || "",
+      extraAgreements: rooms.map((room) => room.extraAgreements).filter(Boolean).join("\n"),
+      areaNotes: rooms.map((room) => room.notes).filter(Boolean).join("\n"),
+      notes: rooms.map((room) => room.notes).filter(Boolean).join("\n"),
     };
   });
 }
@@ -852,7 +1237,7 @@ function collectSiteVisitFloors() {
 function resetSiteVisitForm() {
   els.siteVisitForm.reset();
   updateCounterControl(document.querySelector("#site-visit-square-meters"), 0);
-  els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage geöffnet.</div>`;
+  els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage hinzugefügt.</div>`;
   refreshIcons();
 }
 
@@ -866,9 +1251,11 @@ function renderSiteVisits() {
 
 function renderSiteVisitCard(visit) {
   const floors = Array.isArray(visit.floors) ? visit.floors : [];
-  const sanitaryTotal = floors.reduce((sum, floor) => sum + (Number(floor.sanitaryRooms) || 0), 0);
-  const officeTotal = floors.reduce((sum, floor) => sum + (Number(floor.officeRooms) || 0), 0);
+  const roomTotal = floors.reduce((sum, floor) => {
+    return sum + floorRoomsForDisplay(floor).reduce((roomSum, room) => roomSum + (Number(room.quantity) || 1), 0);
+  }, 0);
   const floorLabel = floors.length === 1 ? "1 Etage" : `${floors.length} Etagen`;
+  const roomLabel = roomTotal === 1 ? "1 Raum" : `${roomTotal} Räume`;
   const notes = visit.notes
     ? `<div class="record-lines"><span>${escapeHtml(visit.notes)}</span></div>`
     : "";
@@ -891,7 +1278,7 @@ function renderSiteVisitCard(visit) {
       </div>
       <div class="record-lines">
         <span>${escapeHtml(visit.address)}</span>
-        <span>${sanitaryTotal} Sanitärräume · ${officeTotal} Büro-Räume</span>
+        <span>${escapeHtml(roomLabel)}</span>
       </div>
       ${notes}
       <details class="visit-details">
@@ -916,30 +1303,36 @@ function renderSiteVisitCard(visit) {
 
 function renderSiteVisitFloorSummary(floor, index) {
   const title = floor.name || `Etage ${index + 1}`;
-  const areaName = floor.areaName ? `<span>Bereich: ${escapeHtml(floor.areaName)}</span>` : "";
-  const extraAgreements = floor.extraAgreements
-    ? `<span>Extra Vereinbarungen: ${escapeHtml(floor.extraAgreements)}</span>`
-    : "";
-  const areaNotes = floor.areaNotes || floor.notes;
-  const notes = areaNotes ? `<span>Notiz: ${escapeHtml(areaNotes)}</span>` : "";
-  const sanitaryLine = Number(floor.sanitaryRooms) > 0
-    ? `<span>Sanitär: ${Number(floor.sanitaryRooms) || 0} Räume, ${Number(floor.sinks) || 0} Waschbecken, ${Number(floor.mirrors) || 0} Spiegel, ${Number(floor.toilets) || 0} Toiletten</span>`
-    : "";
-  const officeLine = Number(floor.officeRooms) > 0
-    ? `<span>Büro: ${Number(floor.officeRooms) || 0} Räume, ${Number(floor.desks) || 0} Schreibtische, ${Number(floor.windows) || 0} Fenster</span>`
-    : "";
-  const floorLine = Number(floor.officeRooms) > 0
-    ? `<span>Boden: ${escapeHtml(normalizeCleaningType(floor.cleaningType))} · ${escapeHtml(floor.floorCondition || "Teppich")}</span>`
-    : "";
+  const rooms = floorRoomsForDisplay(floor);
+  const roomRows = rooms.length
+    ? rooms.map(renderSiteVisitRoomSummary).join("")
+    : `<div class="record-lines"><span>Keine Räume hinterlegt.</span></div>`;
 
   return `
     <article class="floor-summary-item">
       <strong>${escapeHtml(title)}</strong>
+      <div class="room-summary-list">${roomRows}</div>
+    </article>
+  `;
+}
+
+function renderSiteVisitRoomSummary(room) {
+  const details = roomDetailParts(room).join(" · ");
+  const detailLine = details ? `<span>${escapeHtml(details)}</span>` : "";
+  const cleaning = cleaningItemsText(room);
+  const cleaningLine = cleaning ? `<span>Reinigung: ${escapeHtml(cleaning)}</span>` : "";
+  const extraAgreements = room.extraAgreements
+    ? `<span>Extra Vereinbarungen: ${escapeHtml(room.extraAgreements)}</span>`
+    : "";
+  const notes = room.notes ? `<span>Notiz: ${escapeHtml(room.notes)}</span>` : "";
+
+  return `
+    <article class="room-summary-item">
+      <strong>${escapeHtml(formatRoomQuantity(room) + room.name)}</strong>
       <div class="record-lines">
-        ${areaName}
-        ${sanitaryLine}
-        ${officeLine}
-        ${floorLine}
+        <span>${escapeHtml(room.roomType)}</span>
+        ${detailLine}
+        ${cleaningLine}
         ${extraAgreements}
         ${notes}
       </div>
@@ -948,37 +1341,11 @@ function renderSiteVisitFloorSummary(floor, index) {
 }
 
 function siteVisitOfferNotes(visit) {
-  const floors = Array.isArray(visit.floors) ? visit.floors : [];
-  const floorLines = floors.map((floor, index) => {
-    const title = floor.name || `Etage ${index + 1}`;
-    const areaNotes = floor.areaNotes || floor.notes;
-    return [
-      `- ${title}`,
-      floor.areaName ? `  Bereich: ${floor.areaName}` : "",
-      Number(floor.sanitaryRooms) > 0
-        ? `  Sanitär: ${Number(floor.sanitaryRooms) || 0} Räume, ${Number(floor.sinks) || 0} Waschbecken, ${Number(floor.mirrors) || 0} Spiegel, ${Number(floor.toilets) || 0} Toiletten`
-        : "",
-      Number(floor.officeRooms) > 0
-        ? `  Büro: ${Number(floor.officeRooms) || 0} Räume, ${Number(floor.desks) || 0} Schreibtische, ${Number(floor.windows) || 0} Fenster`
-        : "",
-      Number(floor.officeRooms) > 0
-        ? `  Boden: ${normalizeCleaningType(floor.cleaningType)} · ${floor.floorCondition || "Teppich"}`
-        : "",
-      floor.extraAgreements ? `  Extra Vereinbarungen: ${floor.extraAgreements}` : "",
-      areaNotes ? `  Notiz zum Bereich: ${areaNotes}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-  });
-
   return [
     "Aus Begehung übernommen:",
     `Ansprechpartner vor Ort: ${visit.onsiteContact}`,
     `Adresse: ${visit.address}`,
     `Objektgröße: ${visit.squareMeters} m²`,
-    "",
-    "Etagenaufnahme:",
-    floorLines.join("\n"),
     visit.notes ? `\nAllgemeine Notizen:\n${visit.notes}` : "",
   ]
     .filter((line) => line !== "")
@@ -1256,6 +1623,8 @@ function contractSearchText(contract) {
     contactName(contract.customer),
     contract.customer.email,
     contract.customer.phone,
+    contract.authorizationGrantorName,
+    contract.authorizationCompanyAddress,
     contract.offer.service,
     contract.offer.interval,
     CONTRACT_STATUS_LABELS[contract.status] || contract.status,
@@ -1347,6 +1716,14 @@ function renderContractRow(contract) {
         </a>
       `
     : "";
+  const authorizationButton = contract.hasAuthorizationDocument
+    ? `
+        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=authorization&format=pdf" target="_blank" rel="noopener">
+          <i data-lucide="signature" aria-hidden="true"></i>
+          Vollmacht
+        </a>
+      `
+    : "";
 
   return `
     <tr class="${selected}">
@@ -1369,6 +1746,7 @@ function renderContractRow(contract) {
             <i data-lucide="file-text" aria-hidden="true"></i>
             Kunde
           </a>
+          ${authorizationButton}
           ${siteVisitButton}
           <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
             <i data-lucide="trash-2" aria-hidden="true"></i>
@@ -1455,7 +1833,20 @@ async function handleSiteVisitSubmit(event) {
 
   const floors = collectSiteVisitFloors();
   if (floors.length === 0) {
-    showToast("Bitte zuerst eine Etage öffnen.");
+    showToast("Bitte zuerst eine Etage hinzufügen.");
+    return;
+  }
+  if (floors.some((floor) => !Array.isArray(floor.rooms) || floor.rooms.length === 0)) {
+    showToast("Bitte pro Etage mindestens einen Raum hinzufügen.");
+    return;
+  }
+  if (floors.some((floor) => floor.rooms.some((room) => !Array.isArray(room.cleaningItems) || room.cleaningItems.length === 0))) {
+    showToast("Bitte pro Raum mindestens einen Reinigungspunkt auswählen.");
+    return;
+  }
+
+  if (floors.some((floor) => floor.rooms.some((room) => room.cleaningItems.some((item) => item.frequency === "Individuell" && !item.customFrequency)))) {
+    showToast("Bitte bei individuellem Rhythmus eine Angabe eintragen.");
     return;
   }
 
@@ -1706,6 +2097,20 @@ async function handleSmtpSubmit(event) {
 async function loadMailbox() {
   try {
     const settings = await apiGet("api/mailbox.php?action=settings");
+    const canManageSettings = Boolean(settings.canManageSettings ?? isAdmin());
+
+    if (els.mailboxSettingsPanel) {
+      els.mailboxSettingsPanel.hidden = !canManageSettings;
+    }
+    if (els.mailboxGotoSettings) {
+      els.mailboxGotoSettings.hidden = !canManageSettings;
+    }
+    if (els.mailboxNotConfiguredAdminText) {
+      els.mailboxNotConfiguredAdminText.hidden = !canManageSettings;
+    }
+    if (els.mailboxNotConfiguredUserText) {
+      els.mailboxNotConfiguredUserText.hidden = canManageSettings;
+    }
 
     els.mailboxHost.value = settings.host || "";
     els.mailboxImapPort.value = settings.imapPort || 993;
@@ -2011,21 +2416,174 @@ async function handleLogoRemove() {
   }
 }
 
-function handleSiteVisitFloorAction(event) {
-  const button = event.target.closest('[data-action="remove-site-visit-floor"]');
+function userRoleOptions(selectedRole) {
+  const roles = Object.keys(state.userRoles).length
+    ? state.userRoles
+    : { admin: "Admin", role_one: "Rolle 1" };
+
+  return Object.entries(roles)
+    .map(([role, label]) => `<option value="${escapeHtml(role)}"${optionSelected(role, selectedRole)}>${escapeHtml(label)}</option>`)
+    .join("");
+}
+
+function renderUsers() {
+  if (!els.userList) {
+    return;
+  }
+
+  els.userList.innerHTML = state.users.length
+    ? state.users.map((user) => {
+        const currentBadge = Number(user.id) === Number(state.currentUserId) ? `<span class="badge">Aktuell angemeldet</span>` : "";
+        return `
+          <article class="user-management-item" data-user-id="${escapeHtml(user.id)}">
+            <div class="user-management-main">
+              <div>
+                <strong>${escapeHtml(user.email)}</strong>
+                <div class="record-meta">
+                  <span>${escapeHtml(user.roleLabel)}</span>
+                  <span>Angelegt am ${formatDate(user.createdAt)}</span>
+                </div>
+              </div>
+              ${currentBadge}
+            </div>
+            <div class="user-management-controls">
+              <label>
+                Rolle
+                <select name="managedUserRole">
+                  ${userRoleOptions(user.role)}
+                </select>
+              </label>
+              <label>
+                Neues Passwort
+                <input name="managedUserPassword" type="password" minlength="6" placeholder="Leer lassen = unverändert" autocomplete="new-password" />
+              </label>
+              <button class="primary-button" type="button" data-action="save-user" data-id="${escapeHtml(user.id)}">
+                <i data-lucide="save" aria-hidden="true"></i>
+                Speichern
+              </button>
+            </div>
+          </article>
+        `;
+      }).join("")
+    : `<div class="empty-state">Noch keine User vorhanden.</div>`;
+
+  refreshIcons();
+}
+
+async function loadUsers() {
+  if (!isAdmin()) {
+    return;
+  }
+
+  try {
+    const result = await apiGet("api/users.php");
+    state.users = result.users || [];
+    state.userRoles = result.roles || {};
+    state.currentUserId = result.currentUserId || null;
+    renderUsers();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleUserSubmit(event) {
+  event.preventDefault();
+
+  const payload = {
+    email: els.userEmail.value.trim(),
+    password: els.userPassword.value,
+    role: els.userRole.value,
+  };
+
+  try {
+    await apiPost("api/users.php", payload);
+    els.userForm.reset();
+    els.userRole.value = "role_one";
+    await loadUsers();
+    showToast("User wurde angelegt.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function saveManagedUser(button) {
+  const item = button.closest(".user-management-item");
+  if (!item) {
+    return;
+  }
+
+  const id = button.dataset.id;
+  const role = item.querySelector('[name="managedUserRole"]').value;
+  const passwordInput = item.querySelector('[name="managedUserPassword"]');
+  const password = passwordInput.value;
+
+  button.disabled = true;
+  try {
+    await apiPut(`api/users.php?id=${encodeURIComponent(id)}`, { role, password });
+    passwordInput.value = "";
+    await loadUsers();
+    showToast("User wurde aktualisiert.");
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function handleUserListAction(event) {
+  const button = event.target.closest('[data-action="save-user"]');
   if (!button) {
     return;
   }
 
-  button.closest(".floor-section").remove();
-  renumberSiteVisitFloors();
-  ensureSiteVisitFloorEmptyState();
-  refreshIcons();
+  saveManagedUser(button);
+}
+
+function handleSiteVisitFloorAction(event) {
+  const button = event.target.closest('[data-action="remove-site-visit-floor"]');
+  const addRoomButton = event.target.closest('[data-action="add-site-visit-room"]');
+  const removeRoomButton = event.target.closest('[data-action="remove-site-visit-room"]');
+
+  if (addRoomButton) {
+    event.preventDefault();
+    addSiteVisitRoom(addRoomButton.closest(".floor-section"));
+    return;
+  }
+
+  if (removeRoomButton) {
+    event.preventDefault();
+    const floorSection = removeRoomButton.closest(".floor-section");
+    removeRoomButton.closest(".room-section").remove();
+    renumberSiteVisitRooms(floorSection);
+    ensureFloorRoomEmptyState(floorSection);
+    refreshIcons();
+    return;
+  }
+
+  if (button) {
+    event.preventDefault();
+    button.closest(".floor-section").remove();
+    renumberSiteVisitFloors();
+    ensureSiteVisitFloorEmptyState();
+    refreshIcons();
+  }
 }
 
 function handleSiteVisitFloorInput(event) {
   if (event.target.matches('[name="floorName"]')) {
     renumberSiteVisitFloors();
+  }
+  if (event.target.matches('[name="roomName"], [name="roomType"]')) {
+    const floorSection = event.target.closest(".floor-section");
+    if (floorSection) {
+      renumberSiteVisitRooms(floorSection);
+    }
+  }
+  if (event.target.matches('[name="cleaningItem"], [name="cleaningFrequency"]')) {
+    const roomSection = event.target.closest(".room-section");
+    if (roomSection) {
+      syncCleaningTaskSections(roomSection);
+    }
   }
 }
 
@@ -2126,9 +2684,9 @@ function bindEvents() {
     const password = els.loginPassword.value;
 
     try {
-      await apiPost("api/login.php", { email, password });
+      const result = await apiPost("api/login.php", { email, password });
       els.loginError.hidden = true;
-      showApp();
+      showApp(result.user || result);
     } catch (error) {
       els.loginError.textContent = error.message;
       els.loginError.hidden = false;
@@ -2167,6 +2725,10 @@ function bindEvents() {
   });
 
   els.settingsGroupToggle.addEventListener("click", () => {
+    if (!isAdmin()) {
+      showToast("Nur Admins können die Einstellungen öffnen.");
+      return;
+    }
     setSettingsGroupExpanded(els.settingsSubgroup.hidden);
   });
 
@@ -2253,6 +2815,8 @@ function bindEvents() {
 
   els.logoFileInput.addEventListener("change", handleLogoUpload);
   els.logoRemove.addEventListener("click", handleLogoRemove);
+  els.userForm.addEventListener("submit", handleUserSubmit);
+  els.userList.addEventListener("click", handleUserListAction);
 
   els.contractNotifyForm.addEventListener("submit", handleContractNotifySubmit);
   els.contractNotifyAddEmail.addEventListener("click", () => addContractNotifyEmailRow(""));
@@ -2297,7 +2861,7 @@ async function init() {
   try {
     const session = await apiGet("api/me.php");
     if (session.loggedIn) {
-      showApp();
+      showApp(session.user || session);
       return;
     }
   } catch (error) {
