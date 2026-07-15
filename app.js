@@ -1179,7 +1179,7 @@ function cleaningTaskMarkup(task, items) {
     <div class="cleaning-task-row" data-cleaning-task="${escapeHtml(task.key)}">
       <label class="checkbox-field">
         <input name="cleaningItem" type="checkbox" value="${escapeHtml(task.key)}" data-cleaning-key="${escapeHtml(task.key)}"${checked} />
-        ${escapeHtml(task.label)}
+        <span class="cleaning-task-title">${escapeHtml(task.label)}</span>
       </label>
       <div class="cleaning-frequency" data-cleaning-frequency="${escapeHtml(task.key)}" hidden>
         <label>
@@ -1218,6 +1218,7 @@ function syncCleaningTaskSections(roomSection) {
     if (row) {
       row.hidden = !visible;
       row.style.order = visible ? String(visibleOrder.get(key) || 1) : "";
+      row.classList.toggle("is-selected", visible && checkbox.checked);
     }
     if (!visible) {
       checkbox.checked = false;
