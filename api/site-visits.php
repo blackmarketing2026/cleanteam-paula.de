@@ -48,7 +48,7 @@ function normalize_cleaning_type(string $cleaning): string
 
 function normalize_floor_condition(string $condition): string
 {
-    $allowedConditions = ['Teppich', 'Fliesen', 'Laminat', 'Parkett', 'Anderer Boden'];
+    $allowedConditions = ['Teppich', 'Fliesen', 'Laminat', 'Parkett', 'Vinyl', 'Anderer Boden'];
     return in_array($condition, $allowedConditions, true) ? $condition : 'Teppich';
 }
 

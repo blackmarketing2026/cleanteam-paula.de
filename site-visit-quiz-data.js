@@ -22,6 +22,10 @@ const SVQ_INTERVALS = [
   { id: "custom", label: "individuell" },
 ];
 
+/* Für den Boden gibt es statt der "vorhanden"-Frage direkt Bodenart und Reinigungsmethode. */
+const SVQ_FLOOR_MATERIALS = ["Laminat", "Parkett", "Vinyl", "Fliesen"];
+const SVQ_FLOOR_METHODS = ["Gesaugt", "Gewischt", "Gesaugt und gewischt"];
+
 /* Objekt-Definitionen: extra kann "quantity" (Anzahl) und/oder "trashBag" (Mülltüten-Option) enthalten. */
 const SVQ_OBJECTS = {
   floor: { label: "Boden", extra: [], legacyKey: "floor" },

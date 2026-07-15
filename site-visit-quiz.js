@@ -146,12 +146,14 @@ function svqGetOrCreateObjectEntry(room, objectId) {
   if (!room.objects[objectId]) {
     room.objects[objectId] = {
       objectId,
-      present: null,
+      present: objectId === "floor" ? true : null,
       shouldClean: null,
       interval: null,
       customInterval: "",
       quantity: "",
       trashBag: null,
+      floorMaterial: "",
+      floorMethod: "",
       note: "",
     };
   }
@@ -410,6 +412,7 @@ function svqRoomCleaningItems(room) {
       frequency,
       customFrequency,
       bagMode: entry.trashBag === false ? "Ohne Mülltüte" : "Mit Mülltüte",
+      method: entry.objectId === "floor" ? entry.floorMethod || "" : "",
     });
   });
   (room.customObjects || []).forEach((obj) => {
@@ -435,6 +438,7 @@ function svqBuildSiteVisitPayload(draft) {
         quantity: 1,
         squareMeters: 0,
         cleaningItems,
+        floorCondition: room.objects?.floor?.floorMaterial || "",
         notes: "",
       };
     })
@@ -800,6 +804,24 @@ function svqRenderYesNo(question, field, value, action = "yesno") {
   `;
 }
 
+function svqRenderPillChoice(question, field, options, selectedValue, action) {
+  return `
+    <div class="svq-yesno-block">
+      <p class="svq-question">${question}</p>
+      <div class="svq-choice-row">
+        ${options
+          .map(
+            (option) => `
+          <button class="svq-choice-pill${selectedValue === option ? " active" : ""}" type="button"
+            data-svq-action="${action}" data-svq-field="${field}" data-svq-choice="${svqEsc(option)}">${svqEsc(option)}</button>
+        `
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
 function svqRenderIntervalPicker(field, entry, action = "select-interval") {
   return `
     <div class="svq-interval-block">
@@ -850,23 +872,36 @@ function svqRenderRoomObject(draft) {
   const entry = svqGetOrCreateObjectEntry(room, objectId);
   const def = SVQ_OBJECTS[objectId] || { label: objectId, extra: [] };
   const field = `activeRoomDraft.objects.${objectId}`;
+  const isFloor = objectId === "floor";
 
   return `
     <div class="svq-counter">${draft.roomObjectIndex + 1} / ${ids.length}</div>
     <h3>${svqEsc(def.label)}</h3>
-    ${svqRenderYesNo(`Ist${def.label.toLowerCase().startsWith("keine") ? "" : ""} „${svqEsc(def.label)}“ vorhanden?`, `${field}.present`, entry.present)}
     ${
-      entry.present === true
-        ? `
-      ${svqRenderYesNo(`Soll „${svqEsc(def.label)}“ gereinigt werden?`, `${field}.shouldClean`, entry.shouldClean)}
+      isFloor
+        ? svqRenderYesNo("Soll der Boden gereinigt werden?", `${field}.shouldClean`, entry.shouldClean)
+        : `
+      ${svqRenderYesNo(`Ist „${svqEsc(def.label)}“ vorhanden?`, `${field}.present`, entry.present)}
       ${
-        entry.shouldClean === true
+        entry.present === true
+          ? svqRenderYesNo(`Soll „${svqEsc(def.label)}“ gereinigt werden?`, `${field}.shouldClean`, entry.shouldClean)
+          : ""
+      }
+    `
+    }
+    ${
+      entry.present === true && entry.shouldClean === true
+        ? `
+      ${
+        isFloor
           ? `
-        ${svqRenderObjectExtraFields(field, entry, def.extra)}
-        ${svqRenderIntervalPicker(field, entry)}
+        ${svqRenderPillChoice("Welche Bodenart ist das?", `${field}.floorMaterial`, SVQ_FLOOR_MATERIALS, entry.floorMaterial, "select-floor-choice")}
+        ${svqRenderPillChoice("Wie sollte der Boden gereinigt werden?", `${field}.floorMethod`, SVQ_FLOOR_METHODS, entry.floorMethod, "select-floor-choice")}
       `
           : ""
       }
+      ${svqRenderObjectExtraFields(field, entry, def.extra)}
+      ${svqRenderIntervalPicker(field, entry)}
     `
         : ""
     }
@@ -1137,6 +1172,8 @@ async function svqHandleClick(event) {
       }
       if (field.endsWith(".shouldClean") && value === false) {
         svqSetPath(d, field.replace(".shouldClean", ".interval"), null);
+        svqSetPath(d, field.replace(".shouldClean", ".floorMaterial"), "");
+        svqSetPath(d, field.replace(".shouldClean", ".floorMethod"), "");
       }
     });
     return;
@@ -1146,6 +1183,14 @@ async function svqHandleClick(event) {
     const field = button.dataset.svqField;
     svqMutate((d) => {
       svqSetPath(d, `${field}.interval`, button.dataset.svqInterval);
+    });
+    return;
+  }
+
+  if (action === "select-floor-choice") {
+    const field = button.dataset.svqField;
+    svqMutate((d) => {
+      svqSetPath(d, field, button.dataset.svqChoice);
     });
     return;
   }
