@@ -30,26 +30,32 @@ function contract_notification_recipients(string $raw): array
 // Laedt Vertrag, Kostenvoranschlag und Kunde zusammen. Gibt null zurueck, wenn irgendetwas davon fehlt.
 function load_contract_context(PDO $pdo, string $contractId): ?array
 {
-    $contractStmt = $pdo->prepare('SELECT * FROM contracts WHERE id = :id');
-    $contractStmt->execute(['id' => $contractId]);
-    $contract = $contractStmt->fetch();
-    if (!$contract) {
+    $stmt = $pdo->prepare(
+        'SELECT
+            c.*,
+            o.id as offer_id_alias, o.customer_id, o.site_visit_id, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes, o.price, o.created_at AS offer_created_at,
+            cust.id as customer_id_alias, cust.name, cust.email, cust.phone, cust.salutation, cust.contact_last_name, cust.address, cust.house_number, cust.zip, cust.city
+        FROM contracts c
+        JOIN offers o ON c.offer_id = o.id
+        JOIN customers cust ON o.customer_id = cust.id
+        WHERE c.id = :id'
+    );
+    $stmt->execute(['id' => $contractId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
         return null;
     }
 
-    $offerStmt = $pdo->prepare('SELECT * FROM offers WHERE id = :id');
-    $offerStmt->execute(['id' => $contract['offer_id']]);
-    $offer = $offerStmt->fetch();
-    if (!$offer) {
-        return null;
-    }
-
-    $customerStmt = $pdo->prepare('SELECT * FROM customers WHERE id = :id');
-    $customerStmt->execute(['id' => $offer['customer_id']]);
-    $customer = $customerStmt->fetch();
-    if (!$customer) {
-        return null;
-    }
+    // Manuell die Arrays für Vertrag, Angebot und Kunde zusammenstellen,
+    // um die gleiche Struktur wie vorher zu haben.
+    $contract = array_filter($row, fn($key) => !in_array($key, ['offer_id_alias', 'customer_id_alias', 'name', 'email', 'phone', 'salutation', 'contact_last_name', 'address', 'house_number', 'zip', 'city', 'site_visit_id', 'square_meters', 'interval_label', 'service', 'start_date', 'offer_notes', 'price', 'offer_created_at']), ARRAY_FILTER_USE_KEY);
+    $offer = array_intersect_key($row, array_flip(['id', 'customer_id', 'site_visit_id', 'square_meters', 'interval_label', 'service', 'start_date', 'notes', 'price', 'created_at']));
+    $offer['id'] = $row['offer_id_alias']; // 'id' kommt von contracts, also überschreiben
+    $offer['notes'] = $row['offer_notes'];
+    $offer['created_at'] = $row['offer_created_at'];
+    $customer = array_intersect_key($row, array_flip(['id', 'name', 'email', 'phone', 'salutation', 'contact_last_name', 'address', 'house_number', 'zip', 'city']));
+    $customer['id'] = $row['customer_id_alias'];
 
     return ['contract' => $contract, 'offer' => $offer, 'customer' => $customer];
 }
