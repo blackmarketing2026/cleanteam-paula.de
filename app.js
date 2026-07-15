@@ -1725,7 +1725,18 @@ function customerPayloadFromSiteVisit(visit) {
 async function ensureCustomerForSiteVisit(visit) {
   const existingCustomer = findCustomerForSiteVisit(visit);
   if (existingCustomer) {
-    return { customer: existingCustomer, created: false };
+    const companyName = siteVisitCompanyName(visit);
+    if (companyName && existingCustomer.name !== companyName) {
+      const updatedCustomer = {
+        ...existingCustomer,
+        name: companyName,
+      };
+      await apiPut(`api/customers.php?id=${encodeURIComponent(existingCustomer.id)}`, updatedCustomer);
+      await loadAll();
+      return { customer: getCustomer(existingCustomer.id) || updatedCustomer, created: false, updated: true };
+    }
+
+    return { customer: existingCustomer, created: false, updated: false };
   }
 
   const { payload, complete } = customerPayloadFromSiteVisit(visit);
@@ -1739,7 +1750,7 @@ async function ensureCustomerForSiteVisit(visit) {
 
   const customer = await apiPost("api/customers.php", payload);
   await loadAll();
-  return { customer, created: true };
+  return { customer, created: true, updated: false };
 }
 
 async function startOfferFromSiteVisit(id) {
@@ -1764,7 +1775,7 @@ async function prepareOfferFromSiteVisit(id) {
   }
 
   try {
-    const { customer, created } = await ensureCustomerForSiteVisit(visit);
+    const { customer, created, updated } = await ensureCustomerForSiteVisit(visit);
     if (!customer) {
       return false;
     }
@@ -1778,6 +1789,8 @@ async function prepareOfferFromSiteVisit(id) {
     showToast(
       created
         ? "Kunde wurde aus der Begehung angelegt und in den Kostenvoranschlag übernommen."
+        : updated
+          ? "Firmenname wurde aus der Begehung aktualisiert und in den Kostenvoranschlag übernommen."
         : "Begehung wurde in den Kostenvoranschlag übernommen.",
     );
     return true;

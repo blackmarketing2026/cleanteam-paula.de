@@ -452,6 +452,7 @@ function svqBuildSiteVisitPayload(draft) {
 
   return {
     companyName: draft.company.name,
+    customerName: draft.company.name,
     email: draft.company.email,
     phone: draft.company.phone,
     address: address || "Adresse nicht angegeben",
