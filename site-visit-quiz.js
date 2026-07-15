@@ -201,7 +201,6 @@ function svqProgressLabel(draft) {
   }
   if (draft.screen === "custom-object-prompt" || draft.screen === "custom-object-form") return "Individuelle Objekte";
   if (draft.screen === "room-summary") return "Raumübersicht";
-  if (draft.screen === "room-next-action") return "Nächster Schritt";
   if (draft.screen === "rooms-overview") return "Räume-Übersicht";
   if (draft.screen === "finish-confirm") return "Begehung abschließen";
   if (draft.screen === "finish-success") return "Abgeschlossen";
@@ -265,7 +264,7 @@ function svqGoNext() {
   if (draft.screen === "room-summary") {
     svqMutate((d) => {
       svqCommitActiveRoom(d);
-      d.screen = "room-next-action";
+      d.screen = "room-type-select";
     });
     return;
   }
@@ -289,12 +288,8 @@ function svqGoBack() {
 
   if (draft.screen === "room-type-select") {
     svqMutate((d) => {
-      if (d.rooms.length === 0) {
-        d.screen = "intro";
-        d.introStepIndex = SVQ_INTRO_STEPS.length - 1;
-      } else {
-        d.screen = "room-next-action";
-      }
+      d.screen = "intro";
+      d.introStepIndex = SVQ_INTRO_STEPS.length - 1;
     });
     return;
   }
@@ -344,23 +339,16 @@ function svqGoBack() {
     return;
   }
 
-  if (draft.screen === "room-next-action") {
-    svqMutate((d) => {
-      d.screen = "room-summary";
-    });
-    return;
-  }
-
   if (draft.screen === "rooms-overview") {
     svqMutate((d) => {
-      d.screen = "room-next-action";
+      d.screen = "finish-success";
     });
     return;
   }
 
   if (draft.screen === "finish-confirm") {
     svqMutate((d) => {
-      d.screen = "rooms-overview";
+      d.screen = d.status === "completed" ? "rooms-overview" : "room-type-select";
     });
     return;
   }
@@ -653,7 +641,7 @@ function svqRenderScreen(draft) {
     case "intro":
       return svqRenderIntroStep(draft);
     case "room-type-select":
-      return svqRenderRoomTypeSelect();
+      return svqRenderRoomTypeSelect(draft);
     case "room-basic-info":
       return svqRenderRoomBasicInfo(draft);
     case "room-object":
@@ -664,8 +652,6 @@ function svqRenderScreen(draft) {
       return svqRenderCustomObjectForm();
     case "room-summary":
       return svqRenderRoomSummary(draft);
-    case "room-next-action":
-      return svqRenderRoomNextAction(draft);
     case "rooms-overview":
       return svqRenderRoomsOverview(draft);
     case "finish-confirm":
@@ -757,9 +743,17 @@ function svqRenderIntroStep(draft) {
   return "";
 }
 
-function svqRenderRoomTypeSelect() {
+function svqRenderRoomTypeSelect(draft) {
   return `
-    <h3>Welchen Raum möchtest du erfassen?</h3>
+    ${
+      draft.rooms.length
+        ? `
+      <h3>Bereits erfasste Räume</h3>
+      <div class="svq-room-grid">${draft.rooms.map((room, index) => svqRenderRoomCard(room, { index })).join("")}</div>
+    `
+        : ""
+    }
+    <h3>Welchen Raum möchtest du als Nächstes erfassen?</h3>
     <div class="svq-room-type-grid">
       ${SVQ_ROOM_TYPES.map(
         (type) => `
@@ -769,6 +763,12 @@ function svqRenderRoomTypeSelect() {
         </button>
       `
       ).join("")}
+    </div>
+    <div class="svq-choice-row">
+      <button class="primary-button svq-finish-button" type="button" data-svq-action="finish-inspection" ${draft.rooms.length ? "" : "disabled"}>
+        <i data-lucide="flag" aria-hidden="true"></i>
+        Begehung beenden
+      </button>
     </div>
   `;
 }
@@ -973,37 +973,6 @@ function svqRoomObjectEntries(room) {
   const predefined = Object.values(room.objects || {}).map((entry) => ({ ...entry, name: svqObjectLabel(entry.objectId) }));
   const custom = (room.customObjects || []).map((entry) => ({ ...entry, present: true, name: entry.name }));
   return [...predefined, ...custom];
-}
-
-function svqRenderRoomNextAction(draft) {
-  const lastRoom = draft.rooms.find((room) => room.id === draft.lastTouchedRoomId) || draft.rooms[draft.rooms.length - 1];
-  return `
-    <h3>Was möchtest du als Nächstes machen?</h3>
-    ${lastRoom ? svqRenderRoomCard(lastRoom, { compact: true }) : ""}
-    <div class="svq-menu-list">
-      <button class="svq-menu-item" type="button" data-svq-action="next-add-room">
-        <i data-lucide="plus" aria-hidden="true"></i>Weiteren Raum hinzufügen
-      </button>
-      <button class="svq-menu-item" type="button" data-svq-action="next-view-rooms">
-        <i data-lucide="list" aria-hidden="true"></i>Erfasste Räume ansehen
-      </button>
-      ${
-        lastRoom
-          ? `
-        <button class="svq-menu-item" type="button" data-svq-action="room-edit" data-svq-id="${svqEsc(lastRoom.id)}">
-          <i data-lucide="pencil" aria-hidden="true"></i>Raum bearbeiten
-        </button>
-        <button class="svq-menu-item svq-danger-link" type="button" data-svq-action="room-delete" data-svq-id="${svqEsc(lastRoom.id)}">
-          <i data-lucide="trash-2" aria-hidden="true"></i>Raum löschen
-        </button>
-      `
-          : ""
-      }
-      <button class="svq-menu-item svq-menu-item-primary" type="button" data-svq-action="next-finish">
-        <i data-lucide="flag" aria-hidden="true"></i>Begehung fertigstellen
-      </button>
-    </div>
-  `;
 }
 
 function svqRenderRoomsOverview(draft) {
@@ -1228,15 +1197,10 @@ async function svqHandleClick(event) {
     });
     return;
   }
-  if (action === "next-view-rooms") {
+  if (action === "finish-inspection") {
+    if (!svqCurrentDraft()?.rooms.length) return;
     svqMutate((d) => {
-      d.screen = "rooms-overview";
-    });
-    return;
-  }
-  if (action === "next-finish") {
-    svqMutate((d) => {
-      d.screen = "rooms-overview";
+      d.screen = "finish-confirm";
     });
     return;
   }
@@ -1269,9 +1233,6 @@ async function svqHandleClick(event) {
     if (!window.confirm("Diesen Raum wirklich löschen?")) return;
     svqMutate((d) => {
       d.rooms = d.rooms.filter((r) => r.id !== id);
-      if (d.screen === "room-next-action" && d.rooms.length === 0) {
-        d.screen = "rooms-overview";
-      }
     });
     return;
   }
@@ -1284,7 +1245,7 @@ async function svqHandleClick(event) {
   }
   if (action === "finish-cancel") {
     svqMutate((d) => {
-      d.screen = "rooms-overview";
+      d.screen = d.status === "completed" ? "rooms-overview" : "room-type-select";
     });
     return;
   }
