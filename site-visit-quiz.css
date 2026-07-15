@@ -71,6 +71,10 @@
   gap: 10px;
 }
 
+.svq-customer-search {
+  margin-bottom: 12px;
+}
+
 .svq-list-item {
   display: flex;
   align-items: center;

@@ -37,6 +37,7 @@ const SiteVisitQuizStore = {
 const svqState = {
   screen: "home",
   draftId: null,
+  customerQuery: "",
 };
 
 function svqUid() {
@@ -92,6 +93,7 @@ function svqNewDraft() {
     completedAt: null,
     linkedSiteVisitId: null,
     linkedSiteVisitError: null,
+    customerId: null,
     version: 1,
     company: { name: "", phone: "", email: "" },
     address: { street: "", houseNumber: "", zip: "", city: "" },
@@ -108,6 +110,70 @@ function svqNewDraft() {
 function svqCurrentDraft() {
   return svqState.draftId ? SiteVisitQuizStore.get(svqState.draftId) : null;
 }
+
+function svqCustomerList() {
+  if (typeof window.ctCustomerList !== "function") {
+    return [];
+  }
+  return window.ctCustomerList()
+    .filter(Boolean)
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "de"));
+}
+
+function svqCustomerSearchText(customer) {
+  return [
+    customer.name,
+    customer.email,
+    customer.phone,
+    customer.salutation,
+    customer.contactLastName,
+    customer.address,
+    customer.houseNumber,
+    customer.zip,
+    customer.city,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function svqContactNameFromCustomer(customer) {
+  return [customer.salutation, customer.contactLastName].filter(Boolean).join(" ");
+}
+
+function svqApplyCustomerToDraft(draft, customer) {
+  draft.customerId = customer.id || null;
+  draft.company.name = customer.name || "";
+  draft.company.phone = customer.phone || "";
+  draft.company.email = customer.email || "";
+  draft.address.street = customer.address || "";
+  draft.address.houseNumber = customer.houseNumber || "";
+  draft.address.zip = customer.zip || "";
+  draft.address.city = customer.city || "";
+  draft.contact.firstName = "";
+  draft.contact.lastName = customer.contactLastName || "";
+  draft.contact.role = customer.salutation || "";
+  draft.contact.phone = customer.phone || "";
+  draft.contact.email = customer.email || "";
+  draft.screen = "intro";
+  draft.introStepIndex = SVQ_INTRO_STEPS.indexOf("area-size");
+}
+
+function svqStartFromCustomer(customer) {
+  if (!customer) {
+    svqShowValidation("Bitte zuerst einen Kunden auswählen.");
+    return false;
+  }
+  const draft = svqNewDraft();
+  svqApplyCustomerToDraft(draft, customer);
+  SiteVisitQuizStore.save(draft);
+  svqState.draftId = draft.id;
+  svqState.screen = "quiz";
+  svqState.customerQuery = "";
+  svqRender();
+  return true;
+}
+
+window.svqStartFromCustomer = svqStartFromCustomer;
 
 function svqContractLinkedSiteVisitIds() {
   if (typeof window.ctContractLinkedSiteVisitIds !== "function") {
@@ -323,6 +389,13 @@ function svqGoBack() {
   if (!draft) return;
 
   if (draft.screen === "intro") {
+    const step = SVQ_INTRO_STEPS[draft.introStepIndex];
+    if (draft.customerId && step === "area-size") {
+      svqState.screen = "customer-select";
+      svqRender();
+      return;
+    }
+
     svqMutate((d) => {
       if (d.introStepIndex > 0) {
         d.introStepIndex -= 1;
@@ -542,6 +615,8 @@ function svqRender() {
 
   if (svqState.screen === "home") {
     root.innerHTML = svqRenderHome();
+  } else if (svqState.screen === "customer-select") {
+    root.innerHTML = svqRenderCustomerSelect();
   } else if (svqState.screen === "drafts-list") {
     root.innerHTML = svqRenderList("draft");
   } else if (svqState.screen === "completed-list") {
@@ -564,6 +639,7 @@ function svqRender() {
 function svqRenderHome() {
   const drafts = svqVisibleDraftsByStatus("draft");
   const completed = svqVisibleDraftsByStatus("completed");
+  const customers = svqCustomerList();
 
   return `
     <div class="svq-home">
@@ -576,7 +652,21 @@ function svqRenderHome() {
           <i data-lucide="clipboard-plus" aria-hidden="true"></i>
           <div>
             <strong>Neue Begehung erstellen</strong>
-            <span>Startet das geführte Quiz von vorn.</span>
+            <span>Startet das geführte Quiz mit neuen Kundendaten.</span>
+          </div>
+        </button>
+        <button class="svq-home-card" type="button" data-svq-action="home-customers">
+          <i data-lucide="users-round" aria-hidden="true"></i>
+          <div>
+            <strong>Kundenliste verwenden</strong>
+            <span>${customers.length} Kunde${customers.length === 1 ? "" : "n"} verfügbar, Kundendaten werden übernommen.</span>
+          </div>
+        </button>
+        <button class="svq-home-card" type="button" data-svq-action="home-create-customer">
+          <i data-lucide="user-plus" aria-hidden="true"></i>
+          <div>
+            <strong>Neuen Kunden anlegen</strong>
+            <span>Erst Kundendaten speichern, danach automatisch im Quiz weiterarbeiten.</span>
           </div>
         </button>
         <button class="svq-home-card" type="button" data-svq-action="home-drafts">
@@ -592,6 +682,58 @@ function svqRenderHome() {
             <strong>Abgeschlossene Begehungen</strong>
             <span>${completed.length} fertiggestellt</span>
           </div>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function svqRenderCustomerSelect() {
+  const query = svqState.customerQuery.trim().toLowerCase();
+  const customers = svqCustomerList().filter((customer) => !query || svqCustomerSearchText(customer).includes(query));
+  const rows = customers
+    .map((customer) => {
+      const address = [customer.address, customer.houseNumber].filter(Boolean).join(" ");
+      const cityLine = [customer.zip, customer.city].filter(Boolean).join(" ");
+      const contact = svqContactNameFromCustomer(customer) || "Kein Ansprechpartner";
+      return `
+        <article class="svq-list-item">
+          <button class="svq-list-item-main" type="button" data-svq-action="customer-select" data-svq-id="${svqEsc(customer.id)}">
+            <strong>${svqEsc(customer.name || "Ohne Firmennamen")}</strong>
+            <span class="record-meta">
+              <span>${svqEsc(address || "Keine Adresse")}${cityLine ? ", " + svqEsc(cityLine) : ""}</span>
+              <span>${svqEsc(contact)}</span>
+              <span>${svqEsc(customer.email || "-")} · ${svqEsc(customer.phone || "-")}</span>
+            </span>
+          </button>
+          <button class="primary-button" type="button" data-svq-action="customer-select" data-svq-id="${svqEsc(customer.id)}">
+            Übernehmen
+          </button>
+        </article>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="svq-list-view">
+      <div class="svq-list-header">
+        <button class="ghost-button" type="button" data-svq-action="back-home">
+          <i data-lucide="arrow-left" aria-hidden="true"></i>
+          Zurück
+        </button>
+        <h3>Kundenliste verwenden</h3>
+      </div>
+      <label class="svq-field svq-customer-search">
+        Kunde suchen
+        <input type="search" data-svq-customer-search value="${svqEsc(svqState.customerQuery)}" placeholder="Firma, Ansprechpartner oder Adresse" />
+      </label>
+      <div class="svq-list-body">
+        ${rows || `<div class="empty-state">Kein Kunde gefunden. Lege den Kunden zuerst neu an.</div>`}
+      </div>
+      <div class="form-actions">
+        <button class="secondary-button" type="button" data-svq-action="home-create-customer">
+          <i data-lucide="user-plus" aria-hidden="true"></i>
+          Neuen Kunden anlegen
         </button>
       </div>
     </div>
@@ -1137,6 +1279,29 @@ async function svqHandleClick(event) {
     svqRender();
     return;
   }
+  if (action === "home-customers") {
+    if (typeof loadAll === "function") {
+      button.disabled = true;
+      await loadAll();
+    }
+    svqState.customerQuery = "";
+    svqState.screen = "customer-select";
+    svqRender();
+    return;
+  }
+  if (action === "home-create-customer") {
+    if (typeof window.ctOpenCustomerCreateForQuiz === "function") {
+      window.ctOpenCustomerCreateForQuiz();
+    } else {
+      svqShowValidation("Die Kundenanlage konnte nicht geöffnet werden.");
+    }
+    return;
+  }
+  if (action === "customer-select") {
+    const customer = svqCustomerList().find((item) => item.id === id);
+    svqStartFromCustomer(customer);
+    return;
+  }
   if (action === "home-drafts") {
     svqState.screen = "drafts-list";
     svqRender();
@@ -1472,6 +1637,16 @@ function svqHandleCustomFormClick(event) {
 
 function svqHandleInput(event) {
   const target = event.target;
+  if (target.matches("[data-svq-customer-search]")) {
+    svqState.customerQuery = target.value;
+    svqRender();
+    const search = svqRoot()?.querySelector("[data-svq-customer-search]");
+    if (search) {
+      search.focus();
+      search.setSelectionRange(search.value.length, search.value.length);
+    }
+    return;
+  }
   if (target.id === "svq-custom-interval-text") {
     svqCustomObjectFormState.customInterval = target.value;
     return;

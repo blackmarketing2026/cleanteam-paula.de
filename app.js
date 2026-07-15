@@ -41,6 +41,7 @@ const state = {
     sortKey: "customerName",
     sortDirection: "asc",
   },
+  pendingQuizCustomerReturn: false,
 };
 
 const els = {
@@ -255,6 +256,8 @@ function todayAsInputValue() {
 function getCustomer(id) {
   return state.data.customers.find((customer) => customer.id === id);
 }
+
+window.ctCustomerList = () => [...state.data.customers];
 
 function getSiteVisit(id) {
   return state.data.siteVisits.find((visit) => visit.id === id);
@@ -2127,6 +2130,16 @@ function fillCustomerForm(customer) {
   document.querySelector("#customer-name").focus();
 }
 
+function openCustomerCreateForQuiz() {
+  state.pendingQuizCustomerReturn = true;
+  resetCustomerForm();
+  switchView("customer-new");
+  document.querySelector("#customer-name").focus();
+  showToast("Kunde anlegen. Danach geht es automatisch im Quiz weiter.");
+}
+
+window.ctOpenCustomerCreateForQuiz = openCustomerCreateForQuiz;
+
 async function handleCustomerSubmit(event) {
   event.preventDefault();
 
@@ -2144,16 +2157,25 @@ async function handleCustomerSubmit(event) {
   };
 
   try {
+    let savedCustomer;
     if (id) {
-      await apiPut(`api/customers.php?id=${encodeURIComponent(id)}`, payload);
+      savedCustomer = await apiPut(`api/customers.php?id=${encodeURIComponent(id)}`, payload);
       showToast("Kunde wurde aktualisiert.");
     } else {
-      await apiPost("api/customers.php", payload);
+      savedCustomer = await apiPost("api/customers.php", payload);
       showToast("Kunde wurde angelegt.");
     }
 
     resetCustomerForm();
     await loadAll();
+    if (state.pendingQuizCustomerReturn && savedCustomer) {
+      state.pendingQuizCustomerReturn = false;
+      switchView("site-visit-quiz");
+      if (typeof window.svqStartFromCustomer === "function") {
+        window.svqStartFromCustomer(getCustomer(savedCustomer.id) || savedCustomer);
+      }
+      return;
+    }
     switchView("customer-list");
   } catch (error) {
     showToast(error.message);
@@ -3136,6 +3158,7 @@ function handleRecordAction(event) {
   if (action === "edit-customer") {
     const customer = getCustomer(id);
     if (customer) {
+      state.pendingQuizCustomerReturn = false;
       fillCustomerForm(customer);
       switchView("customer-new");
       document.querySelector("#customer-new-view").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -3220,6 +3243,9 @@ function bindEvents() {
 
   els.navLinks.forEach((button) => {
     button.addEventListener("click", () => {
+      if (button.dataset.view !== "customer-new") {
+        state.pendingQuizCustomerReturn = false;
+      }
       if (button.dataset.view === "offers-new") {
         state.pendingOfferSiteVisitId = null;
         clearOfferSiteVisitFields();
@@ -3250,18 +3276,25 @@ function bindEvents() {
 
   els.bottomMenuButton.addEventListener("click", openMobileNav);
   els.mobileBackdrop.addEventListener("click", closeMobileNav);
-  els.quickCustomer.addEventListener("click", () => switchView("customer-new"));
+  els.quickCustomer.addEventListener("click", () => {
+    state.pendingQuizCustomerReturn = false;
+    switchView("customer-new");
+  });
   els.quickOffer.addEventListener("click", () => {
     state.pendingOfferSiteVisitId = null;
     clearOfferSiteVisitFields();
     switchView("offers-new");
   });
   els.newCustomerButton.addEventListener("click", () => {
+    state.pendingQuizCustomerReturn = false;
     resetCustomerForm();
     switchView("customer-new");
     document.querySelector("#customer-name").focus();
   });
-  els.cancelCustomerEdit.addEventListener("click", resetCustomerForm);
+  els.cancelCustomerEdit.addEventListener("click", () => {
+    state.pendingQuizCustomerReturn = false;
+    resetCustomerForm();
+  });
 
   els.customerForm.addEventListener("submit", handleCustomerSubmit);
   els.customerSearch.addEventListener("input", renderCustomers);
