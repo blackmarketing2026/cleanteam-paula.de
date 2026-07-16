@@ -747,14 +747,6 @@ function renderCustomerSection(title, customers, emptyText) {
 function renderCustomerCard(customer) {
   const contract = getLatestContractForCustomer(customer.id);
   const contractBadge = contract ? `<span class="badge success">Vertrag vorhanden</span>` : "";
-  const offerButton = contract
-    ? ""
-    : `
-        <button class="primary-button" type="button" data-action="offer-for-customer" data-id="${escapeHtml(customer.id)}">
-          <i data-lucide="file-plus-2" aria-hidden="true"></i>
-          Kostenvoranschlag
-        </button>
-      `;
   const contractButton = contract
     ? `
       <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
@@ -787,7 +779,6 @@ function renderCustomerCard(customer) {
           <i data-lucide="pencil" aria-hidden="true"></i>
           Bearbeiten
         </button>
-        ${offerButton}
         ${contractButton}
         <button class="ghost-button" type="button" data-action="delete-customer" data-id="${escapeHtml(customer.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
@@ -3163,13 +3154,6 @@ function handleRecordAction(event) {
       switchView("customer-new");
       document.querySelector("#customer-new-view").scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }
-
-  if (action === "offer-for-customer") {
-    state.pendingOfferSiteVisitId = null;
-    switchView("offers-new");
-    els.offerSiteVisit.focus();
-    showToast("Bitte zuerst eine offene Begehung auswählen.");
   }
 
   if (action === "delete-customer") {
