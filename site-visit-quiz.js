@@ -38,6 +38,7 @@ const svqState = {
   screen: "home",
   draftId: null,
   customerQuery: "",
+  customerSelectMode: null,
 };
 
 function svqUid() {
@@ -163,12 +164,14 @@ function svqStartFromCustomer(customer) {
     svqShowValidation("Bitte zuerst einen Kunden auswählen.");
     return false;
   }
-  const draft = svqNewDraft();
+  const reuseDraft = svqState.customerSelectMode === "fill-current" ? svqCurrentDraft() : null;
+  const draft = reuseDraft || svqNewDraft();
   svqApplyCustomerToDraft(draft, customer);
   SiteVisitQuizStore.save(draft);
   svqState.draftId = draft.id;
   svqState.screen = "quiz";
   svqState.customerQuery = "";
+  svqState.customerSelectMode = null;
   svqRender();
   return true;
 }
@@ -643,10 +646,6 @@ function svqRenderHome() {
 
   return `
     <div class="svq-home">
-      <div class="svq-home-intro">
-        <h3>Begehung erstellen</h3>
-        <p class="muted">Geführtes Quiz für die digitale Objektbegehung – auf dem Tablet vor Ort oder am Schreibtisch.</p>
-      </div>
       <div class="svq-home-menu">
         <button class="svq-home-card" type="button" data-svq-action="home-new">
           <i data-lucide="clipboard-plus" aria-hidden="true"></i>
@@ -866,6 +865,16 @@ function svqRenderIntroStep(draft) {
         Firmenname
         <input type="text" data-svq-input="company.name" value="${svqEsc(draft.company.name)}" placeholder="z. B. Beispiel GmbH" autofocus />
       </label>
+      ${
+        draft.customerId
+          ? ""
+          : `
+      <button class="ghost-button svq-use-customer-link" type="button" data-svq-action="intro-use-customer">
+        <i data-lucide="users-round" aria-hidden="true"></i>
+        Stattdessen Daten aus der Kundenliste übernehmen
+      </button>
+      `
+      }
     `;
   }
   if (step === "company-phone") {
@@ -1285,6 +1294,18 @@ async function svqHandleClick(event) {
       await loadAll();
     }
     svqState.customerQuery = "";
+    svqState.customerSelectMode = "new";
+    svqState.screen = "customer-select";
+    svqRender();
+    return;
+  }
+  if (action === "intro-use-customer") {
+    if (typeof loadAll === "function") {
+      button.disabled = true;
+      await loadAll();
+    }
+    svqState.customerQuery = "";
+    svqState.customerSelectMode = "fill-current";
     svqState.screen = "customer-select";
     svqRender();
     return;
@@ -1313,6 +1334,13 @@ async function svqHandleClick(event) {
     return;
   }
   if (action === "back-home") {
+    if (svqState.screen === "customer-select" && svqState.customerSelectMode === "fill-current" && svqCurrentDraft()) {
+      svqState.customerSelectMode = null;
+      svqState.screen = "quiz";
+      svqRender();
+      return;
+    }
+    svqState.customerSelectMode = null;
     svqState.screen = "home";
     svqRender();
     return;

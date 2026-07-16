@@ -5,14 +5,16 @@
   margin: 0 auto;
 }
 
-.svq-home-intro h3 {
-  margin: 0 0 4px;
-}
-
 .svq-home-menu {
   display: grid;
   gap: 12px;
-  margin-top: 20px;
+}
+
+.svq-use-customer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .svq-home-card {
