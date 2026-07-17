@@ -744,9 +744,18 @@ function svqRoomCleaningItems(room) {
 function svqRoomNotes(room) {
   const notes = [];
   svqRoomObjectEntries(room).forEach((entry) => {
+    const parts = [];
+    if (entry.present === false) {
+      parts.push("nicht vorhanden");
+    } else if (entry.present === true && entry.shouldClean === false) {
+      parts.push("vorhanden, keine Reinigung");
+    }
     const note = String(entry.note || "").trim();
     if (note) {
-      notes.push(`${entry.name}: ${note}`);
+      parts.push(`Notiz: ${note}`);
+    }
+    if (parts.length) {
+      notes.push(`${entry.name}: ${parts.join("; ")}`);
     }
   });
   return notes.join("\n");

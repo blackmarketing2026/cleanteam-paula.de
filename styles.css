@@ -1537,6 +1537,10 @@ button.compact-item.selected {
   justify-content: flex-start;
 }
 
+.contractor-signature-actions button {
+  min-height: 44px;
+}
+
 .template-preview-frame {
   width: 100%;
   min-height: 600px;

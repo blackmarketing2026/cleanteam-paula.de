@@ -106,6 +106,7 @@ if ($format === 'pdf') {
     }
 
     $forceRefresh = $documentAudience === 'cleanteam'
+        || $documentAudience === 'checklist'
         || ($documentAudience !== 'site_visit' && ($contract['status'] ?? '') !== 'signiert');
     try {
         $pdf = save_contract_pdf($pdo, $contract['id'], $documentAudience, $forceRefresh);

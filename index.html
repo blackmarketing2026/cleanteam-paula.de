@@ -126,6 +126,10 @@
               <i data-lucide="image" aria-hidden="true"></i>
               <span>Logo</span>
             </button>
+            <button class="nav-link" type="button" data-view="settings-signature">
+              <i data-lucide="signature" aria-hidden="true"></i>
+              <span>Signatur</span>
+            </button>
             <button class="nav-link" type="button" data-view="settings-template">
               <i data-lucide="file-edit" aria-hidden="true"></i>
               <span>Mustervertrag</span>
@@ -494,8 +498,8 @@
                 <input id="offer-manual-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" />
               </label>
               <label class="span-2">
-                Leistungsbeschreibung aus Begehung
-                <textarea id="offer-notes" class="offer-service-editor" rows="16" placeholder="Dienstleistung und Reinigungsumfang aus dem Quiz prüfen und bei Bedarf überarbeiten"></textarea>
+                Notizen / vollständiges Begehungsergebnis
+                <textarea id="offer-notes" class="offer-service-editor" rows="18" placeholder="Vollständiges Ergebnis aus dem Quiz prüfen und bei Bedarf überarbeiten"></textarea>
               </label>
               <div class="price-preview single-price-preview span-2">
                 <div>
@@ -880,6 +884,49 @@
           </section>
         </section>
 
+        <section id="settings-signature-view" class="view" aria-labelledby="settings-signature-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="settings-signature-heading">Signaturen</h3>
+              <p class="muted">Zentrale Unterschriften f&uuml;r Vertragsdokumente.</p>
+            </div>
+          </div>
+
+          <section class="panel" aria-labelledby="contractor-signature-heading">
+            <div class="panel-header wrap-header">
+              <div>
+                <h4 id="contractor-signature-heading">Thomas M&uuml;ndlein, Signatur</h4>
+                <p class="muted">Diese digitale Unterschrift wird bei Vertr&auml;gen im Namen von CleanTeam angeh&auml;ngt.</p>
+              </div>
+            </div>
+            <div class="contractor-signature-layout">
+              <div class="contractor-signature-pad-wrap">
+                <canvas
+                  id="contractor-signature-pad"
+                  width="900"
+                  height="260"
+                  aria-label="Unterschrift Thomas M&uuml;ndlein"
+                ></canvas>
+                <p id="contractor-signature-status" class="muted">Noch keine Unterschrift gespeichert.</p>
+              </div>
+              <div class="form-actions contractor-signature-actions">
+                <button id="contractor-signature-clear" class="ghost-button" type="button">
+                  <i data-lucide="eraser" aria-hidden="true"></i>
+                  Zeichenfl&auml;che leeren
+                </button>
+                <button id="contractor-signature-remove" class="ghost-button" type="button">
+                  <i data-lucide="trash-2" aria-hidden="true"></i>
+                  Unterschrift entfernen
+                </button>
+                <button id="contractor-signature-save" class="primary-button" type="button">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Unterschrift speichern
+                </button>
+              </div>
+            </div>
+          </section>
+        </section>
+
         <section id="settings-template-view" class="view" aria-labelledby="settings-template-heading">
           <div class="section-heading">
             <div>
@@ -917,40 +964,6 @@
                 <i data-lucide="save" aria-hidden="true"></i>
                 Speichern
               </button>
-            </div>
-          </section>
-
-          <section class="panel" aria-labelledby="contractor-signature-heading">
-            <div class="panel-header wrap-header">
-              <div>
-                <h4 id="contractor-signature-heading">Unterschrift Thomas M&uuml;ndlein</h4>
-                <p class="muted">Diese digitale Unterschrift wird auf allen Vertr&auml;gen im Namen von CleanTeam verwendet.</p>
-              </div>
-            </div>
-            <div class="contractor-signature-layout">
-              <div class="contractor-signature-pad-wrap">
-                <canvas
-                  id="contractor-signature-pad"
-                  width="900"
-                  height="260"
-                  aria-label="Unterschrift Thomas M&uuml;ndlein"
-                ></canvas>
-                <p id="contractor-signature-status" class="muted">Noch keine Unterschrift gespeichert.</p>
-              </div>
-              <div class="form-actions contractor-signature-actions">
-                <button id="contractor-signature-clear" class="ghost-button" type="button">
-                  <i data-lucide="eraser" aria-hidden="true"></i>
-                  Zeichenfl&auml;che leeren
-                </button>
-                <button id="contractor-signature-remove" class="ghost-button" type="button">
-                  <i data-lucide="trash-2" aria-hidden="true"></i>
-                  Unterschrift entfernen
-                </button>
-                <button id="contractor-signature-save" class="primary-button" type="button">
-                  <i data-lucide="save" aria-hidden="true"></i>
-                  Unterschrift speichern
-                </button>
-              </div>
             </div>
           </section>
 

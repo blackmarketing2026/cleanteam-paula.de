@@ -191,6 +191,7 @@ const titles = {
   "settings-smtp": "SMTP-Server-Einstellungen",
   "settings-notify": "Vertragsbenachrichtigungen-Einstellungen",
   "settings-logo": "Logo-Einstellungen",
+  "settings-signature": "Signatur",
   "settings-template": "Mustervertrag",
   "settings-users": "User & Rollen",
 };
@@ -541,6 +542,10 @@ function switchView(view) {
     loadUsers();
   }
 
+  if (view === "settings-signature") {
+    loadContractorSignature();
+  }
+
   if (view === "settings-template") {
     loadContractTemplate();
   }
@@ -838,7 +843,7 @@ const CLEANING_TASKS = [
   { key: "floor", label: "Boden" },
   { key: "door", label: "Tür" },
   { key: "desk", label: "Schreibtische" },
-  { key: "chairs", label: "Stuehle" },
+  { key: "chairs", label: "Stühle" },
   { key: "tables", label: "Tische" },
   { key: "window", label: "Fensterbänke" },
   { key: "surface", label: "Oberflächen" },
@@ -846,7 +851,7 @@ const CLEANING_TASKS = [
   { key: "kitchen", label: "Küchenflächen" },
   { key: "handrail", label: "Handlauf / Geländer" },
   { key: "counter", label: "Tresen" },
-  { key: "cabinets", label: "Schraenke" },
+  { key: "cabinets", label: "Schränke" },
   { key: "stairFloor", label: "Etage" },
   { key: "stairDoor", label: "Türen" },
   { key: "treatmentDesk", label: "Schreibtisch" },
@@ -1824,6 +1829,93 @@ function siteVisitOfferNotes(visit) {
   return lines.join("\n");
 }
 
+function completeSiteVisitSummaryStats(visit) {
+  const floors = Array.isArray(visit.floors) ? visit.floors : [];
+  const rooms = floors.flatMap((floor) => floorRoomsForDisplay(floor));
+  const cleaningItemCount = rooms.reduce((sum, room) => sum + cleaningItemsForDisplay(room).length, 0);
+  return { floors, rooms, cleaningItemCount };
+}
+
+function completeOfferNotesValue(value, fallback = "nicht angegeben") {
+  const text = String(value == null ? "" : value).trim();
+  return text || fallback;
+}
+
+function completeOfferNotesMultiline(label, value) {
+  const text = String(value || "").trim();
+  if (!text) return [];
+  return [`  ${label}:`, ...text.split(/\r?\n/).filter(Boolean).map((line) => `    ${line}`)];
+}
+
+function completeSiteVisitOfferNotes(visit) {
+  const { floors, rooms, cleaningItemCount } = completeSiteVisitSummaryStats(visit);
+  const lines = [
+    "Leistungsbeschreibung / Dienstleistung",
+    "",
+    "Begehungsergebnis aus dem Quiz",
+    "",
+    "Objektdaten",
+    `- Firma / Kunde: ${siteVisitCompanyName(visit)}`,
+    `- Ansprechpartner vor Ort: ${completeOfferNotesValue(visit.onsiteContact)}`,
+    `- E-Mail: ${completeOfferNotesValue(visit.email)}`,
+    `- Telefon: ${completeOfferNotesValue(visit.phone)}`,
+    `- Objektadresse: ${completeOfferNotesValue(visit.address)}`,
+    `- Objektgröße: ${Number(visit.squareMeters) || 0} m²`,
+  ];
+
+  if (visit.createdAt) {
+    lines.push(`- Begehung erfasst am: ${formatDate(visit.createdAt)}`);
+  }
+
+  lines.push(
+    "",
+    "Zusammenfassung",
+    `- Etagen/Bereiche: ${floors.length}`,
+    `- Räume: ${rooms.length}`,
+    `- Reinigungspositionen: ${cleaningItemCount}`,
+  );
+
+  if (floors.length > 0) {
+    lines.push("", "Etagen und Räume");
+    floors.forEach((floor, floorIndex) => {
+      const floorName = floor.name || `Etage ${floorIndex + 1}`;
+      const floorRooms = floorRoomsForDisplay(floor);
+      lines.push("", `${floorIndex + 1}. ${floorName}`);
+
+      if (floorRooms.length === 0) {
+        lines.push("  - Keine Räume hinterlegt.");
+        return;
+      }
+
+      floorRooms.forEach((room, roomIndex) => {
+        const roomTitle = `${formatRoomQuantity(room)}${room.name}`;
+        lines.push(`  ${floorIndex + 1}.${roomIndex + 1} ${roomTitle}`);
+        lines.push(`  Raumart: ${completeOfferNotesValue(room.roomType)}`);
+        roomDetailParts(room).forEach((detail) => lines.push(`  ${detail}`));
+
+        const cleaningItems = cleaningItemsForDisplay(room);
+        if (cleaningItems.length > 0) {
+          lines.push("  Leistungen:");
+          cleaningItems.forEach((item) => {
+            lines.push(`  - ${cleaningItemText(item, room)}`);
+          });
+        } else {
+          lines.push("  Leistungen: Keine Reinigungsposition hinterlegt.");
+        }
+
+        lines.push(...completeOfferNotesMultiline("Extra Vereinbarungen", room.extraAgreements));
+        lines.push(...completeOfferNotesMultiline("Raumnotizen", room.notes));
+      });
+    });
+  }
+
+  if (visit.notes) {
+    lines.push("", "Allgemeine Notizen zur Begehung", ...String(visit.notes).split(/\r?\n/).filter(Boolean).map((line) => `- ${line}`));
+  }
+
+  return lines.join("\n");
+}
+
 function findCustomerForSiteVisit(visit) {
   const email = String(visit.email || "").trim().toLowerCase();
   const phone = String(visit.phone || "").trim();
@@ -1963,7 +2055,7 @@ async function prepareOfferFromSiteVisit(id) {
     els.offerCustomer.value = customer.id;
     els.offerSquareMeters.value = visit.squareMeters || "";
     els.offerManualPrice.value = "";
-    els.offerNotes.value = siteVisitOfferNotes(visit);
+    els.offerNotes.value = completeSiteVisitOfferNotes(visit);
     updateOfferPreview();
     showToast(
       created
@@ -2193,6 +2285,14 @@ function renderContractRow(contract) {
         </a>
       `
     : "";
+  const cleaningChecklistButton = contract.offer.siteVisitId
+    ? `
+        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=checklist&format=pdf&download=1" target="_blank" rel="noopener">
+          <i data-lucide="clipboard-check" aria-hidden="true"></i>
+          Mitarbeiter-Checkliste
+        </a>
+      `
+    : "";
   const authorizationButton = contract.hasAuthorizationDocument
     ? `
         <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=authorization&format=pdf" target="_blank" rel="noopener">
@@ -2223,10 +2323,7 @@ function renderContractRow(contract) {
             <i data-lucide="file-text" aria-hidden="true"></i>
             Kunde
           </a>
-          <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=checklist&format=pdf" target="_blank" rel="noopener">
-            <i data-lucide="clipboard-check" aria-hidden="true"></i>
-            Checkliste
-          </a>
+          ${cleaningChecklistButton}
           ${authorizationButton}
           ${siteVisitButton}
           <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
@@ -3088,6 +3185,28 @@ async function handleContractorSignatureRemove() {
   }
 }
 
+function applyContractorSignature(result = {}) {
+  initContractorSignaturePad();
+  if (result.contractorSignatureDataUrl) {
+    drawContractorSignatureDataUrl(result.contractorSignatureDataUrl, result.contractorSignatureUpdatedAt);
+  } else {
+    clearContractorSignaturePad("Noch keine Unterschrift gespeichert.");
+  }
+}
+
+async function loadContractorSignature() {
+  if (!els.contractorSignaturePad) {
+    return;
+  }
+
+  try {
+    const result = await apiGet("api/contract-template.php");
+    applyContractorSignature(result);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function renderTemplatePlaceholderChips(groups) {
   if (!els.templatePlaceholderGroups) {
     return;
@@ -3135,12 +3254,6 @@ async function loadContractTemplate() {
     const result = await apiGet("api/contract-template.php");
     els.templateEditor.value = result.templateHtml || "";
     renderTemplatePlaceholderChips(result.placeholders || {});
-    initContractorSignaturePad();
-    if (result.contractorSignatureDataUrl) {
-      drawContractorSignatureDataUrl(result.contractorSignatureDataUrl, result.contractorSignatureUpdatedAt);
-    } else {
-      clearContractorSignaturePad("Noch keine Unterschrift gespeichert.");
-    }
   } catch (error) {
     showToast(error.message);
   }

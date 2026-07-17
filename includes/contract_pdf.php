@@ -709,7 +709,7 @@ function contract_pdf_filename(array $contract, string $audience): string
         return 'Vollmacht-' . trim($safeNumber, '-') . '.pdf';
     }
     if ($audience === 'checklist') {
-        return 'Checkliste-' . trim($safeNumber, '-') . '.pdf';
+        return 'Mitarbeiter-Checkliste-' . trim($safeNumber, '-') . '.pdf';
     }
 
     $suffix = $audience === 'cleanteam' ? 'CleanTeam' : 'Kunde';
@@ -796,11 +796,15 @@ function site_visit_pdf_cleaning_task_label(string $key): string
         'floor' => 'Boden',
         'door' => 'Tür',
         'desk' => 'Schreibtische',
+        'chairs' => 'Stühle',
+        'tables' => 'Tische',
         'window' => 'Fensterbänke',
         'surface' => 'Oberflächen',
         'trash' => 'Mülleimer-Entleerung',
         'kitchen' => 'Küchenflächen',
         'handrail' => 'Handlauf / Geländer',
+        'counter' => 'Tresen',
+        'cabinets' => 'Schränke',
         'stairFloor' => 'Etage',
         'stairDoor' => 'Türen',
         'treatmentDesk' => 'Schreibtisch',
@@ -1129,15 +1133,15 @@ function render_cleaning_checklist_pdf(array $offer, array $customer, array $con
     $startDate = !empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'Nach Absprache';
     $createdAt = contract_format_date($contract['created_at'] ?? null);
 
-    $pdf->title('Reinigungs-Checkliste');
-    $pdf->label('Mitarbeiter / Endkunde');
+    $pdf->title('Mitarbeiter-Reinigungscheckliste');
+    $pdf->label('Aus der Begehung zum Vertrag ' . $contractNumber);
     $pdf->meta('Vertrag: ' . $contractNumber . ' | Erstellt: ' . $createdAt . ' | Start: ' . $startDate);
     $pdf->heading('Objekt');
     $pdf->keyValue('Kunde', $customerName);
     $pdf->keyValue('Adresse', trim($customerAddress . ', ' . $customerZipCity, ' ,'));
     $pdf->keyValue('Ansprechpartner', contract_signatory_display($customer));
     $pdf->keyValue('Fläche', (int) ($offer['square_meters'] ?? 0) . ' m²');
-    $pdf->paragraph('Je Position abhaken: linkes Kästchen = vom Mitarbeiter erledigt, rechtes Kästchen = vom Endkunden geprüft.');
+    $pdf->paragraph('Arbeitscheckliste für die Reinigung vor Ort. Je Position abhaken: linkes Kästchen = erledigt, rechtes Kästchen = kontrolliert.');
 
     $hasStructuredItems = false;
     if ($siteVisit !== null) {
@@ -1154,7 +1158,7 @@ function render_cleaning_checklist_pdf(array $offer, array $customer, array $con
 
             $floorName = trim((string) ($floor['name'] ?? '')) ?: 'Etage ' . ($floorIndex + 1);
             $pdf->heading($floorName);
-            $pdf->checklistColumns();
+            $pdf->checklistColumns('Erledigt', 'Kontrolle');
 
             foreach ($rooms as $roomIndex => $room) {
                 $quantity = site_visit_pdf_int($room['quantity'] ?? 1);
@@ -1193,7 +1197,7 @@ function render_cleaning_checklist_pdf(array $offer, array $customer, array $con
         if ($fallbackItems === []) {
             $pdf->paragraph('Keine Checklistenpositionen im Vertrag hinterlegt.');
         } else {
-            $pdf->checklistColumns();
+            $pdf->checklistColumns('Erledigt', 'Kontrolle');
             foreach ($fallbackItems as $item) {
                 $pdf->checklistItem($item);
             }
