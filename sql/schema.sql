@@ -174,6 +174,8 @@ INSERT IGNORE INTO branding_settings (id, logo_filename) VALUES (1, NULL);
 CREATE TABLE IF NOT EXISTS contract_template_settings (
   id TINYINT UNSIGNED NOT NULL,
   template_html LONGTEXT NOT NULL,
+  contractor_signature_data LONGTEXT NULL,
+  contractor_signature_updated_at DATETIME NULL,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

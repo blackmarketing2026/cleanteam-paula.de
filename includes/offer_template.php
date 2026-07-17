@@ -92,6 +92,7 @@ function offer_cleaning_item(array $item): ?array
         'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
         'method' => $key === 'floor' && $method !== '' ? offer_floor_cleaning_method($method) : '',
         'bagMode' => $key === 'trash' ? offer_trash_bag_mode(trim((string) ($item['bagMode'] ?? ($item['trashBagMode'] ?? '')))) : '',
+        'quantity' => offer_int($item['quantity'] ?? 0),
     ];
 }
 
@@ -151,6 +152,9 @@ function offer_cleaning_item_text(array $item, array $room = []): string
     }
     if (($item['key'] ?? '') === 'trash' && trim((string) ($item['bagMode'] ?? '')) !== '') {
         $details[] = (string) $item['bagMode'];
+    }
+    if (offer_int($item['quantity'] ?? 0) > 0) {
+        $details[] = 'Anzahl: ' . offer_int($item['quantity']);
     }
 
     return $item['label'] . ': ' . implode(', ', $details);
@@ -319,8 +323,13 @@ function render_offer_document(array $offer, array $customer, ?array $siteVisit 
     $priceFormatted = contract_format_money($price);
 
     $offerNotes = trim((string) ($offer['notes'] ?? ''));
-    $notesBlock = $offerNotes !== '' ? '<p><strong>Besondere Vereinbarungen:</strong> ' . h($offerNotes) . '</p>' : '';
-    $floorPlanHtml = render_offer_floor_plan_html($siteVisit);
+    $displayOfferNotes = preg_replace('/^Leistungsbeschreibung \/ Dienstleistung\r?\n\r?\n?/', '', $offerNotes) ?? $offerNotes;
+    $notesBlock = $offerNotes !== ''
+        ? '<h2>Leistungsbeschreibung / Dienstleistung</h2><div class="offer-service-text">' . h(trim($displayOfferNotes)) . '</div>'
+        : '';
+    $hasEditedServiceDescription = strpos($offerNotes, 'Leistungsbeschreibung / Dienstleistung') !== false
+        || strpos($offerNotes, 'Etagen und Räume') !== false;
+    $floorPlanHtml = $hasEditedServiceDescription ? '' : render_offer_floor_plan_html($siteVisit);
 
     $signUrl = h(base_url() . '/o.php?token=' . $offer['token']);
 
@@ -347,6 +356,7 @@ function render_offer_document(array $offer, array $customer, ?array $siteVisit 
   .floor-plan-floor li { margin-bottom: 10px; }
   .floor-plan-floor li strong,
   .floor-plan-floor li span { display: block; }
+  .offer-service-text { white-space: pre-wrap; border: 1px solid #ddd; border-radius: 8px; padding: 14px; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.55; }
   .muted { color: #666; font-size: 13px; }
   @media print { .cta { display: none; } body { margin: 0; } }
 </style>

@@ -10,8 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=customer-contract-groups-20260715-1" />
-    <link rel="stylesheet" href="site-visit-quiz.css?v=quiz-customer-intro-20260716-1" />
+    <link rel="stylesheet" href="styles.css?v=offer-service-editor-20260716-1" />
+    <link rel="stylesheet" href="site-visit-quiz.css?v=quiz-smart-mobile-20260717-1" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -169,6 +169,41 @@
               <p class="muted">Kunden, Begehungen, Kostenvoranschläge und signierte Verträge an einem Ort.</p>
             </div>
           </div>
+
+          <section class="guide-panel" aria-labelledby="start-guide-heading">
+            <div class="guide-panel-header">
+              <div>
+                <h4 id="start-guide-heading">Schritt-f&uuml;r-Schritt</h4>
+                <p class="muted">Vom Objekttermin bis zum abgeschlossenen Vertrag.</p>
+              </div>
+            </div>
+            <div class="guide-steps">
+              <button class="guide-step" type="button" data-overview-target="site-visit-quiz">
+                <span class="guide-step-number">1</span>
+                <span class="guide-step-content">
+                  <strong>Neubegehung starten</strong>
+                  <small>Objekt vor Ort erfassen</small>
+                </span>
+                <i data-lucide="clipboard-list" aria-hidden="true"></i>
+              </button>
+              <button class="guide-step" type="button" data-overview-target="offers-saved">
+                <span class="guide-step-number">2</span>
+                <span class="guide-step-content">
+                  <strong>Kostenvoranschlag rausschicken</strong>
+                  <small>Per E-Mail senden oder Link kopieren</small>
+                </span>
+                <i data-lucide="send" aria-hidden="true"></i>
+              </button>
+              <button class="guide-step" type="button" data-overview-target="offers-saved">
+                <span class="guide-step-number">3</span>
+                <span class="guide-step-content">
+                  <strong>Vertrag erstellen</strong>
+                  <small>Kunde schlie&szlig;t &uuml;ber den Link mit AGB und Signatur ab</small>
+                </span>
+                <i data-lucide="signature" aria-hidden="true"></i>
+              </button>
+            </div>
+          </section>
 
           <div class="metric-grid">
             <article class="metric-card">
@@ -393,8 +428,8 @@
                 <input id="offer-manual-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" />
               </label>
               <label class="span-2">
-                Notizen
-                <textarea id="offer-notes" rows="4" placeholder="Besondere Wünsche, Schlüsselübergabe, Reinigungszeiten"></textarea>
+                Leistungsbeschreibung aus Begehung
+                <textarea id="offer-notes" class="offer-service-editor" rows="16" placeholder="Dienstleistung und Reinigungsumfang aus dem Quiz prüfen und bei Bedarf überarbeiten"></textarea>
               </label>
               <div class="price-preview single-price-preview span-2">
                 <div>
@@ -819,6 +854,40 @@
             </div>
           </section>
 
+          <section class="panel" aria-labelledby="contractor-signature-heading">
+            <div class="panel-header wrap-header">
+              <div>
+                <h4 id="contractor-signature-heading">Unterschrift Thomas M&uuml;ndlein</h4>
+                <p class="muted">Diese digitale Unterschrift wird auf allen Vertr&auml;gen im Namen von CleanTeam verwendet.</p>
+              </div>
+            </div>
+            <div class="contractor-signature-layout">
+              <div class="contractor-signature-pad-wrap">
+                <canvas
+                  id="contractor-signature-pad"
+                  width="900"
+                  height="260"
+                  aria-label="Unterschrift Thomas M&uuml;ndlein"
+                ></canvas>
+                <p id="contractor-signature-status" class="muted">Noch keine Unterschrift gespeichert.</p>
+              </div>
+              <div class="form-actions contractor-signature-actions">
+                <button id="contractor-signature-clear" class="ghost-button" type="button">
+                  <i data-lucide="eraser" aria-hidden="true"></i>
+                  Zeichenfl&auml;che leeren
+                </button>
+                <button id="contractor-signature-remove" class="ghost-button" type="button">
+                  <i data-lucide="trash-2" aria-hidden="true"></i>
+                  Unterschrift entfernen
+                </button>
+                <button id="contractor-signature-save" class="primary-button" type="button">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Unterschrift speichern
+                </button>
+              </div>
+            </div>
+          </section>
+
           <section class="panel" aria-labelledby="template-preview-heading">
             <div class="panel-header">
               <div>
@@ -928,8 +997,8 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="site-visit-quiz-data.js?v=svq-20260715-7"></script>
-    <script src="site-visit-quiz.js?v=quiz-customer-intro-20260716-1"></script>
-    <script src="app.js?v=remove-customer-offer-button-20260716-1"></script>
+    <script src="site-visit-quiz-data.js?v=quiz-smart-mobile-20260717-1"></script>
+    <script src="site-visit-quiz.js?v=quiz-smart-mobile-20260717-1"></script>
+    <script src="app.js?v=contract-cleaning-checklist-20260716-1"></script>
   </body>
 </html>

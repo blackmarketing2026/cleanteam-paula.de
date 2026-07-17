@@ -124,6 +124,40 @@ final class SimplePdfDocument
         }
     }
 
+    public function checklistItem(string $text): void
+    {
+        $fontSize = 9.2;
+        $lineHeight = 12.5;
+        $boxSize = 8.0;
+        $employeeBoxX = self::PAGE_WIDTH - self::MARGIN_RIGHT - 76.0;
+        $customerBoxX = self::PAGE_WIDTH - self::MARGIN_RIGHT - 30.0;
+        $textWidth = $employeeBoxX - self::MARGIN_LEFT - 12.0;
+        $lines = $this->wrap($this->normalizeWhitespace($text), $fontSize, $textWidth);
+        if ($lines === []) {
+            return;
+        }
+
+        $height = max(count($lines) * $lineHeight, 16.0);
+        $this->ensureSpace($height + 4.0);
+        $startY = $this->y;
+        foreach ($lines as $index => $line) {
+            $this->line($line, self::MARGIN_LEFT, $startY - ($index * $lineHeight), $fontSize, 'F1');
+        }
+
+        $boxY = $startY - 8.0;
+        $this->drawBox($employeeBoxX, $boxY, $boxSize);
+        $this->drawBox($customerBoxX, $boxY, $boxSize);
+        $this->y -= $height + 4.0;
+    }
+
+    public function checklistColumns(string $left = 'Mitarbeiter', string $right = 'Endkunde'): void
+    {
+        $this->ensureSpace(18.0);
+        $this->line($left, self::PAGE_WIDTH - self::MARGIN_RIGHT - 92.0, $this->y, 8.0, 'F2');
+        $this->line($right, self::PAGE_WIDTH - self::MARGIN_RIGHT - 44.0, $this->y, 8.0, 'F2');
+        $this->y -= 12.0;
+    }
+
     public function protocolKeyValue(string $key, string $value): void
     {
         $fontSize = 9.5;
@@ -293,6 +327,14 @@ final class SimplePdfDocument
     private function drawLine(float $x1, float $y1, float $x2, float $y2): void
     {
         $this->write(sprintf("%.2F %.2F m %.2F %.2F l S\n", $x1, $y1, $x2, $y2));
+    }
+
+    private function drawBox(float $x, float $y, float $size): void
+    {
+        $this->drawLine($x, $y, $x + $size, $y);
+        $this->drawLine($x + $size, $y, $x + $size, $y - $size);
+        $this->drawLine($x + $size, $y - $size, $x, $y - $size);
+        $this->drawLine($x, $y - $size, $x, $y);
     }
 
     private function write(string $content): void
@@ -666,6 +708,9 @@ function contract_pdf_filename(array $contract, string $audience): string
     if ($audience === 'authorization') {
         return 'Vollmacht-' . trim($safeNumber, '-') . '.pdf';
     }
+    if ($audience === 'checklist') {
+        return 'Checkliste-' . trim($safeNumber, '-') . '.pdf';
+    }
 
     $suffix = $audience === 'cleanteam' ? 'CleanTeam' : 'Kunde';
     return 'Vertrag-' . trim($safeNumber, '-') . '-' . $suffix . '.pdf';
@@ -673,7 +718,7 @@ function contract_pdf_filename(array $contract, string $audience): string
 
 function normalize_contract_pdf_audience(string $audience): string
 {
-    return in_array($audience, ['cleanteam', 'customer', 'site_visit', 'authorization'], true) ? $audience : 'customer';
+    return in_array($audience, ['cleanteam', 'customer', 'site_visit', 'authorization', 'checklist'], true) ? $audience : 'customer';
 }
 
 function contract_authorization_grantor_name(array $contract): string
@@ -784,6 +829,7 @@ function site_visit_pdf_cleaning_item(array $item): ?array
         'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
         'method' => $key === 'floor' && $method !== '' ? site_visit_pdf_floor_cleaning_method($method) : '',
         'bagMode' => $key === 'trash' ? site_visit_pdf_trash_bag_mode(trim((string) ($item['bagMode'] ?? ($item['trashBagMode'] ?? '')))) : '',
+        'quantity' => site_visit_pdf_int($item['quantity'] ?? 0),
     ];
 }
 
@@ -843,6 +889,9 @@ function site_visit_pdf_cleaning_item_text(array $item, array $room = []): strin
     }
     if (($item['key'] ?? '') === 'trash' && trim((string) ($item['bagMode'] ?? '')) !== '') {
         $details[] = (string) $item['bagMode'];
+    }
+    if (site_visit_pdf_int($item['quantity'] ?? 0) > 0) {
+        $details[] = 'Anzahl: ' . site_visit_pdf_int($item['quantity']);
     }
 
     return $item['label'] . ': ' . implode(', ', $details);
@@ -1017,6 +1066,147 @@ function render_site_visit_pdf(array $siteVisit, array $offer, array $customer, 
     return $pdf->output();
 }
 
+function cleaning_checklist_items_from_offer_notes(string $notes): array
+{
+    $items = [];
+    $currentRoom = '';
+    $skipPrefixes = [
+        'Leistungsbeschreibung / Dienstleistung',
+        'Firma:',
+        'Ansprechpartner vor Ort:',
+        'Adresse:',
+        'Objektgröße:',
+        'Begehung erfasst am:',
+        'Etagen und Räume:',
+        'Allgemeine Notizen:',
+    ];
+
+    foreach (preg_split('/\R/u', $notes) ?: [] as $line) {
+        $line = trim($line);
+        if ($line === '') {
+            continue;
+        }
+
+        $shouldSkip = false;
+        foreach ($skipPrefixes as $prefix) {
+            if ($line === $prefix || strpos($line, $prefix) === 0) {
+                $shouldSkip = true;
+                break;
+            }
+        }
+        if ($shouldSkip) {
+            continue;
+        }
+
+        if (preg_match('/^\d+\.\s+(.+)$/u', $line, $matches) === 1) {
+            $currentRoom = trim($matches[1]);
+            continue;
+        }
+
+        if (strpos($line, '- ') === 0) {
+            $currentRoom = trim(substr($line, 2));
+            continue;
+        }
+
+        $line = preg_replace('/^[•*-]\s*/u', '', $line) ?? $line;
+        if ($line === '') {
+            continue;
+        }
+
+        $items[] = $currentRoom !== '' ? $currentRoom . ': ' . $line : $line;
+    }
+
+    return array_values(array_unique($items));
+}
+
+function render_cleaning_checklist_pdf(array $offer, array $customer, array $contract, ?array $siteVisit = null): string
+{
+    $pdf = new SimplePdfDocument();
+    $contractNumber = (string) ($contract['number'] ?? 'Entwurf');
+    $customerName = contract_customer_display_name($customer);
+    $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
+    $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
+    $startDate = !empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'Nach Absprache';
+    $createdAt = contract_format_date($contract['created_at'] ?? null);
+
+    $pdf->title('Reinigungs-Checkliste');
+    $pdf->label('Mitarbeiter / Endkunde');
+    $pdf->meta('Vertrag: ' . $contractNumber . ' | Erstellt: ' . $createdAt . ' | Start: ' . $startDate);
+    $pdf->heading('Objekt');
+    $pdf->keyValue('Kunde', $customerName);
+    $pdf->keyValue('Adresse', trim($customerAddress . ', ' . $customerZipCity, ' ,'));
+    $pdf->keyValue('Ansprechpartner', contract_signatory_display($customer));
+    $pdf->keyValue('Fläche', (int) ($offer['square_meters'] ?? 0) . ' m²');
+    $pdf->paragraph('Je Position abhaken: linkes Kästchen = vom Mitarbeiter erledigt, rechtes Kästchen = vom Endkunden geprüft.');
+
+    $hasStructuredItems = false;
+    if ($siteVisit !== null) {
+        $floors = site_visit_floors_from_row($siteVisit);
+        foreach ($floors as $floorIndex => $floor) {
+            if (!is_array($floor)) {
+                continue;
+            }
+
+            $rooms = site_visit_pdf_rooms_from_floor($floor);
+            if ($rooms === []) {
+                continue;
+            }
+
+            $floorName = trim((string) ($floor['name'] ?? '')) ?: 'Etage ' . ($floorIndex + 1);
+            $pdf->heading($floorName);
+            $pdf->checklistColumns();
+
+            foreach ($rooms as $roomIndex => $room) {
+                $quantity = site_visit_pdf_int($room['quantity'] ?? 1);
+                $roomTitle = ($quantity > 1 ? $quantity . 'x ' : '') . (trim((string) ($room['name'] ?? '')) ?: 'Raum ' . ($roomIndex + 1));
+                $roomType = trim((string) ($room['roomType'] ?? ''));
+                $details = site_visit_pdf_room_details($room);
+                $roomLabel = $roomTitle . ($roomType !== '' ? ' (' . $roomType . ')' : '');
+                if ($details !== '') {
+                    $roomLabel .= ' - ' . $details;
+                }
+
+                $items = site_visit_pdf_cleaning_items_from_room($room);
+                if ($items === []) {
+                    continue;
+                }
+
+                $hasStructuredItems = true;
+                $pdf->subheading($roomLabel);
+                foreach ($items as $item) {
+                    $pdf->checklistItem(site_visit_pdf_cleaning_item_text($item, $room));
+                }
+
+                if (trim((string) ($room['extraAgreements'] ?? '')) !== '') {
+                    $pdf->paragraph('Extra Vereinbarungen: ' . (string) $room['extraAgreements'], 9.2, 12.0);
+                }
+                if (trim((string) ($room['notes'] ?? '')) !== '') {
+                    $pdf->paragraph('Notiz: ' . (string) $room['notes'], 9.2, 12.0);
+                }
+            }
+        }
+    }
+
+    if (!$hasStructuredItems) {
+        $fallbackItems = cleaning_checklist_items_from_offer_notes(trim((string) ($offer['notes'] ?? '')));
+        $pdf->heading('Leistungsbeschreibung');
+        if ($fallbackItems === []) {
+            $pdf->paragraph('Keine Checklistenpositionen im Vertrag hinterlegt.');
+        } else {
+            $pdf->checklistColumns();
+            foreach ($fallbackItems as $item) {
+                $pdf->checklistItem($item);
+            }
+        }
+    }
+
+    $pdf->heading('Abschluss');
+    $pdf->keyValue('Mitarbeiter', 'Name: ________________________________  Datum: ________________');
+    $pdf->keyValue('Endkunde', 'Name: ________________________________  Datum: ________________');
+
+    return $pdf->output();
+}
+
 function render_authorization_pdf(array $offer, array $customer, array $contract): string
 {
     if (!contract_has_authorization_details($contract)) {
@@ -1099,6 +1289,8 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $managingDirectors = implode(', ', CONTRACTOR['managing_directors']);
     $contractorZipCity = CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city'] . ', ' . CONTRACTOR['country'];
     $contractorServicePoint = CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'];
+    $contractorSignatureName = contract_contractor_signature_name();
+    $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
     $pdf->title('Gebäudereinigungsvertrag');
     $pdf->label($documentLabel);
@@ -1121,7 +1313,14 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     contract_template_html_to_pdf($pdf, $templateBodyHtml);
 
     $pdf->heading('Unterschriften');
-    $pdf->keyValue('CleanTeam', CONTRACTOR['service_point_city'] . ', ' . $createdAt . ' | Geschäftsführer: ' . $managingDirectors);
+    $pdf->keyValue('CleanTeam', CONTRACTOR['service_point_city'] . ', ' . $createdAt . ' | Im Namen von CleanTeam: ' . $contractorSignatureName);
+    if ($contractorSignatureDataUrl !== null) {
+        if (!$pdf->signatureImage($contractorSignatureDataUrl)) {
+            $pdf->paragraph('Die CleanTeam-Unterschrift konnte nicht eingebettet werden.', 9.5, 170.0);
+        }
+    } else {
+        $pdf->keyValue('CleanTeam-Unterschrift', 'Noch nicht in den Einstellungen hinterlegt.');
+    }
     $pdf->keyValue('Kunde', (string) $customer['city'] . ', ' . $signedAt . ' | Vertragsunterzeichnung durch: ' . $signatoryName);
     if ($isSigned) {
         $pdf->keyValue('Elektronische Signatur', 'Signaturdaten wurden elektronisch erfasst.');
@@ -1194,6 +1393,8 @@ function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool 
         $content = render_site_visit_pdf($context['siteVisit'], $context['offer'], $context['customer'], $context['contract']);
     } elseif ($audience === 'authorization') {
         $content = render_authorization_pdf($context['offer'], $context['customer'], $context['contract']);
+    } elseif ($audience === 'checklist') {
+        $content = render_cleaning_checklist_pdf($context['offer'], $context['customer'], $context['contract'], $context['siteVisit'] ?? null);
     } else {
         $content = render_contract_pdf($context['offer'], $context['customer'], $context['contract'], ['audience' => $audience]);
     }
@@ -1237,6 +1438,9 @@ function save_contract_pdfs(PDO $pdo, string $contractId, bool $force = true): v
     $context = contract_pdf_context($pdo, $contractId);
     if ($context !== null && ($context['siteVisit'] ?? null) !== null) {
         save_contract_pdf($pdo, $contractId, 'site_visit', $force);
+    }
+    if ($context !== null) {
+        save_contract_pdf($pdo, $contractId, 'checklist', $force);
     }
     if ($context !== null && contract_has_authorization_details($context['contract'])) {
         save_contract_pdf($pdo, $contractId, 'authorization', $force);

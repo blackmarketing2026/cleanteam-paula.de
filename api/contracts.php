@@ -3,8 +3,6 @@
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/contract_notify.php';
-require_once __DIR__ . '/../includes/contract_pdf.php';
 
 require_login();
 
@@ -113,53 +111,7 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-    $body = read_json_body();
-    $offerId = trim((string) ($body['offerId'] ?? ''));
-
-    if ($offerId === '') {
-        json_error('Kostenvoranschlags-ID fehlt.', 422);
-    }
-
-    $offerStmt = $pdo->prepare('SELECT id, customer_id FROM offers WHERE id = :id');
-    $offerStmt->execute(['id' => $offerId]);
-    $offer = $offerStmt->fetch();
-
-    if (!$offer) {
-        json_error('Kostenvoranschlag wurde nicht gefunden.', 404);
-    }
-
-    $existingStmt = $pdo->prepare('SELECT id FROM contracts WHERE offer_id = :offer_id');
-    $existingStmt->execute(['offer_id' => $offerId]);
-    $existing = $existingStmt->fetch();
-
-    if (!$existing) {
-        $year = gmdate('Y');
-        $count = (int) $pdo->query('SELECT COUNT(*) FROM contracts')->fetchColumn();
-        $number = sprintf('CT-%s-%03d', $year, $count + 1);
-
-        $id = generate_id('contract');
-        $stmt = $pdo->prepare(
-            'INSERT INTO contracts (id, offer_id, customer_id, number, status, current_step, created_at)
-             VALUES (:id, :offer_id, :customer_id, :number, :status, :current_step, UTC_TIMESTAMP())'
-        );
-        $stmt->execute([
-            'id' => $id,
-            'offer_id' => $offerId,
-            'customer_id' => $offer['customer_id'],
-            'number' => $number,
-            'status' => 'entwurf',
-            'current_step' => 'daten',
-        ]);
-        $contractId = $id;
-        save_contract_pdfs($pdo, $contractId, true);
-        notify_contract_created($pdo, $contractId);
-    } else {
-        $contractId = $existing['id'];
-    }
-
-    $stmt = $pdo->prepare(CONTRACT_SELECT . ' WHERE ct.id = :id');
-    $stmt->execute(['id' => $contractId]);
-    json_response(contract_row_to_json($stmt->fetch()), 201);
+    json_error('Verträge werden nur über den Kostenvoranschlags-Link erstellt.', 405);
 }
 
 if ($method === 'DELETE') {

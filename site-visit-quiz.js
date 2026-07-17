@@ -82,6 +82,10 @@ function svqSetPath(obj, path, value) {
   target[keys[keys.length - 1]] = value;
 }
 
+function svqGetPath(obj, path) {
+  return path.split(".").reduce((target, key) => (target == null ? undefined : target[key]), obj);
+}
+
 function svqNewDraft() {
   return {
     id: svqUid(),
@@ -105,6 +109,7 @@ function svqNewDraft() {
     editingRoomId: null,
     lastTouchedRoomId: null,
     roomObjectIndex: 0,
+    preferences: { lastInterval: "", lastCustomInterval: "" },
   };
 }
 
@@ -275,6 +280,48 @@ function svqGetOrCreateObjectEntry(room, objectId) {
   return room.objects[objectId];
 }
 
+function svqDraftPreferences(draft) {
+  if (!draft.preferences || typeof draft.preferences !== "object") {
+    draft.preferences = { lastInterval: "", lastCustomInterval: "" };
+  }
+  return draft.preferences;
+}
+
+function svqRememberInterval(draft, interval, customInterval = "") {
+  if (!interval) return;
+  const preferences = svqDraftPreferences(draft);
+  preferences.lastInterval = interval;
+  preferences.lastCustomInterval = interval === "custom" ? customInterval || "" : "";
+}
+
+function svqEntryPathFromField(field) {
+  return field.replace(/\.(present|shouldClean|interval|customInterval|quantity|trashBag|floorMaterial|floorMethod|note)$/, "");
+}
+
+function svqApplyCleaningDefaults(draft, field) {
+  const entry = svqGetPath(draft, svqEntryPathFromField(field));
+  if (!entry || entry.shouldClean !== true) return;
+  const def = SVQ_OBJECTS[entry.objectId] || { extra: [] };
+  const preferences = svqDraftPreferences(draft);
+  const room = draft.activeRoomDraft;
+
+  if (!entry.interval && preferences.lastInterval) {
+    entry.interval = preferences.lastInterval;
+    entry.customInterval = preferences.lastInterval === "custom" ? preferences.lastCustomInterval || "" : "";
+  } else if (!entry.interval) {
+    entry.interval = svqObjectDefaultInterval(room, entry.objectId);
+  }
+  if (entry.objectId === "floor" && !entry.floorMethod) {
+    entry.floorMethod = svqDefaultFloorMethod(room);
+  }
+  if (def.extra?.includes("quantity") && (entry.quantity === "" || entry.quantity == null || Number(entry.quantity) < 1)) {
+    entry.quantity = "1";
+  }
+  if (def.extra?.includes("trashBag") && entry.trashBag == null) {
+    entry.trashBag = true;
+  }
+}
+
 function svqRoomObjectIds(room) {
   const type = svqRoomType(room.type);
   if (!type) return [];
@@ -284,6 +331,101 @@ function svqRoomObjectIds(room) {
     if (!ids.includes(id) && !type.excludeUniversal?.includes(id)) ids.push(id);
   });
   return ids;
+}
+
+function svqRoomDefaultInterval(room) {
+  const defaults = typeof SVQ_ROOM_INTERVAL_DEFAULTS === "object" ? SVQ_ROOM_INTERVAL_DEFAULTS : {};
+  return defaults[room?.type] || "weekly";
+}
+
+function svqObjectDefaultInterval(room, objectId) {
+  const defaults = typeof SVQ_OBJECT_INTERVAL_DEFAULTS === "object" ? SVQ_OBJECT_INTERVAL_DEFAULTS : {};
+  return defaults[objectId] || svqRoomDefaultInterval(room);
+}
+
+function svqDefaultFloorMethod(room) {
+  if (["wc", "kitchen", "treatment_room", "changing_room"].includes(room?.type)) return "Gewischt";
+  if (["office", "waiting_room", "meeting_room"].includes(room?.type)) return "Gesaugt und gewischt";
+  return "Gewischt";
+}
+
+function svqApplyCleanDefaults(room, objectId) {
+  const entry = svqGetOrCreateObjectEntry(room, objectId);
+  const def = SVQ_OBJECTS[objectId] || { extra: [] };
+  entry.present = true;
+  entry.shouldClean = true;
+  if (!entry.interval) entry.interval = svqObjectDefaultInterval(room, objectId);
+  if (objectId === "floor" && !entry.floorMethod) entry.floorMethod = svqDefaultFloorMethod(room);
+  if (def.extra?.includes("quantity") && !entry.quantity) entry.quantity = "1";
+  if (def.extra?.includes("trashBag") && entry.trashBag == null) entry.trashBag = true;
+}
+
+function svqApplyNoClean(room, objectId) {
+  const entry = svqGetOrCreateObjectEntry(room, objectId);
+  entry.present = true;
+  entry.shouldClean = false;
+  entry.interval = null;
+  entry.customInterval = "";
+  if (objectId === "floor") {
+    entry.floorMaterial = "";
+    entry.floorMethod = "";
+  }
+}
+
+function svqApplyNotPresent(room, objectId) {
+  const entry = svqGetOrCreateObjectEntry(room, objectId);
+  entry.present = false;
+  entry.shouldClean = null;
+  entry.interval = null;
+  entry.customInterval = "";
+  entry.floorMaterial = "";
+  entry.floorMethod = "";
+  entry.quantity = "";
+  entry.trashBag = null;
+}
+
+function svqObjectAnswerState(room, objectId) {
+  const entry = svqGetOrCreateObjectEntry(room, objectId);
+  if (objectId === "floor") {
+    if (entry.shouldClean === false) return "done";
+    if (entry.shouldClean === true) {
+      const hasInterval = entry.interval && (entry.interval !== "custom" || String(entry.customInterval || "").trim());
+      return hasInterval && entry.floorMaterial && entry.floorMethod ? "done" : "partial";
+    }
+    return "empty";
+  }
+  if (entry.present === false) return "done";
+  if (entry.present === true && entry.shouldClean === false) return "done";
+  if (entry.present === true && entry.shouldClean === true) {
+    return entry.interval && (entry.interval !== "custom" || String(entry.customInterval || "").trim()) ? "done" : "partial";
+  }
+  return "empty";
+}
+
+function svqRoomProgress(room) {
+  const ids = svqRoomObjectIds(room);
+  const done = ids.filter((objectId) => svqObjectAnswerState(room, objectId) === "done").length;
+  const cleaning = ids.filter((objectId) => {
+    const entry = svqGetOrCreateObjectEntry(room, objectId);
+    return entry.present === true && entry.shouldClean === true;
+  }).length;
+  return { done, total: ids.length, cleaning };
+}
+
+function svqDraftCleaningCount(draft) {
+  return draft.rooms.reduce((sum, room) => {
+    const predefined = svqRoomObjectEntries(room).filter((entry) => entry.present && entry.shouldClean).length;
+    return sum + predefined;
+  }, 0);
+}
+
+function svqCloneRoomForDraft(draft, room) {
+  const clone = JSON.parse(JSON.stringify(room));
+  clone.id = svqUid();
+  clone.label = room.type === "custom" ? `${room.label || room.typeLabel} (Kopie)` : svqNextRoomLabel(draft, room.type);
+  clone.createdAt = svqNowIso();
+  clone.updatedAt = svqNowIso();
+  return clone;
 }
 
 /* ---------- Fortschritt ---------- */
@@ -322,6 +464,54 @@ function svqProgressLabel(draft) {
   if (draft.screen === "finish-confirm") return "Begehung abschließen";
   if (draft.screen === "finish-success") return "Abgeschlossen";
   return "Begehung";
+}
+
+function svqAdvanceRoomObject(draft) {
+  const ids = svqRoomObjectIds(draft.activeRoomDraft);
+  if (draft.roomObjectIndex < ids.length - 1) {
+    draft.roomObjectIndex += 1;
+  } else {
+    draft.screen = "custom-object-prompt";
+  }
+}
+
+function svqCurrentRoomObject(draft) {
+  if (draft.screen !== "room-object" || !draft.activeRoomDraft) return null;
+  const ids = svqRoomObjectIds(draft.activeRoomDraft);
+  const objectId = ids[draft.roomObjectIndex];
+  if (!objectId) return null;
+  const entry = svqGetOrCreateObjectEntry(draft.activeRoomDraft, objectId);
+  const def = SVQ_OBJECTS[objectId] || { label: objectId, extra: [] };
+  return { objectId, entry, def, isFloor: objectId === "floor" };
+}
+
+function svqRoomObjectValidationMessage(draft) {
+  const current = svqCurrentRoomObject(draft);
+  if (!current) return "";
+
+  const { entry, def, isFloor } = current;
+  const label = def.label || "Objekt";
+  if (isFloor) {
+    if (entry.shouldClean == null) return "Bitte entscheide, ob der Boden gereinigt werden soll.";
+    if (entry.shouldClean !== true) return "";
+    if (!entry.floorMaterial) return "Bitte waehle die Bodenart.";
+    if (!entry.floorMethod) return "Bitte waehle die Reinigungsmethode.";
+  } else {
+    if (entry.present == null) return `Bitte entscheide, ob "${label}" vorhanden ist.`;
+    if (entry.present !== true) return "";
+    if (entry.shouldClean == null) return `Bitte entscheide, ob "${label}" gereinigt werden soll.`;
+    if (entry.shouldClean !== true) return "";
+  }
+
+  if (!entry.interval) return "Bitte waehle das Reinigungsintervall.";
+  if (entry.interval === "custom" && !String(entry.customInterval || "").trim()) {
+    return "Bitte trage das individuelle Intervall ein.";
+  }
+  return "";
+}
+
+function svqShouldSkipAfterYesNo(draft, field, value) {
+  return draft.screen === "room-object" && ((field.endsWith(".present") && value === false) || (field.endsWith(".shouldClean") && value === false));
 }
 
 /* ---------- Navigation: Weiter / Zurück ---------- */
@@ -367,13 +557,13 @@ function svqGoNext() {
   }
 
   if (draft.screen === "room-object") {
+    const message = svqRoomObjectValidationMessage(draft);
+    if (message) {
+      svqShowValidation(message);
+      return;
+    }
     svqMutate((d) => {
-      const ids = svqRoomObjectIds(d.activeRoomDraft);
-      if (d.roomObjectIndex < ids.length - 1) {
-        d.roomObjectIndex += 1;
-      } else {
-        d.screen = "custom-object-prompt";
-      }
+      svqAdvanceRoomObject(d);
     });
     return;
   }
@@ -535,6 +725,7 @@ function svqRoomCleaningItems(room) {
       customFrequency,
       bagMode: entry.trashBag === false ? "Ohne Mülltüte" : "Mit Mülltüte",
       method: entry.objectId === "floor" ? entry.floorMethod || "" : "",
+      quantity: def.extra?.includes("quantity") ? Number(entry.quantity) || 0 : 0,
     });
   });
   (room.customObjects || []).forEach((obj) => {
@@ -544,9 +735,21 @@ function svqRoomCleaningItems(room) {
       key: "surface",
       frequency: "Individuell",
       customFrequency: [obj.name, intervalLabel].filter(Boolean).join(" – "),
+      quantity: Number(obj.quantity) || 0,
     });
   });
   return items;
+}
+
+function svqRoomNotes(room) {
+  const notes = [];
+  svqRoomObjectEntries(room).forEach((entry) => {
+    const note = String(entry.note || "").trim();
+    if (note) {
+      notes.push(`${entry.name}: ${note}`);
+    }
+  });
+  return notes.join("\n");
 }
 
 function svqBuildSiteVisitPayload(draft) {
@@ -561,7 +764,7 @@ function svqBuildSiteVisitPayload(draft) {
         squareMeters: 0,
         cleaningItems,
         floorCondition: room.objects?.floor?.floorMaterial || "",
-        notes: "",
+        notes: svqRoomNotes(room),
       };
     })
     .filter(Boolean);
@@ -785,11 +988,41 @@ function svqRenderList(status) {
   `;
 }
 
+function svqRenderQuizContext(draft) {
+  const activeRoom = draft.activeRoomDraft ? (draft.activeRoomDraft.label || draft.activeRoomDraft.typeLabel) : "";
+  const area = Number(draft.areaSize.value) > 0 ? `${Number(draft.areaSize.value)} m²` : "Fläche offen";
+  const cleaned = svqDraftCleaningCount(draft);
+  const items = [
+    { icon: "building-2", label: draft.company.name || "Kunde offen" },
+    { icon: "ruler", label: area },
+    { icon: "layout-list", label: `${draft.rooms.length} Raum${draft.rooms.length === 1 ? "" : "e"}` },
+    { icon: "sparkles", label: `${cleaned} Leistung${cleaned === 1 ? "" : "en"}` },
+  ];
+  if (activeRoom) {
+    items.push({ icon: "map-pin", label: activeRoom });
+  }
+
+  return `
+    <div class="svq-context-strip" aria-label="Aktueller Begehungsstand">
+      ${items
+        .map(
+          (item) => `
+        <span class="svq-context-item">
+          <i data-lucide="${item.icon}" aria-hidden="true"></i>
+          <span>${svqEsc(item.label)}</span>
+        </span>
+      `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function svqRenderQuizShell(draft) {
   const percent = svqProgressPercent(draft);
   const showNav = !["finish-success"].includes(draft.screen);
   const showBack = !["finish-confirm", "finish-success"].includes(draft.screen);
-  const showNext = ["intro", "room-basic-info", "room-object", "room-summary"].includes(draft.screen);
+  const showNext = ["intro", "room-basic-info", "room-object"].includes(draft.screen);
 
   return `
     <div class="svq-quiz">
@@ -797,6 +1030,8 @@ function svqRenderQuizShell(draft) {
         <div class="svq-progress-fill" style="width:${percent}%"></div>
       </div>
       <div class="svq-progress-label">${svqEsc(svqProgressLabel(draft))} · ${percent}%</div>
+
+      ${svqRenderQuizContext(draft)}
 
       <div class="svq-screen">
         ${svqRenderScreen(draft)}
@@ -928,7 +1163,7 @@ function svqRenderIntroStep(draft) {
       <h3>Wie groß ist die zu reinigende Fläche?</h3>
       <label class="svq-field">
         Quadratmeter
-        <input type="number" min="0" data-svq-input="areaSize.value" value="${svqEsc(draft.areaSize.value)}" placeholder="z. B. 450" />
+        <input type="number" min="0" inputmode="numeric" data-svq-input="areaSize.value" value="${svqEsc(draft.areaSize.value)}" placeholder="z. B. 450" />
       </label>
       <div class="svq-choice-row">
         ${modes
@@ -946,7 +1181,23 @@ function svqRenderIntroStep(draft) {
 }
 
 function svqRenderRoomTypeSelect(draft) {
+  const lastRoom = draft.rooms.find((room) => room.id === draft.lastTouchedRoomId) || draft.rooms[draft.rooms.length - 1];
   return `
+    ${
+      lastRoom
+        ? `
+      <div class="svq-smart-strip">
+        <button class="svq-smart-action" type="button" data-svq-action="duplicate-last-room">
+          <i data-lucide="copy" aria-hidden="true"></i>
+          <span>
+            <strong>Letzten Raum kopieren</strong>
+            <small>${svqEsc(lastRoom.label || lastRoom.typeLabel)} mit allen Leistungen übernehmen</small>
+          </span>
+        </button>
+      </div>
+    `
+        : ""
+    }
     ${
       draft.rooms.length
         ? `
@@ -1020,18 +1271,39 @@ function svqRenderPillChoice(question, field, options, selectedValue, action) {
   `;
 }
 
+function svqRenderIntervalButton(interval, field, entry, action) {
+  return `
+    <button class="svq-choice-pill${entry.interval === interval.id ? " active" : ""}" type="button"
+      data-svq-action="${action}" data-svq-field="${field}" data-svq-interval="${interval.id}">${interval.label}</button>
+  `;
+}
+
 function svqRenderIntervalPicker(field, entry, action = "select-interval") {
+  const quickIds = Array.isArray(window.SVQ_QUICK_INTERVALS) ? window.SVQ_QUICK_INTERVALS : (typeof SVQ_QUICK_INTERVALS !== "undefined" ? SVQ_QUICK_INTERVALS : []);
+  const quickSet = new Set(quickIds);
+  const quickIntervals = SVQ_INTERVALS.filter((interval) => quickSet.has(interval.id));
+  const otherIntervals = SVQ_INTERVALS.filter((interval) => !quickSet.has(interval.id));
+  const selectedIsOther = otherIntervals.some((interval) => interval.id === entry.interval);
+  const primaryIntervals = quickIntervals.length ? quickIntervals : SVQ_INTERVALS;
+
   return `
     <div class="svq-interval-block">
       <p class="svq-question">In welchem Intervall soll gereinigt werden?</p>
       <div class="svq-interval-grid">
-        ${SVQ_INTERVALS.map(
-          (interval) => `
-          <button class="svq-choice-pill${entry.interval === interval.id ? " active" : ""}" type="button"
-            data-svq-action="${action}" data-svq-field="${field}" data-svq-interval="${interval.id}">${interval.label}</button>
-        `
-        ).join("")}
+        ${primaryIntervals.map((interval) => svqRenderIntervalButton(interval, field, entry, action)).join("")}
       </div>
+      ${
+        quickIntervals.length && otherIntervals.length
+          ? `
+        <details class="svq-interval-more"${selectedIsOther ? " open" : ""}>
+          <summary>Weitere Intervalle</summary>
+          <div class="svq-interval-grid">
+            ${otherIntervals.map((interval) => svqRenderIntervalButton(interval, field, entry, action)).join("")}
+          </div>
+        </details>
+      `
+          : ""
+      }
       ${
         entry.interval === "custom" && action === "select-interval"
           ? `<label class="svq-field">Individuelles Intervall<input type="text" data-svq-input="${field}.customInterval" value="${svqEsc(entry.customInterval)}" placeholder="z. B. jeden Montag und Donnerstag" /></label>`
@@ -1045,7 +1317,7 @@ function svqRenderObjectExtraFields(field, entry, extra) {
   if (!extra.length) return "";
   return `
     <div class="svq-field-grid">
-      ${extra.includes("quantity") ? `<label class="svq-field">Anzahl<input type="number" min="0" data-svq-input="${field}.quantity" value="${svqEsc(entry.quantity)}" /></label>` : ""}
+      ${extra.includes("quantity") ? `<label class="svq-field">Anzahl<input type="number" min="0" inputmode="numeric" data-svq-input="${field}.quantity" value="${svqEsc(entry.quantity)}" /></label>` : ""}
       ${
         extra.includes("trashBag")
           ? `
@@ -1063,6 +1335,53 @@ function svqRenderObjectExtraFields(field, entry, extra) {
   `;
 }
 
+function svqRenderObjectStepper(room, ids, activeIndex) {
+  return `
+    <div class="svq-object-stepper" aria-label="Objekte im aktuellen Raum">
+      ${ids
+        .map((objectId, index) => {
+          const state = svqObjectAnswerState(room, objectId);
+          return `
+        <button class="svq-object-step ${state}${index === activeIndex ? " active" : ""}" type="button" data-svq-action="jump-object" data-svq-index="${index}">
+          <span class="svq-object-step-number">${index + 1}</span>
+          <span class="svq-object-step-label">${svqEsc(svqObjectLabel(objectId))}</span>
+        </button>
+      `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function svqRenderObjectQuickActions(entry, objectId, isFloor) {
+  const cleanActive = entry.present === true && entry.shouldClean === true;
+  const noCleanActive = entry.present === true && entry.shouldClean === false;
+  const absentActive = entry.present === false;
+
+  return `
+    <div class="svq-quick-actions" aria-label="Schnellentscheidung">
+      <button class="svq-quick-action${cleanActive ? " active-clean" : ""}" type="button" data-svq-action="object-quick" data-svq-object="${svqEsc(objectId)}" data-svq-mode="clean">
+        <i data-lucide="sparkles" aria-hidden="true"></i>
+        <span>Reinigen</span>
+      </button>
+      <button class="svq-quick-action${noCleanActive ? " active-muted" : ""}" type="button" data-svq-action="object-quick" data-svq-object="${svqEsc(objectId)}" data-svq-mode="no-clean">
+        <i data-lucide="minus-circle" aria-hidden="true"></i>
+        <span>Ohne Reinigung</span>
+      </button>
+      ${
+        isFloor
+          ? ""
+          : `
+      <button class="svq-quick-action${absentActive ? " active-muted" : ""}" type="button" data-svq-action="object-quick" data-svq-object="${svqEsc(objectId)}" data-svq-mode="absent">
+        <i data-lucide="eye-off" aria-hidden="true"></i>
+        <span>Nicht vorhanden</span>
+      </button>
+      `
+      }
+    </div>
+  `;
+}
+
 function svqRenderRoomObject(draft) {
   const room = draft.activeRoomDraft;
   const ids = svqRoomObjectIds(room);
@@ -1071,10 +1390,18 @@ function svqRenderRoomObject(draft) {
   const def = SVQ_OBJECTS[objectId] || { label: objectId, extra: [] };
   const field = `activeRoomDraft.objects.${objectId}`;
   const isFloor = objectId === "floor";
+  const progress = svqRoomProgress(room);
 
   return `
-    <div class="svq-counter">${draft.roomObjectIndex + 1} / ${ids.length}</div>
-    <h3>${svqEsc(def.label)}</h3>
+    <div class="svq-object-header">
+      <div>
+        <div class="svq-counter">${draft.roomObjectIndex + 1} / ${ids.length}</div>
+        <h3>${svqEsc(def.label)}</h3>
+      </div>
+      <span class="svq-room-progress">${progress.done} / ${progress.total} beantwortet</span>
+    </div>
+    ${svqRenderObjectStepper(room, ids, draft.roomObjectIndex)}
+    ${svqRenderObjectQuickActions(entry, objectId, isFloor)}
     ${
       isFloor
         ? svqRenderYesNo("Soll der Boden gereinigt werden?", `${field}.shouldClean`, entry.shouldClean)
@@ -1147,7 +1474,7 @@ function svqRenderCustomObjectForm() {
     <h3>Individuelles Objekt</h3>
     <div class="svq-field-grid">
       <label class="svq-field span-2">Bezeichnung des Objekts<input type="text" id="svq-custom-name" placeholder="z. B. Kaffeeautomat" /></label>
-      <label class="svq-field">Anzahl<input type="number" min="0" id="svq-custom-quantity" /></label>
+      <label class="svq-field">Anzahl<input type="number" min="0" inputmode="numeric" id="svq-custom-quantity" /></label>
     </div>
     ${svqRenderYesNo("Soll gereinigt werden?", "svq-custom-clean", formState.shouldClean, "custom-yesno")}
     <div id="svq-custom-interval-slot">${formState.shouldClean === true ? svqRenderIntervalPicker("svq-custom", formState, "custom-interval") : ""}</div>
@@ -1165,12 +1492,24 @@ function svqRenderRoomSummary(draft) {
   return `
     <h3>Raum erfasst: ${svqEsc(room.label || room.typeLabel)}</h3>
     ${svqRenderRoomCard(room, { compact: true })}
+    <div class="svq-summary-actions">
+      <button class="secondary-button" type="button" data-svq-action="summary-add-room">
+        <i data-lucide="plus" aria-hidden="true"></i>Raum speichern und weiter
+      </button>
+      <button class="secondary-button" type="button" data-svq-action="summary-overview">
+        <i data-lucide="list-checks" aria-hidden="true"></i>Zur Gesamtübersicht
+      </button>
+      <button class="primary-button" type="button" data-svq-action="summary-finish">
+        <i data-lucide="flag" aria-hidden="true"></i>Speichern und abschließen
+      </button>
+    </div>
   `;
 }
 
 function svqRenderRoomCard(room, { compact = false, index = null } = {}) {
   const cleaned = svqRoomObjectEntries(room).filter((entry) => entry.present && entry.shouldClean);
   const notCleaned = svqRoomObjectEntries(room).filter((entry) => entry.present && !entry.shouldClean);
+  const progress = svqRoomProgress(room);
 
   return `
     <article class="svq-room-card">
@@ -1195,6 +1534,7 @@ function svqRenderRoomCard(room, { compact = false, index = null } = {}) {
       </header>
       <div class="svq-room-card-body">
         <p><strong>${cleaned.length}</strong> zu reinigende Objekte, ${notCleaned.length} vorhanden ohne Reinigung.</p>
+        ${progress.total ? `<span class="svq-room-progress">${progress.done} / ${progress.total} Fragen beantwortet</span>` : ""}
         ${
           cleaned.length
             ? `<ul class="svq-object-list">${cleaned
@@ -1410,6 +1750,50 @@ async function svqHandleClick(event) {
     return;
   }
 
+  if (action === "duplicate-last-room") {
+    svqMutate((d) => {
+      const source = d.rooms.find((room) => room.id === d.lastTouchedRoomId) || d.rooms[d.rooms.length - 1];
+      if (!source) return;
+      const clone = svqCloneRoomForDraft(d, source);
+      d.rooms.push(clone);
+      d.lastTouchedRoomId = clone.id;
+      d.screen = "room-type-select";
+    });
+    return;
+  }
+
+  if (action === "jump-object") {
+    const nextIndex = Number(button.dataset.svqIndex);
+    svqMutate((d) => {
+      const ids = svqRoomObjectIds(d.activeRoomDraft);
+      if (Number.isInteger(nextIndex) && nextIndex >= 0 && nextIndex < ids.length) {
+        d.roomObjectIndex = nextIndex;
+      }
+    });
+    return;
+  }
+
+  if (action === "object-quick") {
+    const objectId = button.dataset.svqObject;
+    const mode = button.dataset.svqMode;
+    svqMutate((d) => {
+      if (!d.activeRoomDraft || !objectId) return;
+      if (mode === "clean") {
+        svqApplyCleanDefaults(d.activeRoomDraft, objectId);
+        const entry = svqGetOrCreateObjectEntry(d.activeRoomDraft, objectId);
+        svqRememberInterval(d, entry.interval, entry.customInterval || "");
+      } else if (mode === "no-clean") {
+        svqApplyNoClean(d.activeRoomDraft, objectId);
+      } else if (mode === "absent") {
+        svqApplyNotPresent(d.activeRoomDraft, objectId);
+      }
+      if (!svqRoomObjectValidationMessage(d)) {
+        svqAdvanceRoomObject(d);
+      }
+    });
+    return;
+  }
+
   if (action === "yesno") {
     const field = button.dataset.svqField;
     const value = button.dataset.svqValue === "true";
@@ -1423,6 +1807,12 @@ async function svqHandleClick(event) {
         svqSetPath(d, field.replace(".shouldClean", ".floorMaterial"), "");
         svqSetPath(d, field.replace(".shouldClean", ".floorMethod"), "");
       }
+      if (field.endsWith(".shouldClean") && value === true) {
+        svqApplyCleaningDefaults(d, field);
+      }
+      if (svqShouldSkipAfterYesNo(d, field, value)) {
+        svqAdvanceRoomObject(d);
+      }
     });
     return;
   }
@@ -1430,7 +1820,16 @@ async function svqHandleClick(event) {
   if (action === "select-interval") {
     const field = button.dataset.svqField;
     svqMutate((d) => {
-      svqSetPath(d, `${field}.interval`, button.dataset.svqInterval);
+      const interval = button.dataset.svqInterval;
+      const entry = svqGetPath(d, field);
+      svqSetPath(d, `${field}.interval`, interval);
+      if (interval === "custom" && entry && !entry.customInterval) {
+        entry.customInterval = svqDraftPreferences(d).lastCustomInterval || "";
+      }
+      svqRememberInterval(d, interval, entry?.customInterval || "");
+      if (!svqRoomObjectValidationMessage(d)) {
+        svqAdvanceRoomObject(d);
+      }
     });
     return;
   }
@@ -1439,6 +1838,9 @@ async function svqHandleClick(event) {
     const field = button.dataset.svqField;
     svqMutate((d) => {
       svqSetPath(d, field, button.dataset.svqChoice);
+      if (!svqRoomObjectValidationMessage(d)) {
+        svqAdvanceRoomObject(d);
+      }
     });
     return;
   }
@@ -1480,7 +1882,18 @@ async function svqHandleClick(event) {
     const shouldClean = svqCustomObjectFormState.shouldClean;
     const interval = svqCustomObjectFormState.interval;
     const customInterval = svqCustomObjectFormState.customInterval;
+    if (shouldClean === true && !interval) {
+      svqShowValidation("Bitte waehle das Reinigungsintervall.");
+      return;
+    }
+    if (shouldClean === true && interval === "custom" && !String(customInterval || "").trim()) {
+      svqShowValidation("Bitte trage das individuelle Intervall ein.");
+      return;
+    }
     svqMutate((d) => {
+      if (shouldClean === true) {
+        svqRememberInterval(d, interval, customInterval);
+      }
       d.activeRoomDraft.customObjects.push({
         id: svqUid(),
         name,
@@ -1495,6 +1908,20 @@ async function svqHandleClick(event) {
     svqCustomObjectFormState.shouldClean = null;
     svqCustomObjectFormState.interval = null;
     svqCustomObjectFormState.customInterval = "";
+    return;
+  }
+
+  if (action === "summary-add-room" || action === "summary-overview" || action === "summary-finish") {
+    svqMutate((d) => {
+      svqCommitActiveRoom(d);
+      if (action === "summary-add-room") {
+        d.screen = "room-type-select";
+      } else if (action === "summary-overview") {
+        d.screen = "rooms-overview";
+      } else {
+        d.screen = "finish-confirm";
+      }
+    });
     return;
   }
 
@@ -1527,12 +1954,9 @@ async function svqHandleClick(event) {
     svqMutate((d) => {
       const room = d.rooms.find((r) => r.id === id);
       if (!room) return;
-      const clone = JSON.parse(JSON.stringify(room));
-      clone.id = svqUid();
-      clone.label = `${room.label || room.typeLabel} (Kopie)`;
-      clone.createdAt = svqNowIso();
-      clone.updatedAt = svqNowIso();
+      const clone = svqCloneRoomForDraft(d, room);
       d.rooms.push(clone);
+      d.lastTouchedRoomId = clone.id;
     });
     return;
   }
@@ -1684,6 +2108,12 @@ function svqHandleInput(event) {
   const draft = svqCurrentDraft();
   if (!draft) return;
   svqSetPath(draft, path, target.value);
+  if (path.endsWith(".customInterval")) {
+    const entry = svqGetPath(draft, path.replace(".customInterval", ""));
+    if (entry?.interval === "custom") {
+      svqRememberInterval(draft, "custom", target.value);
+    }
+  }
   draft.updatedAt = svqNowIso();
   SiteVisitQuizStore.save(draft);
 }

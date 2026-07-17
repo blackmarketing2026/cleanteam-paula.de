@@ -22,6 +22,32 @@ const SVQ_INTERVALS = [
   { id: "custom", label: "individuell" },
 ];
 
+const SVQ_ROOM_INTERVAL_DEFAULTS = {
+  office: "weekly",
+  wc: "daily",
+  entrance: "daily",
+  hallway: "daily",
+  staircase: "weekly",
+  treatment_room: "daily",
+  waiting_room: "daily",
+  kitchen: "daily",
+  break_room: "daily",
+  storage_room: "monthly",
+  changing_room: "daily",
+  meeting_room: "weekly",
+  sales_room: "daily",
+  custom: "weekly",
+};
+
+const SVQ_OBJECT_INTERVAL_DEFAULTS = {
+  windowsills: "weekly",
+  doors: "monthly",
+  handrail: "weekly",
+  cabinets: "monthly",
+};
+
+const SVQ_QUICK_INTERVALS = ["daily", "twice_weekly", "weekly", "monthly", "as_needed"];
+
 /* Für den Boden gibt es statt der "vorhanden"-Frage direkt Bodenart und Reinigungsmethode. */
 const SVQ_FLOOR_MATERIALS = ["Laminat", "Parkett", "Vinyl", "Fliesen", "Teppich"];
 const SVQ_FLOOR_METHODS = ["Gesaugt", "Gewischt", "Gesaugt und gewischt"];
@@ -51,7 +77,7 @@ const SVQ_OBJECTS = {
    letzte Standardfragen ergänzt (siehe svqRoomObjectIds in site-visit-quiz.js). */
 const SVQ_ROOM_TYPES = [
   { id: "office", label: "Büro", icon: "briefcase", legacyType: "Büro", objects: ["floor", "desks", "windowsills"], excludeUniversal: ["tables"] },
-  { id: "wc", label: "WC und Sanitärbereich", icon: "shower-head", legacyType: "Sanitär", objects: ["floor", "toilets", "sinks", "mirrors"], excludeUniversal: ["chairs"] },
+  { id: "wc", label: "WC und Sanitärbereich", icon: "shower-head", legacyType: "Sanitär", objects: ["floor", "toilets", "sinks", "mirrors"], excludeUniversal: ["chairs", "tables"] },
   { id: "entrance", label: "Eingangsbereich", icon: "door-open", legacyType: "Empfang", objects: ["floor", "counter", "windowsills"] },
   { id: "hallway", label: "Flur", icon: "move-horizontal", legacyType: "Flur", objects: ["floor", "windowsills"] },
   { id: "staircase", label: "Treppenhaus", icon: "footprints", legacyType: "Treppenhaus", objects: ["floor", "handrail"] },

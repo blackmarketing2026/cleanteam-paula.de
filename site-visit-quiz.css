@@ -1,8 +1,12 @@
 /* Styles für das Begehungs-Quiz (site-visit-quiz.js). Nutzt die Design-Tokens aus styles.css. */
 
 .svq-panel {
-  max-width: 720px;
+  max-width: 860px;
   margin: 0 auto;
+}
+
+.svq-panel button {
+  touch-action: manipulation;
 }
 
 .svq-home-menu {
@@ -57,6 +61,54 @@
   font-size: 13px;
 }
 
+.svq-smart-strip {
+  display: grid;
+  gap: 10px;
+}
+
+.svq-smart-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid rgba(15, 139, 111, 0.22);
+  border-radius: var(--radius);
+  background: rgba(15, 139, 111, 0.08);
+  color: var(--blue-950);
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.svq-smart-action:hover {
+  border-color: rgba(15, 139, 111, 0.48);
+  background: rgba(15, 139, 111, 0.12);
+}
+
+.svq-smart-action svg {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  color: var(--success);
+}
+
+.svq-smart-action span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.svq-smart-action strong {
+  font-size: 14px;
+}
+
+.svq-smart-action small {
+  color: #38506b;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 .svq-list-header {
   display: flex;
   align-items: center;
@@ -85,6 +137,12 @@
   border-radius: var(--radius);
   background: var(--surface-soft);
   padding: 12px 14px;
+}
+
+.svq-list-item > .primary-button,
+.svq-list-item > .secondary-button,
+.svq-list-item > .ghost-button {
+  flex: 0 0 auto;
 }
 
 .svq-list-item-main {
@@ -127,7 +185,44 @@
   font-weight: 800;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
+}
+
+.svq-context-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 4px;
+  scrollbar-width: thin;
+}
+
+.svq-context-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-height: 34px;
+  max-width: min(260px, 74vw);
+  border: 1px solid rgba(8, 50, 95, 0.1);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: #38506b;
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.svq-context-item svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: var(--blue-800);
+}
+
+.svq-context-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .svq-screen {
@@ -152,6 +247,125 @@
   padding: 4px 10px;
 }
 
+.svq-object-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.svq-object-header > div {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.svq-object-stepper {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.svq-object-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  max-width: 180px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: #38506b;
+  padding: 6px 12px 6px 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.svq-object-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--blue-100);
+  color: var(--blue-900);
+}
+
+.svq-object-step-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.svq-object-step.done {
+  border-color: rgba(15, 139, 111, 0.28);
+  background: rgba(15, 139, 111, 0.08);
+  color: var(--success);
+}
+
+.svq-object-step.partial {
+  border-color: rgba(181, 129, 43, 0.34);
+  background: rgba(181, 129, 43, 0.1);
+  color: #8a5d12;
+}
+
+.svq-object-step.active {
+  border-color: var(--blue-800);
+  box-shadow: 0 0 0 3px rgba(19, 121, 216, 0.12);
+  color: var(--blue-900);
+}
+
+.svq-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.svq-quick-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--blue-900);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.svq-quick-action svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.svq-quick-action:hover {
+  border-color: var(--blue-600);
+  background: var(--blue-050);
+}
+
+.svq-quick-action.active-clean {
+  border-color: rgba(15, 139, 111, 0.42);
+  background: rgba(15, 139, 111, 0.12);
+  color: var(--success);
+}
+
+.svq-quick-action.active-muted {
+  border-color: rgba(56, 80, 107, 0.24);
+  background: rgba(56, 80, 107, 0.08);
+  color: #38506b;
+}
+
 .svq-field {
   display: grid;
   gap: 6px;
@@ -167,7 +381,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 10px 12px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--ink);
   background: #fff;
@@ -202,6 +416,7 @@
 }
 
 .svq-choice-pill {
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #fff;
@@ -224,7 +439,7 @@
 
 .svq-room-type-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 
@@ -243,6 +458,16 @@
   font-weight: 800;
   font-size: 13px;
   color: var(--blue-900);
+}
+
+.svq-room-type-card span,
+.svq-choice-pill,
+.svq-yesno-button,
+.svq-menu-item,
+.svq-quick-action {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .svq-room-type-card svg {
@@ -315,6 +540,23 @@
   gap: 8px;
 }
 
+.svq-interval-more {
+  display: grid;
+  gap: 10px;
+}
+
+.svq-interval-more summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--blue-900);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.svq-interval-more[open] summary {
+  margin-bottom: 8px;
+}
+
 .svq-mini-list {
   display: grid;
   gap: 8px;
@@ -343,6 +585,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
   min-height: 52px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -393,8 +636,13 @@
   gap: 10px;
 }
 
+.svq-room-card header > div:first-child {
+  min-width: 0;
+}
+
 .svq-room-card-actions {
   display: flex;
+  flex: 0 0 auto;
   gap: 6px;
 }
 
@@ -405,8 +653,33 @@
   color: #38506b;
 }
 
+.svq-room-progress {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 9px;
+}
+
 .svq-object-list li {
   margin-bottom: 2px;
+}
+
+.svq-summary-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.svq-summary-actions .primary-button,
+.svq-summary-actions .secondary-button {
+  min-height: 48px;
+  white-space: normal;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .svq-confirm-box,
@@ -450,11 +723,113 @@
   gap: 10px;
 }
 
+.svq-nav-primary .primary-button,
+.svq-nav-primary .secondary-button {
+  min-width: 132px;
+}
+
 .svq-nav-secondary {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+@media (max-width: 1024px) {
+  .svq-nav {
+    position: sticky;
+    bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 8px);
+    z-index: 4;
+    margin-inline: -8px;
+    padding: 12px 8px;
+    border: 1px solid rgba(8, 50, 95, 0.12);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 -10px 28px rgba(7, 40, 78, 0.12);
+  }
+}
+
+@media (max-width: 760px) {
+  .svq-home-card,
+  .svq-list-item {
+    align-items: stretch;
+  }
+
+  .svq-list-header,
+  .svq-list-item {
+    flex-direction: column;
+  }
+
+  .svq-list-header .ghost-button,
+  .svq-list-item > .primary-button,
+  .svq-list-item > .secondary-button,
+  .svq-list-item > .ghost-button {
+    width: 100%;
+  }
+
+  .svq-room-type-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .svq-room-type-card {
+    min-height: 96px;
+    padding: 12px 8px;
+    font-size: 12.5px;
+  }
+
+  .svq-interval-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .svq-choice-pill {
+    justify-content: center;
+    min-width: 0;
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .svq-object-header {
+    display: grid;
+  }
+
+  .svq-object-header .svq-room-progress {
+    justify-self: start;
+  }
+
+  .svq-summary-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .svq-room-card header {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .svq-room-card-actions {
+    justify-content: flex-start;
+  }
+
+  .svq-nav-primary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .svq-nav-primary > span {
+    display: none;
+  }
+
+  .svq-nav-primary > .secondary-button:only-child {
+    grid-column: 1 / -1;
+  }
+
+  .svq-nav-primary .primary-button,
+  .svq-nav-primary .secondary-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -477,5 +852,13 @@
   .svq-nav-secondary .ghost-button {
     width: 100%;
     justify-content: center;
+  }
+}
+
+@media (max-width: 380px) {
+  .svq-room-type-grid,
+  .svq-interval-grid,
+  .svq-quick-actions {
+    grid-template-columns: 1fr;
   }
 }

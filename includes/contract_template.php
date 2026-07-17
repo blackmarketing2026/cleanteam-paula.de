@@ -101,6 +101,11 @@ function contract_signatory_display(array $customer): string
     return trim($salutation . ' ' . $lastName);
 }
 
+function contract_contractor_signature_name(): string
+{
+    return (string) (CONTRACTOR['managing_directors'][0] ?? 'Thomas Mündlein');
+}
+
 function contract_format_date(?string $isoOrMysqlDate): string
 {
     if ($isoOrMysqlDate === null || $isoOrMysqlDate === '') {
@@ -215,6 +220,10 @@ function contract_template_cleaning_item_text(array $item): string
     }
     if ($key === 'trash' && trim((string) ($item['bagMode'] ?? '')) !== '') {
         $details[] = trim((string) $item['bagMode']);
+    }
+    $quantity = max(0, (int) ($item['quantity'] ?? 0));
+    if ($quantity > 0) {
+        $details[] = 'Anzahl: ' . $quantity;
     }
 
     return contract_template_cleaning_task_label($key) . ': ' . implode(', ', array_filter($details));
@@ -366,10 +375,24 @@ function ensure_contract_template_settings_table(PDO $pdo): void
         'CREATE TABLE IF NOT EXISTS contract_template_settings (
             id TINYINT UNSIGNED NOT NULL,
             template_html LONGTEXT NOT NULL,
+            contractor_signature_data LONGTEXT NULL,
+            contractor_signature_updated_at DATETIME NULL,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
     );
+
+    $columns = [
+        'contractor_signature_data' => 'ALTER TABLE contract_template_settings ADD COLUMN contractor_signature_data LONGTEXT NULL AFTER template_html',
+        'contractor_signature_updated_at' => 'ALTER TABLE contract_template_settings ADD COLUMN contractor_signature_updated_at DATETIME NULL AFTER contractor_signature_data',
+    ];
+
+    foreach ($columns as $column => $sql) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM contract_template_settings LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($sql);
+        }
+    }
 }
 
 // Startwert des Mustervertrags: der bisherige, fest verdrahtete Vertragstext (§ 1 - § 9),
@@ -482,6 +505,43 @@ function save_contract_template_html(PDO $pdo, string $html): void
          ON DUPLICATE KEY UPDATE template_html = :html2, updated_at = UTC_TIMESTAMP()'
     );
     $stmt->execute(['html' => $html, 'html2' => $html]);
+}
+
+function get_contract_template_contractor_signature_data(PDO $pdo): ?string
+{
+    ensure_contract_template_settings_table($pdo);
+    $stmt = $pdo->query('SELECT contractor_signature_data FROM contract_template_settings WHERE id = 1');
+    $row = $stmt->fetch();
+    $signature = $row ? trim((string) ($row['contractor_signature_data'] ?? '')) : '';
+
+    return $signature !== '' ? $signature : null;
+}
+
+function save_contract_template_contractor_signature_data(PDO $pdo, ?string $signatureDataUrl): void
+{
+    ensure_contract_template_settings_table($pdo);
+    $templateHtml = get_contract_template_html($pdo);
+
+    if ($signatureDataUrl === null) {
+        $stmt = $pdo->prepare(
+            'INSERT INTO contract_template_settings (id, template_html, contractor_signature_data, contractor_signature_updated_at, updated_at)
+             VALUES (1, :html, NULL, NULL, UTC_TIMESTAMP())
+             ON DUPLICATE KEY UPDATE contractor_signature_data = NULL, contractor_signature_updated_at = NULL, updated_at = UTC_TIMESTAMP()'
+        );
+        $stmt->execute(['html' => $templateHtml]);
+        return;
+    }
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO contract_template_settings (id, template_html, contractor_signature_data, contractor_signature_updated_at, updated_at)
+         VALUES (1, :html, :signature, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+         ON DUPLICATE KEY UPDATE contractor_signature_data = :signature2, contractor_signature_updated_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP()'
+    );
+    $stmt->execute([
+        'html' => $templateHtml,
+        'signature' => $signatureDataUrl,
+        'signature2' => $signatureDataUrl,
+    ]);
 }
 
 // Fuer die Platzhalter-Palette in den Einstellungen: Gruppe, Token, Beschreibung.
@@ -636,6 +696,11 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $signatureImage = $isSigned && !empty($contract['signature_data'])
         ? '<img src="' . h($contract['signature_data']) . '" alt="Unterschrift" style="max-height:70px;">'
         : '<span class="sign-placeholder">noch nicht unterschrieben</span>';
+    $contractorSignatureName = h(contract_contractor_signature_name());
+    $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
+    $contractorSignatureImage = $contractorSignatureDataUrl !== null
+        ? '<img src="' . h($contractorSignatureDataUrl) . '" alt="Unterschrift Thomas Mündlein" style="max-height:70px;">'
+        : '<span class="sign-placeholder">CleanTeam-Unterschrift noch nicht hinterlegt</span>';
 
     $managingDirectorsHtml = implode('<br>', array_map('h', CONTRACTOR['managing_directors']));
     $contractorLegalName = h(CONTRACTOR['legal_name']);
@@ -710,7 +775,8 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 <div class="sign-block">
   <div class="sign-col">
     <div>{$contractorServicePointCity}, {$createdAt}</div>
-    <div style="margin-top:12px;">Geschäftsführer:<br>{$managingDirectorsHtml}</div>
+    <div style="margin-top:12px;">Im Namen von CleanTeam:<br>{$contractorSignatureName}</div>
+    {$contractorSignatureImage}
   </div>
   <div class="sign-col">
     <div>{$customerCity}, {$signedAt}</div>

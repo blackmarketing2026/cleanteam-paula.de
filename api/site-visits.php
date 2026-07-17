@@ -123,6 +123,7 @@ function normalize_cleaning_item(array $item): ?array
         'customFrequency' => $frequency === 'Individuell' ? trim((string) ($item['customFrequency'] ?? '')) : '',
         'method' => $key === 'floor' && $method !== '' ? normalize_floor_cleaning_method($method) : '',
         'bagMode' => $key === 'trash' ? normalize_trash_bag_mode(trim((string) ($item['bagMode'] ?? ($item['trashBagMode'] ?? '')))) : '',
+        'quantity' => visit_int($item['quantity'] ?? 0),
     ];
 }
 

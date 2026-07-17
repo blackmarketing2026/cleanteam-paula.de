@@ -149,6 +149,11 @@ const els = {
   templatePreviewButton: document.querySelector("#contract-template-preview-button"),
   templateSave: document.querySelector("#contract-template-save"),
   templatePreviewFrame: document.querySelector("#contract-template-preview-frame"),
+  contractorSignaturePad: document.querySelector("#contractor-signature-pad"),
+  contractorSignatureStatus: document.querySelector("#contractor-signature-status"),
+  contractorSignatureClear: document.querySelector("#contractor-signature-clear"),
+  contractorSignatureRemove: document.querySelector("#contractor-signature-remove"),
+  contractorSignatureSave: document.querySelector("#contractor-signature-save"),
   userForm: document.querySelector("#user-form"),
   userName: document.querySelector("#user-name"),
   userEmail: document.querySelector("#user-email"),
@@ -185,6 +190,10 @@ const titles = {
 };
 
 let currentLogoUrl = null;
+let contractorSignaturePadReady = false;
+let contractorSignatureHasInk = false;
+let contractorSignatureDrawing = false;
+let contractorSignatureLastPoint = null;
 
 const mailboxState = {
   messages: [],
@@ -919,6 +928,7 @@ function normalizeCleaningItem(item = {}) {
     customFrequency: item.customFrequency || "",
     method: key === "floor" && rawMethod ? normalizeFloorCleaningMethod(rawMethod) : "",
     bagMode: key === "trash" ? normalizeTrashBagMode(item.bagMode || item.trashBagMode) : "",
+    quantity: Number(item.quantity) || 0,
   };
 }
 
@@ -973,6 +983,10 @@ function cleaningItemText(item, room = {}) {
 
   if (item.key === "trash" && item.bagMode) {
     details.push(item.bagMode);
+  }
+
+  if (item.quantity > 0) {
+    details.push(`Anzahl: ${item.quantity}`);
   }
 
   return `${item.label}: ${details.filter(Boolean).join(", ")}`;
@@ -1063,7 +1077,10 @@ function formatRoomQuantity(room) {
 }
 
 function roomDetailParts(room) {
-  return [];
+  return [
+    Number(room.squareMeters) > 0 ? `${Number(room.squareMeters)} m²` : "",
+    room.floorCondition ? `Bodenart: ${room.floorCondition}` : "",
+  ].filter(Boolean);
 }
 
 function cleaningItemsText(room) {
@@ -1660,16 +1677,64 @@ function renderSiteVisitRoomSummary(room) {
 }
 
 function siteVisitOfferNotes(visit) {
-  return [
-    "Aus Begehung übernommen:",
+  const lines = [
+    "Leistungsbeschreibung / Dienstleistung",
+    "",
     `Firma: ${siteVisitCompanyName(visit)}`,
-    `Ansprechpartner vor Ort: ${visit.onsiteContact}`,
-    `Adresse: ${visit.address}`,
-    `Objektgröße: ${visit.squareMeters} m²`,
-    visit.notes ? `\nAllgemeine Notizen:\n${visit.notes}` : "",
-  ]
-    .filter((line) => line !== "")
-    .join("\n");
+    `Ansprechpartner vor Ort: ${visit.onsiteContact || "nicht angegeben"}`,
+    `Adresse: ${visit.address || "nicht angegeben"}`,
+    `Objektgröße: ${visit.squareMeters || 0} m²`,
+  ];
+
+  if (visit.createdAt) {
+    lines.push(`Begehung erfasst am: ${formatDate(visit.createdAt)}`);
+  }
+
+  const floors = Array.isArray(visit.floors) ? visit.floors : [];
+  if (floors.length > 0) {
+    lines.push("", "Etagen und Räume:");
+    floors.forEach((floor, floorIndex) => {
+      const floorName = floor.name || `Etage ${floorIndex + 1}`;
+      const rooms = floorRoomsForDisplay(floor);
+      lines.push("", `${floorIndex + 1}. ${floorName}`);
+
+      if (rooms.length === 0) {
+        lines.push("- Keine Räume hinterlegt.");
+        return;
+      }
+
+      rooms.forEach((room) => {
+        const roomTitle = `${formatRoomQuantity(room)}${room.name}`;
+        const roomDetails = [
+          room.roomType,
+          ...roomDetailParts(room),
+        ].filter(Boolean);
+        lines.push(`- ${roomTitle}${roomDetails.length ? ` (${roomDetails.join(", ")})` : ""}`);
+
+        const cleaningItems = cleaningItemsForDisplay(room);
+        if (cleaningItems.length > 0) {
+          cleaningItems.forEach((item) => {
+            lines.push(`  • ${cleaningItemText(item, room)}`);
+          });
+        } else {
+          lines.push("  • Keine Reinigungsposition hinterlegt.");
+        }
+
+        if (room.extraAgreements) {
+          lines.push(`  Extra Vereinbarungen: ${room.extraAgreements}`);
+        }
+        if (room.notes) {
+          lines.push(`  Notiz: ${room.notes}`);
+        }
+      });
+    });
+  }
+
+  if (visit.notes) {
+    lines.push("", "Allgemeine Notizen:", visit.notes);
+  }
+
+  return lines.join("\n");
 }
 
 function findCustomerForSiteVisit(visit) {
@@ -1853,7 +1918,7 @@ function renderOfferCard(offer) {
     ? `Gesendet am ${formatDate(offer.sentAt)}`
     : "Noch nicht per E-Mail versendet";
 
-  const contractButton = offer.contractId
+  const contractActions = offer.contractId
     ? `
       <button class="secondary-button" type="button" data-action="open-contract" data-id="${escapeHtml(offer.contractId)}">
         <i data-lucide="signature" aria-hidden="true"></i>
@@ -1864,12 +1929,7 @@ function renderOfferCard(offer) {
         Vertragsdokument
       </a>
     `
-    : `
-      <button class="secondary-button" type="button" data-action="create-contract-document" data-id="${escapeHtml(offer.id)}">
-        <i data-lucide="file-text" aria-hidden="true"></i>
-        Vertrag erstellen
-      </button>
-    `;
+    : "";
 
   return `
     <article class="record-item">
@@ -1904,7 +1964,7 @@ function renderOfferCard(offer) {
           <i data-lucide="link" aria-hidden="true"></i>
           Link kopieren
         </button>
-        ${contractButton}
+        ${contractActions}
         <button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
           Löschen
@@ -2075,6 +2135,10 @@ function renderContractRow(contract) {
           <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=customer&format=pdf" target="_blank" rel="noopener">
             <i data-lucide="file-text" aria-hidden="true"></i>
             Kunde
+          </a>
+          <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=checklist&format=pdf" target="_blank" rel="noopener">
+            <i data-lucide="clipboard-check" aria-hidden="true"></i>
+            Checkliste
           </a>
           ${authorizationButton}
           ${siteVisitButton}
@@ -2306,16 +2370,6 @@ async function sendOffer(id) {
     await apiPost(`api/send-offer.php?id=${encodeURIComponent(id)}`);
     await loadAll();
     showToast("Kostenvoranschlag wurde per E-Mail versendet.");
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-async function createContractDocument(offerId) {
-  try {
-    const contract = await apiPost("api/contracts.php", { offerId });
-    await loadAll();
-    window.open(`contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf`, "_blank");
   } catch (error) {
     showToast(error.message);
   }
@@ -2791,6 +2845,154 @@ async function handleLogoRemove() {
   }
 }
 
+function contractorSignatureContext() {
+  if (!els.contractorSignaturePad) {
+    return null;
+  }
+
+  const context = els.contractorSignaturePad.getContext("2d");
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.lineWidth = 5;
+  context.strokeStyle = "#102033";
+  return context;
+}
+
+function updateContractorSignatureStatus(message) {
+  if (els.contractorSignatureStatus) {
+    els.contractorSignatureStatus.textContent = message;
+  }
+}
+
+function clearContractorSignaturePad(message = "Zeichenfläche ist leer.") {
+  const canvas = els.contractorSignaturePad;
+  const context = contractorSignatureContext();
+  if (!canvas || !context) {
+    return;
+  }
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  contractorSignatureHasInk = false;
+  contractorSignatureLastPoint = null;
+  updateContractorSignatureStatus(message);
+}
+
+function contractorSignaturePoint(event) {
+  const canvas = els.contractorSignaturePad;
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: ((event.clientX - rect.left) / rect.width) * canvas.width,
+    y: ((event.clientY - rect.top) / rect.height) * canvas.height,
+  };
+}
+
+function initContractorSignaturePad() {
+  const canvas = els.contractorSignaturePad;
+  const context = contractorSignatureContext();
+  if (!canvas || !context || contractorSignaturePadReady) {
+    return;
+  }
+
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    canvas.setPointerCapture(event.pointerId);
+    contractorSignatureDrawing = true;
+    contractorSignatureLastPoint = contractorSignaturePoint(event);
+    context.beginPath();
+    context.moveTo(contractorSignatureLastPoint.x, contractorSignatureLastPoint.y);
+    context.lineTo(contractorSignatureLastPoint.x + 0.01, contractorSignatureLastPoint.y + 0.01);
+    context.stroke();
+    contractorSignatureHasInk = true;
+    updateContractorSignatureStatus("Neue Unterschrift gezeichnet. Zum Übernehmen speichern.");
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    if (!contractorSignatureDrawing || contractorSignatureLastPoint === null) {
+      return;
+    }
+
+    event.preventDefault();
+    const point = contractorSignaturePoint(event);
+    context.lineTo(point.x, point.y);
+    context.stroke();
+    contractorSignatureLastPoint = point;
+    contractorSignatureHasInk = true;
+    updateContractorSignatureStatus("Neue Unterschrift gezeichnet. Zum Übernehmen speichern.");
+  });
+
+  const stopDrawing = (event) => {
+    if (!contractorSignatureDrawing) {
+      return;
+    }
+    contractorSignatureDrawing = false;
+    contractorSignatureLastPoint = null;
+    if (canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  canvas.addEventListener("pointerup", stopDrawing);
+  canvas.addEventListener("pointercancel", stopDrawing);
+  canvas.addEventListener("pointerleave", stopDrawing);
+  contractorSignaturePadReady = true;
+}
+
+function drawContractorSignatureDataUrl(dataUrl, updatedAt) {
+  const canvas = els.contractorSignaturePad;
+  const context = contractorSignatureContext();
+  if (!canvas || !context || !dataUrl) {
+    clearContractorSignaturePad("Noch keine Unterschrift gespeichert.");
+    return;
+  }
+
+  const image = new Image();
+  image.onload = () => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    const scale = Math.min(canvas.width / image.width, canvas.height / image.height, 1);
+    const width = image.width * scale;
+    const height = image.height * scale;
+    context.drawImage(image, 0, (canvas.height - height) / 2, width, height);
+    contractorSignatureHasInk = true;
+    const suffix = updatedAt ? ` Gespeichert am ${formatDate(updatedAt)}.` : "";
+    updateContractorSignatureStatus(`Unterschrift Thomas Mündlein ist gespeichert.${suffix}`);
+  };
+  image.onerror = () => {
+    clearContractorSignaturePad("Gespeicherte Unterschrift konnte nicht geladen werden.");
+  };
+  image.src = dataUrl;
+}
+
+async function handleContractorSignatureSave() {
+  initContractorSignaturePad();
+  if (!contractorSignatureHasInk) {
+    showToast("Bitte zuerst auf der Zeichenfläche unterschreiben.");
+    return;
+  }
+
+  try {
+    const signatureDataUrl = els.contractorSignaturePad.toDataURL("image/png");
+    await apiPost("api/contract-template.php?action=signature", { signatureDataUrl });
+    updateContractorSignatureStatus("Unterschrift Thomas Mündlein ist gespeichert.");
+    showToast("CleanTeam-Unterschrift wurde gespeichert.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleContractorSignatureRemove() {
+  if (!window.confirm("Unterschrift Thomas Mündlein wirklich aus allen Verträgen entfernen?")) {
+    return;
+  }
+
+  try {
+    await apiPost("api/contract-template.php?action=remove-signature", {});
+    clearContractorSignaturePad("Noch keine Unterschrift gespeichert.");
+    showToast("CleanTeam-Unterschrift wurde entfernt.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function renderTemplatePlaceholderChips(groups) {
   if (!els.templatePlaceholderGroups) {
     return;
@@ -2838,6 +3040,12 @@ async function loadContractTemplate() {
     const result = await apiGet("api/contract-template.php");
     els.templateEditor.value = result.templateHtml || "";
     renderTemplatePlaceholderChips(result.placeholders || {});
+    initContractorSignaturePad();
+    if (result.contractorSignatureDataUrl) {
+      drawContractorSignatureDataUrl(result.contractorSignatureDataUrl, result.contractorSignatureUpdatedAt);
+    } else {
+      clearContractorSignaturePad("Noch keine Unterschrift gespeichert.");
+    }
   } catch (error) {
     showToast(error.message);
   }
@@ -3183,10 +3391,6 @@ function handleRecordAction(event) {
     switchView("contracts");
   }
 
-  if (action === "create-contract-document") {
-    createContractDocument(id);
-  }
-
   if (action === "delete-offer") {
     deleteOffer(id);
   }
@@ -3268,6 +3472,16 @@ function bindEvents() {
     state.pendingOfferSiteVisitId = null;
     clearOfferSiteVisitFields();
     switchView("offers-new");
+  });
+  document.querySelectorAll("[data-overview-target]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.overviewTarget;
+      if (target === "offers-new") {
+        state.pendingOfferSiteVisitId = null;
+        clearOfferSiteVisitFields();
+      }
+      switchView(target);
+    });
   });
   els.newCustomerButton.addEventListener("click", () => {
     state.pendingQuizCustomerReturn = false;
@@ -3353,6 +3567,11 @@ function bindEvents() {
   els.templateSave.addEventListener("click", handleContractTemplateSave);
   els.templateReset.addEventListener("click", handleContractTemplateReset);
   els.templatePreviewButton.addEventListener("click", handleContractTemplatePreview);
+  els.contractorSignatureClear.addEventListener("click", () => {
+    clearContractorSignaturePad("Zeichenfläche ist leer. Neue Unterschrift zeichnen und speichern.");
+  });
+  els.contractorSignatureSave.addEventListener("click", handleContractorSignatureSave);
+  els.contractorSignatureRemove.addEventListener("click", handleContractorSignatureRemove);
   els.userForm.addEventListener("submit", handleUserSubmit);
   els.userList.addEventListener("click", handleUserListAction);
 
