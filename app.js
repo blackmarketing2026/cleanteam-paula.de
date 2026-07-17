@@ -2109,6 +2109,14 @@ function renderOfferCard(offer) {
       </a>
     `
     : "";
+  const contractProcessAction = offer.contractId
+    ? ""
+    : `
+      <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
+        <i data-lucide="signature" aria-hidden="true"></i>
+        Vertrag erstellen
+      </button>
+    `;
 
   return `
     <article class="record-item">
@@ -2139,6 +2147,7 @@ function renderOfferCard(offer) {
           <i data-lucide="send" aria-hidden="true"></i>
           Kostenvoranschlag senden
         </button>
+        ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="link" aria-hidden="true"></i>
           Link kopieren
