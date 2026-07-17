@@ -1107,6 +1107,18 @@ button.compact-item.selected {
   gap: 12px;
 }
 
+.site-visit-editor-panel {
+  margin-top: 18px;
+}
+
+.site-visit-editor-form {
+  align-items: start;
+}
+
+.site-visit-editor-panel[hidden] {
+  display: none;
+}
+
 .floor-builder-header,
 .floor-section-toolbar {
   display: flex;

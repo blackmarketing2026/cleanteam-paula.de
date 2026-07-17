@@ -35,6 +35,7 @@ const state = {
   currentView: "overview",
   selectedContractId: null,
   pendingOfferSiteVisitId: null,
+  editingSiteVisitId: null,
   contractFilters: {
     search: "",
     period: "all",
@@ -77,6 +78,11 @@ const els = {
   siteVisitForm: document.querySelector("#site-visit-form"),
   addSiteVisitFloor: document.querySelector("#add-site-visit-floor"),
   siteVisitFloors: document.querySelector("#site-visit-floors"),
+  siteVisitEditorPanel: document.querySelector("#site-visit-editor-panel"),
+  siteVisitEditorHeading: document.querySelector("#site-visit-editor-heading"),
+  siteVisitEditorMeta: document.querySelector("#site-visit-editor-meta"),
+  cancelSiteVisitEdit: document.querySelector("#cancel-site-visit-edit"),
+  siteVisitSubmitLabel: document.querySelector("#site-visit-submit-label"),
   siteVisitList: document.querySelector("#site-visit-list"),
   offerForm: document.querySelector("#offer-form"),
   offerSiteVisit: document.querySelector("#offer-site-visit"),
@@ -832,11 +838,15 @@ const CLEANING_TASKS = [
   { key: "floor", label: "Boden" },
   { key: "door", label: "Tür" },
   { key: "desk", label: "Schreibtische" },
+  { key: "chairs", label: "Stuehle" },
+  { key: "tables", label: "Tische" },
   { key: "window", label: "Fensterbänke" },
   { key: "surface", label: "Oberflächen" },
   { key: "trash", label: "Mülleimer-Entleerung" },
   { key: "kitchen", label: "Küchenflächen" },
   { key: "handrail", label: "Handlauf / Geländer" },
+  { key: "counter", label: "Tresen" },
+  { key: "cabinets", label: "Schraenke" },
   { key: "stairFloor", label: "Etage" },
   { key: "stairDoor", label: "Türen" },
   { key: "treatmentDesk", label: "Schreibtisch" },
@@ -845,9 +855,9 @@ const CLEANING_TASKS = [
   { key: "disinfection", label: "Desinfektion" },
 ];
 
-const SANITARY_CLEANING_TASK_KEYS = ["mirror", "floor", "door", "toilet"];
-const OFFICE_CLEANING_TASK_KEYS = ["floor", "desk", "window", "trash"];
-const STAIRCASE_CLEANING_TASK_KEYS = ["stairFloor", "stairDoor"];
+const SANITARY_CLEANING_TASK_KEYS = ["floor", "toilet", "washbasin", "mirror", "door"];
+const OFFICE_CLEANING_TASK_KEYS = ["floor", "desk", "chairs", "window", "trash"];
+const STAIRCASE_CLEANING_TASK_KEYS = ["floor", "handrail", "stairFloor", "stairDoor"];
 const GENERAL_CLEANING_TASK_KEYS = [
   "washbasin",
   "toilet",
@@ -855,11 +865,15 @@ const GENERAL_CLEANING_TASK_KEYS = [
   "floor",
   "door",
   "desk",
+  "chairs",
+  "tables",
   "window",
   "surface",
   "trash",
   "kitchen",
   "handrail",
+  "counter",
+  "cabinets",
 ];
 const TREATMENT_ROOM_CLEANING_TASK_KEYS = [
   "floor",
@@ -1246,7 +1260,7 @@ function changeCounter(button, direction) {
   updateCounterControl(input, (Number(input.value) || 0) + direction * step);
 }
 
-function addSiteVisitFloor(values = {}) {
+function addSiteVisitFloor(values = {}, options = {}) {
   const emptyState = els.siteVisitFloors.querySelector(".floor-empty-state");
   if (emptyState) {
     emptyState.remove();
@@ -1299,7 +1313,9 @@ function addSiteVisitFloor(values = {}) {
   }
   renumberSiteVisitFloors();
   refreshIcons();
-  section.querySelector('[name="floorName"]').focus();
+  if (options.focus !== false) {
+    section.querySelector('[name="floorName"]').focus();
+  }
 }
 
 function cleaningFrequencyOptions(selectedFrequency) {
@@ -1326,6 +1342,7 @@ function cleaningTaskMarkup(task, items) {
   const frequency = item?.frequency || "Täglich";
   const customFrequency = item?.customFrequency || "";
   const method = item?.method || "Gesaugt und gewischt";
+  const quantity = Number(item?.quantity) || 0;
   const bagMode = item?.bagMode || "Mit Mülltüte";
   const floorMethod = task.key === "floor"
     ? `
@@ -1348,6 +1365,15 @@ function cleaningTaskMarkup(task, items) {
       `
     : "";
 
+  const quantityField = task.key === "floor"
+    ? ""
+    : `
+        <label data-cleaning-quantity="${escapeHtml(task.key)}" hidden>
+          Anzahl
+          <input name="cleaningQuantity" type="number" min="0" inputmode="numeric" data-cleaning-key="${escapeHtml(task.key)}" value="${escapeHtml(quantity)}" />
+        </label>
+      `;
+
   return `
     <div class="cleaning-task-row" data-cleaning-task="${escapeHtml(task.key)}">
       <label class="checkbox-field">
@@ -1367,6 +1393,7 @@ function cleaningTaskMarkup(task, items) {
         </label>
         ${floorMethod}
         ${trashBag}
+        ${quantityField}
       </div>
     </div>
   `;
@@ -1386,6 +1413,7 @@ function syncCleaningTaskSections(roomSection) {
     const customField = roomSection.querySelector(`[data-cleaning-custom="${key}"]`);
     const methodField = roomSection.querySelector(`[data-cleaning-method="${key}"]`);
     const trashBagField = roomSection.querySelector(`[data-cleaning-bag="${key}"]`);
+    const quantityField = roomSection.querySelector(`[data-cleaning-quantity="${key}"]`);
     const visible = visibleKeys.has(key);
 
     if (row) {
@@ -1408,6 +1436,9 @@ function syncCleaningTaskSections(roomSection) {
     }
     if (trashBagField) {
       trashBagField.hidden = !visible || !checkbox.checked;
+    }
+    if (quantityField) {
+      quantityField.hidden = !visible || !checkbox.checked;
     }
   });
 }
@@ -1524,6 +1555,7 @@ function collectSiteVisitFloors() {
             bagMode: key === "trash"
               ? roomSection.querySelector(`[name="cleaningTrashBagMode"][data-cleaning-key="${key}"]`)?.value || "Mit Mülltüte"
               : "",
+            quantity: Number(roomSection.querySelector(`[name="cleaningQuantity"][data-cleaning-key="${key}"]`)?.value) || 0,
           };
         });
       return {
@@ -1576,6 +1608,57 @@ function resetSiteVisitForm() {
   refreshIcons();
 }
 
+function closeSiteVisitEditor() {
+  state.editingSiteVisitId = null;
+  if (els.siteVisitEditorPanel) {
+    els.siteVisitEditorPanel.hidden = true;
+  }
+  resetSiteVisitForm();
+}
+
+function openSiteVisitEditor(id) {
+  const visit = getSiteVisit(id);
+  if (!visit || !els.siteVisitForm || !els.siteVisitFloors || !els.siteVisitEditorPanel) {
+    showToast("Begehung konnte nicht zum Bearbeiten geoeffnet werden.");
+    return;
+  }
+
+  state.editingSiteVisitId = id;
+  els.siteVisitEditorPanel.hidden = false;
+  if (els.siteVisitEditorHeading) {
+    els.siteVisitEditorHeading.textContent = `Begehung bearbeiten: ${siteVisitCompanyName(visit)}`;
+  }
+  if (els.siteVisitEditorMeta) {
+    const floors = Array.isArray(visit.floors) ? visit.floors : [];
+    const roomCount = floors.reduce((sum, floor) => sum + floorRoomsForDisplay(floor).length, 0);
+    els.siteVisitEditorMeta.textContent = [
+      visit.createdAt ? `Erfasst am ${formatDate(visit.createdAt)}` : "",
+      `${Number(visit.squareMeters) || 0} m²`,
+      `${floors.length} Etage${floors.length === 1 ? "" : "n"}`,
+      `${roomCount} Raum${roomCount === 1 ? "" : "e"}`,
+    ].filter(Boolean).join(" · ");
+  }
+
+  document.querySelector("#site-visit-customer-name").value = siteVisitCompanyName(visit);
+  document.querySelector("#site-visit-email").value = visit.email || "";
+  document.querySelector("#site-visit-phone").value = visit.phone || "";
+  document.querySelector("#site-visit-address").value = visit.address || "";
+  document.querySelector("#site-visit-onsite-contact").value = visit.onsiteContact || "";
+  document.querySelector("#site-visit-square-meters").value = Number(visit.squareMeters) || 0;
+  document.querySelector("#site-visit-notes").value = visit.notes || "";
+
+  els.siteVisitFloors.innerHTML = "";
+  const floors = Array.isArray(visit.floors) ? visit.floors : [];
+  if (floors.length) {
+    floors.forEach((floor) => addSiteVisitFloor(floor, { focus: false }));
+  } else {
+    ensureSiteVisitFloorEmptyState();
+  }
+  renumberSiteVisitFloors();
+  refreshIcons();
+  els.siteVisitEditorPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function renderSiteVisits() {
   const visits = [...visibleSavedSiteVisits()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -1624,6 +1707,10 @@ function renderSiteVisitCard(visit) {
         </div>
       </details>
       <div class="record-actions">
+        <button class="secondary-button" type="button" data-action="edit-site-visit" data-id="${escapeHtml(visit.id)}">
+          <i data-lucide="pencil" aria-hidden="true"></i>
+          Bearbeiten
+        </button>
         <button class="primary-button" type="button" data-action="offer-from-site-visit" data-id="${escapeHtml(visit.id)}">
           <i data-lucide="file-plus-2" aria-hidden="true"></i>
           Kostenvoranschlag
@@ -2246,6 +2333,11 @@ async function handleSiteVisitSubmit(event) {
     return;
   }
 
+  if (!state.editingSiteVisitId) {
+    showToast("Bitte zuerst eine gespeicherte Begehung zum Bearbeiten auswaehlen.");
+    return;
+  }
+
   const unnamedRoom = [...els.siteVisitFloors.querySelectorAll(".room-section")]
     .find((roomSection) => !roomSection.querySelector('[name="roomName"]')?.value.trim());
   if (unnamedRoom) {
@@ -2294,11 +2386,11 @@ async function handleSiteVisitSubmit(event) {
   };
 
   try {
-    await apiPost("api/site-visits.php", payload);
-    resetSiteVisitForm();
+    await apiPut(`api/site-visits.php?id=${encodeURIComponent(state.editingSiteVisitId)}`, payload);
+    closeSiteVisitEditor();
     await loadAll();
     switchView("site-visit-saved");
-    showToast("Begehung wurde gespeichert.");
+    showToast("Begehung wurde aktualisiert.");
   } catch (error) {
     showToast(error.message);
   }
@@ -2440,6 +2532,9 @@ async function deleteSiteVisit(id) {
 
   try {
     await apiDelete(`api/site-visits.php?id=${encodeURIComponent(id)}`);
+    if (state.editingSiteVisitId === id) {
+      closeSiteVisitEditor();
+    }
     await loadAll();
     showToast("Begehung wurde gelöscht.");
   } catch (error) {
@@ -3335,6 +3430,11 @@ function handleDashboardAction(event) {
     addSiteVisitFloor();
   }
 
+  if (button.dataset.action === "cancel-site-visit-edit") {
+    event.preventDefault();
+    closeSiteVisitEditor();
+  }
+
   if (button.dataset.action === "counter-decrement") {
     event.preventDefault();
     changeCounter(button, -1);
@@ -3370,6 +3470,10 @@ function handleRecordAction(event) {
 
   if (action === "delete-site-visit") {
     deleteSiteVisit(id);
+  }
+
+  if (action === "edit-site-visit") {
+    openSiteVisitEditor(id);
   }
 
   if (action === "offer-from-site-visit") {
@@ -3498,6 +3602,17 @@ function bindEvents() {
   els.customerSearch.addEventListener("input", renderCustomers);
 
   document.addEventListener("click", handleDashboardAction);
+  if (els.siteVisitForm) {
+    els.siteVisitForm.addEventListener("submit", handleSiteVisitSubmit);
+  }
+  if (els.siteVisitFloors) {
+    els.siteVisitFloors.addEventListener("click", handleSiteVisitFloorAction);
+    els.siteVisitFloors.addEventListener("input", handleSiteVisitFloorInput);
+    els.siteVisitFloors.addEventListener("keydown", handleSiteVisitFloorKeydown);
+  }
+  if (els.cancelSiteVisitEdit) {
+    els.cancelSiteVisitEdit.addEventListener("click", closeSiteVisitEditor);
+  }
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
   els.offerSiteVisit.addEventListener("change", handleOfferSiteVisitChange);

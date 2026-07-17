@@ -434,6 +434,100 @@ if ($method === 'POST') {
     json_response(site_visit_to_json($stmt->fetch()), 201);
 }
 
+if ($method === 'PUT') {
+    $id = (string) ($_GET['id'] ?? '');
+    if ($id === '') {
+        json_error('Begehungs-ID fehlt.', 422);
+    }
+
+    $existingStmt = $pdo->prepare('SELECT * FROM site_visits WHERE id = :id');
+    $existingStmt->execute(['id' => $id]);
+    if (!$existingStmt->fetch()) {
+        json_error('Begehung wurde nicht gefunden.', 404);
+    }
+
+    $body = read_json_body();
+    $companyName = trim((string) ($body['companyName'] ?? ($body['customerName'] ?? '')));
+    if ($companyName === '') {
+        json_error('Bitte den Firmennamen eintragen.', 422);
+    }
+
+    $required = ['email', 'phone', 'address', 'onsiteContact'];
+    foreach ($required as $field) {
+        if (trim((string) ($body[$field] ?? '')) === '') {
+            json_error("Feld \"{$field}\" ist erforderlich.", 422);
+        }
+    }
+
+    $squareMeters = visit_int($body['squareMeters'] ?? 0);
+    $floors = $body['floors'] ?? [];
+    if ($squareMeters <= 0) {
+        json_error('Die Objektgroesse in Quadratmetern ist erforderlich.', 422);
+    }
+    if (!is_array($floors) || count($floors) === 0) {
+        json_error('Bitte mindestens eine Etage hinzufuegen und ausfuellen.', 422);
+    }
+
+    $normalizedFloors = [];
+    foreach ($floors as $index => $floor) {
+        if (!is_array($floor)) {
+            continue;
+        }
+        $normalizedFloor = normalize_visit_floor($floor, (int) $index);
+        if (count($normalizedFloor['rooms']) === 0) {
+            json_error('Bitte pro Etage mindestens einen Raum hinzufuegen.', 422);
+        }
+        foreach ($normalizedFloor['rooms'] as $room) {
+            if (!isset($room['cleaningItems']) || !is_array($room['cleaningItems']) || count($room['cleaningItems']) === 0) {
+                json_error('Bitte pro Raum mindestens einen Reinigungspunkt auswaehlen.', 422);
+            }
+            foreach ($room['cleaningItems'] as $cleaningItem) {
+                if (($cleaningItem['frequency'] ?? '') === 'Individuell' && trim((string) ($cleaningItem['customFrequency'] ?? '')) === '') {
+                    json_error('Bitte bei individuellem Rhythmus eine Angabe eintragen.', 422);
+                }
+            }
+        }
+        $normalizedFloors[] = $normalizedFloor;
+    }
+
+    if (count($normalizedFloors) === 0) {
+        json_error('Bitte mindestens eine Etage hinzufuegen und ausfuellen.', 422);
+    }
+
+    $floorsJson = json_encode($normalizedFloors, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($floorsJson === false) {
+        json_error('Etagen konnten nicht gespeichert werden.', 422);
+    }
+
+    $stmt = $pdo->prepare(
+        'UPDATE site_visits
+         SET customer_name = :customer_name,
+             email = :email,
+             phone = :phone,
+             address = :address,
+             onsite_contact = :onsite_contact,
+             square_meters = :square_meters,
+             floors_json = :floors_json,
+             notes = :notes
+         WHERE id = :id'
+    );
+    $stmt->execute([
+        'id' => $id,
+        'customer_name' => $companyName,
+        'email' => trim((string) $body['email']),
+        'phone' => trim((string) $body['phone']),
+        'address' => trim((string) $body['address']),
+        'onsite_contact' => trim((string) $body['onsiteContact']),
+        'square_meters' => $squareMeters,
+        'floors_json' => $floorsJson,
+        'notes' => trim((string) ($body['notes'] ?? '')),
+    ]);
+
+    $stmt = $pdo->prepare('SELECT * FROM site_visits WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    json_response(site_visit_to_json($stmt->fetch()));
+}
+
 if ($method === 'DELETE') {
     $id = (string) ($_GET['id'] ?? '');
     if ($id === '') {
