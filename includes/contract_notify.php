@@ -4,6 +4,8 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/crypto.php';
 require_once __DIR__ . '/SmtpMailer.php';
 require_once __DIR__ . '/contract_pdf.php';
+require_once __DIR__ . '/email_template.php';
+require_once __DIR__ . '/email_settings.php';
 
 function load_contract_notification_settings(PDO $pdo): array
 {
@@ -81,6 +83,10 @@ function load_mailbox_smtp(PDO $pdo): ?array
 function notify_contract_created(PDO $pdo, string $contractId): void
 {
     try {
+        if (!email_delivery_is_allowed($pdo, 'internal_contract_notification')) {
+            return;
+        }
+
         $notifySettings = load_contract_notification_settings($pdo);
         if (!$notifySettings['enabled']) {
             return;
@@ -102,8 +108,8 @@ function notify_contract_created(PDO $pdo, string $contractId): void
         }
 
         $pdf = save_contract_pdf($pdo, $contractId, 'cleanteam', false);
-        $message = '<p>Ein Vertrag wurde angelegt oder aktualisiert.</p>'
-            . '<p>Im Anhang finden Sie die CleanTeam-Ausfertigung als PDF inklusive Signaturprotokoll.</p>';
+        $messageContent = '<p style="margin:0 0 14px 0;">Ein Vertrag wurde angelegt oder aktualisiert.</p>'
+            . '<p style="margin:0;">Im Anhang finden Sie die CleanTeam-Ausfertigung als PDF inklusive Signaturprotokoll.</p>';
 
         $mailer = new SmtpMailer(
             $smtp['host'],
@@ -114,6 +120,12 @@ function notify_contract_created(PDO $pdo, string $contractId): void
         );
 
         $subject = 'Neuer Vertrag ' . ($context['contract']['number'] ?? '') . ' – ' . $context['customer']['name'];
+        $message = render_email_template($pdo, $messageContent, [
+            'title' => 'Neuer Vertrag',
+            'preheader' => 'Ein Vertrag wurde angelegt oder aktualisiert.',
+            'fromName' => $smtp['from_name'] ?? 'CleanTeam',
+            'signatureText' => $smtp['signature'] ?? '',
+        ]);
 
         foreach ($recipients as $recipient) {
             try {
@@ -143,6 +155,10 @@ function notify_contract_created(PDO $pdo, string $contractId): void
 function notify_customer_contract_signed(PDO $pdo, string $contractId): void
 {
     try {
+        if (!email_delivery_is_allowed($pdo, 'contract_customer')) {
+            return;
+        }
+
         $context = load_contract_context($pdo, $contractId);
         if ($context === null) {
             return;
@@ -161,10 +177,15 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
         $pdf = save_contract_pdf($pdo, $contractId, 'customer', false);
         $number = (string) ($context['contract']['number'] ?? '');
 
-        $message = '<p>Sehr geehrte Damen und Herren,</p>'
+        $messageContent = '<p style="margin:0 0 14px 0;">Sehr geehrte Damen und Herren,</p>'
             . '<p>herzlich willkommen bei CleanTeam Group! Ihr Vertrag wurde soeben von Ihnen unterschrieben und ist damit gültig.</p>'
-            . '<p>Im Anhang finden Sie eine Kopie Ihres Vertrags' . ($number !== '' ? ' (' . htmlspecialchars($number, ENT_QUOTES, 'UTF-8') . ')' : '') . '.</p>'
-            . '<p>Mit freundlichen Grüßen<br>Ihr CleanTeam-Team</p>';
+            . '<p>Im Anhang finden Sie eine Kopie Ihres Vertrags' . ($number !== '' ? ' (' . email_h($number) . ')' : '') . '.</p>';
+        $message = render_email_template($pdo, $messageContent, [
+            'title' => 'Ihr Vertrag bei CleanTeam Group',
+            'preheader' => 'Ihr unterschriebener Vertrag liegt als PDF bei.',
+            'fromName' => $smtp['from_name'] ?? 'CleanTeam',
+            'signatureText' => $smtp['signature'] ?? '',
+        ]);
 
         $mailer = new SmtpMailer(
             $smtp['host'],

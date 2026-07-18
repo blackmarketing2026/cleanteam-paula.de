@@ -5,6 +5,8 @@ require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/crypto.php';
 require_once __DIR__ . '/../includes/SmtpMailer.php';
+require_once __DIR__ . '/../includes/email_template.php';
+require_once __DIR__ . '/../includes/email_settings.php';
 
 require_admin();
 
@@ -37,6 +39,8 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
+    email_delivery_assert_allowed($pdo, 'test');
+
     $settings = load_smtp_settings($pdo);
     if ($settings['host'] === '' || $settings['from_email'] === '') {
         json_error('Bitte zuerst die SMTP-Einstellungen speichern.', 422);
@@ -56,13 +60,22 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
             $settings['username'],
             decrypt_secret($settings['password_encrypted'])
         );
+        $htmlBody = render_email_template(
+            $pdo,
+            '<p style="margin:0;">Diese Test-E-Mail bestätigt, dass Ihre SMTP-Einstellungen im CleanTeam Dashboard funktionieren.</p>',
+            [
+                'title' => 'CleanTeam Dashboard – Test-E-Mail',
+                'preheader' => 'Ihre SMTP-Einstellungen funktionieren.',
+                'fromName' => $settings['from_name'],
+            ]
+        );
         $mailer->send(
             $settings['from_email'],
             $settings['from_name'],
             $to,
             $to,
             'CleanTeam Dashboard – Test-E-Mail',
-            '<p>Diese Test-E-Mail bestätigt, dass Ihre SMTP-Einstellungen im CleanTeam Dashboard funktionieren.</p>',
+            $htmlBody,
             true
         );
     } catch (Throwable $exception) {

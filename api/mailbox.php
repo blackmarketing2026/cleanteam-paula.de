@@ -5,6 +5,8 @@ require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/crypto.php';
 require_once __DIR__ . '/../includes/SmtpMailer.php';
+require_once __DIR__ . '/../includes/email_template.php';
+require_once __DIR__ . '/../includes/email_settings.php';
 
 require_login();
 
@@ -355,6 +357,8 @@ function mailbox_save_to_sent(array $settings, string $fromEmail, string $fromNa
 }
 
 if ($method === 'POST' && $action === 'send') {
+    email_delivery_assert_allowed($pdo, 'mailbox');
+
     $settings = load_mailbox_settings($pdo);
     if ($settings['host'] === '' || ($settings['password_encrypted'] ?? '') === '') {
         json_error('Bitte zuerst das Postfach einrichten.', 422);
@@ -369,7 +373,13 @@ if ($method === 'POST' && $action === 'send') {
         json_error('Empfänger, Betreff und Text sind erforderlich.', 422);
     }
 
-    $htmlBody = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
+    $messageHtml = '<div style="margin:0;">' . email_plain_text_html($message) . '</div>';
+    $htmlBody = render_email_template($pdo, $messageHtml, [
+        'title' => $subject,
+        'preheader' => trim($message),
+        'fromName' => $settings['from_name'] ?? 'CleanTeam',
+        'signatureText' => $settings['signature'] ?? '',
+    ]);
 
     try {
         $mailer = new SmtpMailer(

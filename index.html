@@ -10,8 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=offer-service-editor-20260716-1" />
-    <link rel="stylesheet" href="site-visit-quiz.css?v=quiz-smart-mobile-20260717-1" />
+    <link rel="stylesheet" href="styles.css?v=offer-send-recipient-20260718-1" />
+    <link rel="stylesheet" href="site-visit-quiz.css?v=quiz-draft-selection-20260718-1" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -117,6 +117,10 @@
             <button class="nav-link" type="button" data-view="settings-smtp">
               <i data-lucide="server" aria-hidden="true"></i>
               <span>SMTP-Server</span>
+            </button>
+            <button class="nav-link" type="button" data-view="settings-email">
+              <i data-lucide="mail-check" aria-hidden="true"></i>
+              <span>E-Mails</span>
             </button>
             <button class="nav-link" type="button" data-view="settings-notify">
               <i data-lucide="bell" aria-hidden="true"></i>
@@ -738,8 +742,8 @@
                 <input id="mailbox-from-name" type="text" placeholder="CleanTeam" />
               </label>
               <label class="span-2">
-                Signatur
-                <textarea id="mailbox-signature" rows="4" placeholder="Mit freundlichen Grüßen&#10;Ihr CleanTeam"></textarea>
+                Signatur-Zusatz
+                <textarea id="mailbox-signature" rows="4" placeholder="z. B. Direktkontakt, Öffnungszeiten oder Abteilungshinweis"></textarea>
               </label>
               <div class="form-actions span-2">
                 <button class="primary-button" type="submit">
@@ -803,6 +807,55 @@
                   <i data-lucide="send" aria-hidden="true"></i>
                   Test-E-Mail senden
                 </button>
+                <button class="primary-button" type="submit">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Einstellungen speichern
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+
+        <section id="settings-email-view" class="view" aria-labelledby="settings-email-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="settings-email-heading">E-Mail-Einstellungen</h3>
+              <p class="muted">Steuert, welche E-Mails das Dashboard aktiv versenden darf.</p>
+            </div>
+          </div>
+
+          <section class="panel form-panel" aria-labelledby="email-settings-form-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="email-settings-form-heading">Versandfreigaben</h4>
+              </div>
+            </div>
+            <form id="email-settings-form" class="form-grid">
+              <label class="span-2 checkbox-row">
+                <input id="email-settings-customer-enabled" type="checkbox" />
+                D&uuml;rfen E-Mails an Kunden gesendet werden
+              </label>
+              <label class="span-2 checkbox-row">
+                <input id="email-settings-offer-enabled" type="checkbox" />
+                Kostenvoranschl&auml;ge per E-Mail an Kunden senden
+              </label>
+              <label class="span-2 checkbox-row">
+                <input id="email-settings-contract-enabled" type="checkbox" />
+                Vertrags-E-Mails an Kunden senden
+              </label>
+              <label class="span-2 checkbox-row">
+                <input id="email-settings-mailbox-enabled" type="checkbox" />
+                Manuelle E-Mails aus dem Postfach senden
+              </label>
+              <label class="span-2 checkbox-row">
+                <input id="email-settings-internal-contract-enabled" type="checkbox" />
+                Interne Vertragsbenachrichtigungen senden
+              </label>
+              <label class="span-2 checkbox-row">
+                <input id="email-settings-test-enabled" type="checkbox" />
+                Test-E-Mails aus den Einstellungen senden
+              </label>
+              <div class="form-actions span-2">
                 <button class="primary-button" type="submit">
                   <i data-lucide="save" aria-hidden="true"></i>
                   Einstellungen speichern
@@ -1058,6 +1111,34 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
+    <div id="offer-send-modal" class="modal-overlay" hidden>
+      <form id="offer-send-form" class="modal-box" role="dialog" aria-modal="true" aria-labelledby="offer-send-modal-heading">
+        <h4 id="offer-send-modal-heading">Kostenvoranschlag senden</h4>
+        <p id="offer-send-customer" class="muted"></p>
+        <div class="recipient-mode-row" role="group" aria-label="Empfänger auswählen">
+          <button id="offer-send-suggested" class="secondary-button recipient-mode-button" type="button" data-recipient-mode="customer">
+            <i data-lucide="user-check" aria-hidden="true"></i>
+            Kunden-E-Mail
+          </button>
+          <button id="offer-send-manual" class="secondary-button recipient-mode-button" type="button" data-recipient-mode="manual">
+            <i data-lucide="mail-plus" aria-hidden="true"></i>
+            Manuell
+          </button>
+        </div>
+        <label class="modal-field">
+          An welche E-Mail-Adresse soll gesendet werden? *
+          <input id="offer-send-email" type="email" required placeholder="empfaenger@beispiel.de" />
+        </label>
+        <div class="form-actions">
+          <button id="offer-send-cancel" class="ghost-button" type="button">Abbrechen</button>
+          <button id="offer-send-submit" class="primary-button" type="submit">
+            <i data-lucide="send" aria-hidden="true"></i>
+            Senden
+          </button>
+        </div>
+      </form>
+    </div>
+
     <div id="link-modal" class="modal-overlay" hidden>
       <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="link-modal-heading">
         <h4 id="link-modal-heading">Kostenvoranschlags- und Vertragslink</h4>
@@ -1076,8 +1157,8 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="site-visit-quiz-data.js?v=quiz-smart-mobile-20260717-1"></script>
-    <script src="site-visit-quiz.js?v=quiz-smart-mobile-20260717-1"></script>
-    <script src="app.js?v=offer-contract-link-20260717-1"></script>
+    <script src="site-visit-quiz-data.js?v=quiz-trash-send-20260718-1"></script>
+    <script src="site-visit-quiz.js?v=quiz-draft-selection-20260718-1"></script>
+    <script src="app.js?v=email-settings-20260718-1"></script>
   </body>
 </html>

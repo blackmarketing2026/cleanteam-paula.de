@@ -936,6 +936,39 @@ button.compact-item.selected {
   box-shadow: var(--shadow);
 }
 
+.modal-box h4 {
+  margin: 0 0 8px;
+}
+
+.modal-field {
+  margin: 16px 0;
+}
+
+.recipient-mode-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.recipient-mode-button {
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+}
+
+.recipient-mode-button.active {
+  border-color: var(--blue-700);
+  background: var(--blue-050);
+  color: var(--blue-900);
+  box-shadow: 0 0 0 3px rgba(19, 121, 216, 0.1);
+}
+
+.recipient-mode-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .link-copy-row {
   display: flex;
   gap: 8px;

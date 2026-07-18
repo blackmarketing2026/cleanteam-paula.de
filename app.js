@@ -35,6 +35,8 @@ const state = {
   currentView: "overview",
   selectedContractId: null,
   pendingOfferSiteVisitId: null,
+  pendingSendOfferId: null,
+  offerSendRecipientMode: "customer",
   editingSiteVisitId: null,
   contractFilters: {
     search: "",
@@ -95,6 +97,14 @@ const els = {
   offerNotes: document.querySelector("#offer-notes"),
   offerEstimatedPricePreview: document.querySelector("#offer-estimated-price-preview"),
   offerList: document.querySelector("#offer-list"),
+  offerSendModal: document.querySelector("#offer-send-modal"),
+  offerSendForm: document.querySelector("#offer-send-form"),
+  offerSendCustomer: document.querySelector("#offer-send-customer"),
+  offerSendSuggested: document.querySelector("#offer-send-suggested"),
+  offerSendManual: document.querySelector("#offer-send-manual"),
+  offerSendEmail: document.querySelector("#offer-send-email"),
+  offerSendCancel: document.querySelector("#offer-send-cancel"),
+  offerSendSubmit: document.querySelector("#offer-send-submit"),
   contractList: document.querySelector("#contract-list"),
   contractSearch: document.querySelector("#contract-search"),
   contractPeriodFilter: document.querySelector("#contract-period-filter"),
@@ -110,6 +120,13 @@ const els = {
   smtpFromName: document.querySelector("#smtp-from-name"),
   smtpFromEmail: document.querySelector("#smtp-from-email"),
   sendTestMail: document.querySelector("#send-test-mail"),
+  emailSettingsForm: document.querySelector("#email-settings-form"),
+  emailSettingsCustomerEnabled: document.querySelector("#email-settings-customer-enabled"),
+  emailSettingsOfferEnabled: document.querySelector("#email-settings-offer-enabled"),
+  emailSettingsContractEnabled: document.querySelector("#email-settings-contract-enabled"),
+  emailSettingsMailboxEnabled: document.querySelector("#email-settings-mailbox-enabled"),
+  emailSettingsInternalContractEnabled: document.querySelector("#email-settings-internal-contract-enabled"),
+  emailSettingsTestEnabled: document.querySelector("#email-settings-test-enabled"),
   mailboxNotConfigured: document.querySelector("#mailbox-not-configured"),
   mailboxNotConfiguredAdminText: document.querySelector("#mailbox-not-configured-admin-text"),
   mailboxNotConfiguredUserText: document.querySelector("#mailbox-not-configured-user-text"),
@@ -189,6 +206,7 @@ const titles = {
   contracts: "Verträge",
   mailbox: "Postfach",
   "settings-smtp": "SMTP-Server-Einstellungen",
+  "settings-email": "E-Mail-Einstellungen",
   "settings-notify": "Vertragsbenachrichtigungen-Einstellungen",
   "settings-logo": "Logo-Einstellungen",
   "settings-signature": "Signatur",
@@ -368,6 +386,10 @@ function contactName(customer) {
   return `${customer.salutation} ${customer.contactLastName}`;
 }
 
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
 function offerValidity(offer) {
   const diffMs = new Date(offer.expiresAt).getTime() - Date.now();
 
@@ -532,6 +554,10 @@ function switchView(view) {
 
   if (view === "settings-smtp") {
     loadSmtpSettings();
+  }
+
+  if (view === "settings-email") {
+    loadEmailSettings();
   }
 
   if (view === "settings-notify") {
@@ -2563,13 +2589,102 @@ async function handleOfferSubmit(event) {
   }
 }
 
-async function sendOffer(id) {
+function setOfferSendRecipientMode(mode) {
+  const suggestedEmail = els.offerSendModal.dataset.suggestedEmail || "";
+  const canUseSuggested = isValidEmail(suggestedEmail);
+  const nextMode = mode === "customer" && canUseSuggested ? "customer" : "manual";
+
+  state.offerSendRecipientMode = nextMode;
+  els.offerSendSuggested.classList.toggle("active", nextMode === "customer");
+  els.offerSendManual.classList.toggle("active", nextMode === "manual");
+  els.offerSendSuggested.disabled = !canUseSuggested;
+  els.offerSendEmail.readOnly = nextMode === "customer";
+
+  if (nextMode === "customer") {
+    els.offerSendEmail.value = suggestedEmail;
+  } else if (!els.offerSendEmail.value && canUseSuggested) {
+    els.offerSendEmail.value = suggestedEmail;
+  }
+}
+
+function openOfferSendModal(id) {
+  const offer = getOffer(id);
+  if (!offer) {
+    showToast("Kostenvoranschlag wurde nicht gefunden.");
+    return;
+  }
+
+  const suggestedEmail = String(offer.customer?.email || "").trim();
+  const hasSuggestedEmail = isValidEmail(suggestedEmail);
+  const customerLabel = offer.customer?.name || "Kunde";
+
+  state.pendingSendOfferId = id;
+  els.offerSendModal.dataset.offerId = id;
+  els.offerSendModal.dataset.suggestedEmail = suggestedEmail;
+  els.offerSendCustomer.textContent = hasSuggestedEmail
+    ? `Vorschlag aus dem Kunden „${customerLabel}“: ${suggestedEmail}`
+    : `Für „${customerLabel}“ ist keine gültige Kunden-E-Mail hinterlegt.`;
+  els.offerSendEmail.value = "";
+  setOfferSendRecipientMode(hasSuggestedEmail ? "customer" : "manual");
+
+  els.offerSendModal.hidden = false;
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+  els.offerSendEmail.focus();
+  if (state.offerSendRecipientMode === "manual") {
+    els.offerSendEmail.select();
+  }
+}
+
+function closeOfferSendModal() {
+  els.offerSendModal.hidden = true;
+  state.pendingSendOfferId = null;
+  els.offerSendModal.dataset.offerId = "";
+  els.offerSendModal.dataset.suggestedEmail = "";
+  els.offerSendForm.reset();
+  els.offerSendEmail.readOnly = false;
+  els.offerSendSubmit.disabled = false;
+}
+
+async function sendOffer(id, toEmail) {
   try {
-    await apiPost(`api/send-offer.php?id=${encodeURIComponent(id)}`);
-    await loadAll();
-    showToast("Kostenvoranschlag wurde per E-Mail versendet.");
+    const result = await apiPost(`api/send-offer.php?id=${encodeURIComponent(id)}`, { toEmail });
+    try {
+      await loadAll();
+    } catch (error) {
+      // Der Versand war erfolgreich; ein spätes Listen-Refresh darf den Nutzer nicht irritieren.
+    }
+    showToast(`Kostenvoranschlag wurde an ${result.sentTo || toEmail} versendet.`);
+    return true;
   } catch (error) {
     showToast(error.message);
+    return false;
+  }
+}
+
+async function submitOfferSendForm(event) {
+  event.preventDefault();
+  const id = state.pendingSendOfferId;
+  const toEmail = els.offerSendEmail.value.trim();
+
+  if (!id) {
+    showToast("Kostenvoranschlag wurde nicht gefunden.");
+    closeOfferSendModal();
+    return;
+  }
+
+  if (!isValidEmail(toEmail)) {
+    showToast("Bitte eine gültige E-Mail-Adresse eintragen.");
+    els.offerSendEmail.focus();
+    return;
+  }
+
+  els.offerSendSubmit.disabled = true;
+  const sent = await sendOffer(id, toEmail);
+  els.offerSendSubmit.disabled = false;
+  if (sent) {
+    closeOfferSendModal();
   }
 }
 
@@ -2719,6 +2834,41 @@ async function handleSmtpSubmit(event) {
     await apiPost("api/settings.php", payload);
     showToast("Einstellungen wurden gespeichert.");
     await loadSmtpSettings();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function loadEmailSettings() {
+  try {
+    const settings = await apiGet("api/email-settings.php");
+    els.emailSettingsCustomerEnabled.checked = settings.customerEmailsEnabled;
+    els.emailSettingsOfferEnabled.checked = settings.offerEmailsEnabled;
+    els.emailSettingsContractEnabled.checked = settings.contractEmailsEnabled;
+    els.emailSettingsMailboxEnabled.checked = settings.mailboxEmailsEnabled;
+    els.emailSettingsInternalContractEnabled.checked = settings.internalContractNotificationsEnabled;
+    els.emailSettingsTestEnabled.checked = settings.testEmailsEnabled;
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleEmailSettingsSubmit(event) {
+  event.preventDefault();
+
+  const payload = {
+    customerEmailsEnabled: els.emailSettingsCustomerEnabled.checked,
+    offerEmailsEnabled: els.emailSettingsOfferEnabled.checked,
+    contractEmailsEnabled: els.emailSettingsContractEnabled.checked,
+    mailboxEmailsEnabled: els.emailSettingsMailboxEnabled.checked,
+    internalContractNotificationsEnabled: els.emailSettingsInternalContractEnabled.checked,
+    testEmailsEnabled: els.emailSettingsTestEnabled.checked,
+  };
+
+  try {
+    await apiPost("api/email-settings.php", payload);
+    showToast("E-Mail-Einstellungen wurden gespeichert.");
+    await loadEmailSettings();
   } catch (error) {
     showToast(error.message);
   }
@@ -3603,7 +3753,7 @@ function handleRecordAction(event) {
   }
 
   if (action === "send-offer") {
-    sendOffer(id);
+    openOfferSendModal(id);
   }
 
   if (action === "copy-offer-link") {
@@ -3769,6 +3919,7 @@ function bindEvents() {
 
   els.smtpForm.addEventListener("submit", handleSmtpSubmit);
   els.sendTestMail.addEventListener("click", sendTestMail);
+  els.emailSettingsForm.addEventListener("submit", handleEmailSettingsSubmit);
 
   els.mailboxList.addEventListener("click", handleRecordAction);
   els.mailboxRefresh.addEventListener("click", loadMailboxInbox);
@@ -3778,9 +3929,8 @@ function bindEvents() {
   els.mailboxComposeToggle.addEventListener("click", () => {
     const wasHidden = els.mailboxComposeForm.hidden;
     els.mailboxComposeForm.hidden = !wasHidden;
-    if (wasHidden && !els.mailboxComposeBody.value && mailboxState.signature) {
-      els.mailboxComposeBody.value = `\n\n-- \n${mailboxState.signature}`;
-      els.mailboxComposeBody.setSelectionRange(0, 0);
+    if (wasHidden) {
+      els.mailboxComposeBody.focus();
     }
   });
   els.mailboxFolderTabs.forEach((button) => {
@@ -3827,6 +3977,20 @@ function bindEvents() {
     }
   });
 
+  els.offerSendForm.addEventListener("submit", submitOfferSendForm);
+  els.offerSendCancel.addEventListener("click", closeOfferSendModal);
+  els.offerSendSuggested.addEventListener("click", () => setOfferSendRecipientMode("customer"));
+  els.offerSendManual.addEventListener("click", () => {
+    setOfferSendRecipientMode("manual");
+    els.offerSendEmail.focus();
+    els.offerSendEmail.select();
+  });
+  els.offerSendModal.addEventListener("click", (event) => {
+    if (event.target === els.offerSendModal) {
+      closeOfferSendModal();
+    }
+  });
+
   els.linkModalCopy.addEventListener("click", copyLinkModalValue);
   els.linkModalClose.addEventListener("click", closeLinkModal);
   els.linkModal.addEventListener("click", (event) => {
@@ -3835,6 +3999,10 @@ function bindEvents() {
     }
   });
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !els.offerSendModal.hidden) {
+      closeOfferSendModal();
+      return;
+    }
     if (event.key === "Escape" && !els.linkModal.hidden) {
       closeLinkModal();
     }

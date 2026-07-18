@@ -32,6 +32,10 @@ const SiteVisitQuizStore = {
   remove(id) {
     localStorage.setItem(SVQ_STORAGE_KEY, JSON.stringify(this.list().filter((item) => item.id !== id)));
   },
+  removeMany(ids) {
+    const selectedIds = new Set(ids);
+    localStorage.setItem(SVQ_STORAGE_KEY, JSON.stringify(this.list().filter((item) => !selectedIds.has(item.id))));
+  },
 };
 
 const svqState = {
@@ -39,6 +43,7 @@ const svqState = {
   draftId: null,
   customerQuery: "",
   customerSelectMode: null,
+  selectedDraftIds: new Set(),
 };
 
 function svqUid() {
@@ -203,6 +208,28 @@ function svqVisibleDraftsByStatus(status) {
     .filter((draft) => !svqIsContractLinkedCompletedDraft(draft, hiddenSiteVisitIds));
 }
 
+function svqDraftSelection() {
+  if (!(svqState.selectedDraftIds instanceof Set)) {
+    svqState.selectedDraftIds = new Set(Array.isArray(svqState.selectedDraftIds) ? svqState.selectedDraftIds : []);
+  }
+  return svqState.selectedDraftIds;
+}
+
+function svqClearDraftSelection() {
+  svqDraftSelection().clear();
+}
+
+function svqSelectedVisibleDraftIds() {
+  const visibleIds = new Set(svqVisibleDraftsByStatus("draft").map((draft) => draft.id));
+  const selection = svqDraftSelection();
+  [...selection].forEach((draftId) => {
+    if (!visibleIds.has(draftId)) {
+      selection.delete(draftId);
+    }
+  });
+  return [...selection].filter((draftId) => visibleIds.has(draftId));
+}
+
 function svqPruneContractLinkedCompletedVisits() {
   const hiddenSiteVisitIds = svqContractLinkedSiteVisitIds();
   if (hiddenSiteVisitIds.size === 0) {
@@ -294,6 +321,10 @@ function svqRememberInterval(draft, interval, customInterval = "") {
   preferences.lastCustomInterval = interval === "custom" ? customInterval || "" : "";
 }
 
+function svqHasValidQuantity(value) {
+  return String(value ?? "").trim() !== "" && Number(value) > 0;
+}
+
 function svqEntryPathFromField(field) {
   return field.replace(/\.(present|shouldClean|interval|customInterval|quantity|trashBag|floorMaterial|floorMethod|note)$/, "");
 }
@@ -301,35 +332,22 @@ function svqEntryPathFromField(field) {
 function svqApplyCleaningDefaults(draft, field) {
   const entry = svqGetPath(draft, svqEntryPathFromField(field));
   if (!entry || entry.shouldClean !== true) return;
-  const def = SVQ_OBJECTS[entry.objectId] || { extra: [] };
-  const preferences = svqDraftPreferences(draft);
-  const room = draft.activeRoomDraft;
 
-  if (!entry.interval && preferences.lastInterval) {
-    entry.interval = preferences.lastInterval;
-    entry.customInterval = preferences.lastInterval === "custom" ? preferences.lastCustomInterval || "" : "";
-  } else if (!entry.interval) {
-    entry.interval = svqObjectDefaultInterval(room, entry.objectId);
-  }
   if (entry.objectId === "floor" && !entry.floorMethod) {
-    entry.floorMethod = svqDefaultFloorMethod(room);
-  }
-  if (def.extra?.includes("quantity") && (entry.quantity === "" || entry.quantity == null || Number(entry.quantity) < 1)) {
-    entry.quantity = "1";
-  }
-  if (def.extra?.includes("trashBag") && entry.trashBag == null) {
-    entry.trashBag = true;
+    entry.floorMethod = svqDefaultFloorMethod(draft.activeRoomDraft);
   }
 }
 
 function svqRoomObjectIds(room) {
   const type = svqRoomType(room.type);
   if (!type) return [];
-  if (type.id === "custom") return type.objects;
   const ids = [...type.objects];
-  ["chairs", "tables"].forEach((id) => {
-    if (!ids.includes(id) && !type.excludeUniversal?.includes(id)) ids.push(id);
-  });
+  if (type.id !== "custom") {
+    ["chairs", "tables"].forEach((id) => {
+      if (!ids.includes(id) && !type.excludeUniversal?.includes(id)) ids.push(id);
+    });
+  }
+  if (!ids.includes("trash")) ids.push("trash");
   return ids;
 }
 
@@ -351,13 +369,9 @@ function svqDefaultFloorMethod(room) {
 
 function svqApplyCleanDefaults(room, objectId) {
   const entry = svqGetOrCreateObjectEntry(room, objectId);
-  const def = SVQ_OBJECTS[objectId] || { extra: [] };
   entry.present = true;
   entry.shouldClean = true;
-  if (!entry.interval) entry.interval = svqObjectDefaultInterval(room, objectId);
   if (objectId === "floor" && !entry.floorMethod) entry.floorMethod = svqDefaultFloorMethod(room);
-  if (def.extra?.includes("quantity") && !entry.quantity) entry.quantity = "1";
-  if (def.extra?.includes("trashBag") && entry.trashBag == null) entry.trashBag = true;
 }
 
 function svqApplyNoClean(room, objectId) {
@@ -386,6 +400,7 @@ function svqApplyNotPresent(room, objectId) {
 
 function svqObjectAnswerState(room, objectId) {
   const entry = svqGetOrCreateObjectEntry(room, objectId);
+  const def = SVQ_OBJECTS[objectId] || { extra: [] };
   if (objectId === "floor") {
     if (entry.shouldClean === false) return "done";
     if (entry.shouldClean === true) {
@@ -397,7 +412,10 @@ function svqObjectAnswerState(room, objectId) {
   if (entry.present === false) return "done";
   if (entry.present === true && entry.shouldClean === false) return "done";
   if (entry.present === true && entry.shouldClean === true) {
-    return entry.interval && (entry.interval !== "custom" || String(entry.customInterval || "").trim()) ? "done" : "partial";
+    const hasInterval = entry.interval && (entry.interval !== "custom" || String(entry.customInterval || "").trim());
+    const hasQuantity = !def.extra?.includes("quantity") || svqHasValidQuantity(entry.quantity);
+    const hasTrashBag = !def.extra?.includes("trashBag") || entry.trashBag != null;
+    return hasInterval && hasQuantity && hasTrashBag ? "done" : "partial";
   }
   return "empty";
 }
@@ -501,6 +519,12 @@ function svqRoomObjectValidationMessage(draft) {
     if (entry.present !== true) return "";
     if (entry.shouldClean == null) return `Bitte entscheide, ob "${label}" gereinigt werden soll.`;
     if (entry.shouldClean !== true) return "";
+    if (def.extra?.includes("quantity") && !svqHasValidQuantity(entry.quantity)) {
+      return `Bitte trage die Anzahl für "${label}" ein.`;
+    }
+    if (def.extra?.includes("trashBag") && entry.trashBag == null) {
+      return "Bitte entscheide, ob mit oder ohne Mülltüte.";
+    }
   }
 
   if (!entry.interval) return "Bitte waehle das Reinigungsintervall.";
@@ -954,14 +978,52 @@ function svqRenderCustomerSelect() {
 function svqRenderList(status) {
   const items = svqVisibleDraftsByStatus(status)
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  const isDraftList = status === "draft";
+  const selection = isDraftList ? svqDraftSelection() : new Set();
+  const itemIds = new Set(items.map((draft) => draft.id));
+  if (isDraftList) {
+    [...selection].forEach((draftId) => {
+      if (!itemIds.has(draftId)) {
+        selection.delete(draftId);
+      }
+    });
+  }
+  const selectedCount = isDraftList ? items.filter((draft) => selection.has(draft.id)).length : 0;
+  const allSelected = isDraftList && items.length > 0 && selectedCount === items.length;
+  const selectionBar = isDraftList && items.length
+    ? `
+      <div class="svq-selection-bar">
+        <button class="secondary-button" type="button" data-svq-action="${allSelected ? "clear-draft-selection" : "select-all-drafts"}">
+          <i data-lucide="${allSelected ? "square" : "check-square"}" aria-hidden="true"></i>
+          ${allSelected ? "Auswahl aufheben" : "Alle markieren"}
+        </button>
+        <span class="svq-selection-count">${selectedCount} von ${items.length} markiert</span>
+        <button class="ghost-button svq-danger-link" type="button" data-svq-action="delete-selected-drafts" ${selectedCount ? "" : "disabled"}>
+          <i data-lucide="trash-2" aria-hidden="true"></i>
+          Markierte löschen
+        </button>
+      </div>
+    `
+    : "";
 
   const rows = items
     .map((draft) => {
       const address = [draft.address.street, draft.address.houseNumber].filter(Boolean).join(" ");
       const cityLine = [draft.address.zip, draft.address.city].filter(Boolean).join(" ");
       const contact = [draft.contact.firstName, draft.contact.lastName].filter(Boolean).join(" ");
+      const isSelected = isDraftList && selection.has(draft.id);
       return `
-        <article class="svq-list-item">
+        <article class="svq-list-item${isSelected ? " selected" : ""}">
+          ${
+            isDraftList
+              ? `
+          <button class="svq-select-button${isSelected ? " active" : ""}" type="button" data-svq-action="toggle-draft-select" data-svq-id="${svqEsc(draft.id)}" aria-pressed="${isSelected ? "true" : "false"}">
+            <i data-lucide="${isSelected ? "check-square" : "square"}" aria-hidden="true"></i>
+            <span>${isSelected ? "Markiert" : "Markieren"}</span>
+          </button>
+        `
+              : ""
+          }
           <button class="svq-list-item-main" type="button" data-svq-action="open-draft" data-svq-id="${svqEsc(draft.id)}">
             <strong>${svqEsc(draft.company.name) || "Ohne Firmennamen"}</strong>
             <span class="record-meta">
@@ -990,6 +1052,7 @@ function svqRenderList(status) {
         </button>
         <h3>${status === "draft" ? "Entwürfe" : "Abgeschlossene Begehungen"}</h3>
       </div>
+      ${selectionBar}
       <div class="svq-list-body">
         ${rows || `<div class="empty-state">${status === "draft" ? "Keine Entwürfe vorhanden." : "Noch keine abgeschlossene Begehung."}</div>`}
       </div>
@@ -1330,8 +1393,8 @@ function svqRenderObjectExtraFields(field, entry, extra) {
       ${
         extra.includes("trashBag")
           ? `
-        <div class="svq-field">
-          Mülltüten
+        <div class="svq-field span-2">
+          Mit oder ohne Mülltüte?
           <div class="svq-choice-row">
             <button class="svq-choice-pill${entry.trashBag === true ? " active" : ""}" type="button" data-svq-action="yesno" data-svq-field="${field}.trashBag" data-svq-value="true">mit Mülltüte</button>
             <button class="svq-choice-pill${entry.trashBag === false ? " active" : ""}" type="button" data-svq-action="yesno" data-svq-field="${field}.trashBag" data-svq-value="false">ohne Mülltüte</button>
@@ -1363,19 +1426,24 @@ function svqRenderObjectStepper(room, ids, activeIndex) {
 }
 
 function svqRenderObjectQuickActions(entry, objectId, isFloor) {
+  const isTrash = objectId === "trash";
   const cleanActive = entry.present === true && entry.shouldClean === true;
   const noCleanActive = entry.present === true && entry.shouldClean === false;
   const absentActive = entry.present === false;
+  const cleanLabel = isTrash ? "Leeren" : "Reinigen";
+  const noCleanLabel = isTrash ? "Nicht leeren" : "Ohne Reinigung";
+  const cleanIcon = isTrash ? "trash-2" : "sparkles";
 
   return `
+    ${isTrash ? `<p class="svq-question">Soll der Mülleimer geleert werden?</p>` : ""}
     <div class="svq-quick-actions" aria-label="Schnellentscheidung">
       <button class="svq-quick-action${cleanActive ? " active-clean" : ""}" type="button" data-svq-action="object-quick" data-svq-object="${svqEsc(objectId)}" data-svq-mode="clean">
-        <i data-lucide="sparkles" aria-hidden="true"></i>
-        <span>Reinigen</span>
+        <i data-lucide="${cleanIcon}" aria-hidden="true"></i>
+        <span>${cleanLabel}</span>
       </button>
       <button class="svq-quick-action${noCleanActive ? " active-muted" : ""}" type="button" data-svq-action="object-quick" data-svq-object="${svqEsc(objectId)}" data-svq-mode="no-clean">
         <i data-lucide="minus-circle" aria-hidden="true"></i>
-        <span>Ohne Reinigung</span>
+        <span>${noCleanLabel}</span>
       </button>
       ${
         isFloor
@@ -1411,18 +1479,6 @@ function svqRenderRoomObject(draft) {
     </div>
     ${svqRenderObjectStepper(room, ids, draft.roomObjectIndex)}
     ${svqRenderObjectQuickActions(entry, objectId, isFloor)}
-    ${
-      isFloor
-        ? svqRenderYesNo("Soll der Boden gereinigt werden?", `${field}.shouldClean`, entry.shouldClean)
-        : `
-      ${svqRenderYesNo(`Ist „${svqEsc(def.label)}“ vorhanden?`, `${field}.present`, entry.present)}
-      ${
-        entry.present === true
-          ? svqRenderYesNo(`Soll „${svqEsc(def.label)}“ gereinigt werden?`, `${field}.shouldClean`, entry.shouldClean)
-          : ""
-      }
-    `
-    }
     ${
       entry.present === true && entry.shouldClean === true
         ? `
@@ -1673,11 +1729,13 @@ async function svqHandleClick(event) {
     return;
   }
   if (action === "home-drafts") {
+    svqClearDraftSelection();
     svqState.screen = "drafts-list";
     svqRender();
     return;
   }
   if (action === "home-completed") {
+    svqClearDraftSelection();
     svqState.screen = "completed-list";
     svqRender();
     return;
@@ -1689,6 +1747,7 @@ async function svqHandleClick(event) {
       svqRender();
       return;
     }
+    svqClearDraftSelection();
     svqState.customerSelectMode = null;
     svqState.screen = "home";
     svqRender();
@@ -1696,6 +1755,7 @@ async function svqHandleClick(event) {
   }
   if (action === "open-draft") {
     const draft = SiteVisitQuizStore.get(id);
+    svqClearDraftSelection();
     svqState.draftId = id;
     svqState.screen = "quiz";
     if (draft && draft.status === "completed" && draft.screen !== "rooms-overview") {
@@ -1707,9 +1767,48 @@ async function svqHandleClick(event) {
     }
     return;
   }
+  if (action === "toggle-draft-select") {
+    const selection = svqDraftSelection();
+    if (selection.has(id)) {
+      selection.delete(id);
+    } else if (SiteVisitQuizStore.get(id)?.status === "draft") {
+      selection.add(id);
+    }
+    svqRender();
+    return;
+  }
+  if (action === "select-all-drafts") {
+    const selection = svqDraftSelection();
+    svqVisibleDraftsByStatus("draft").forEach((draft) => selection.add(draft.id));
+    svqRender();
+    return;
+  }
+  if (action === "clear-draft-selection") {
+    svqClearDraftSelection();
+    svqRender();
+    return;
+  }
+  if (action === "delete-selected-drafts") {
+    const selectedIds = svqSelectedVisibleDraftIds();
+    if (!selectedIds.length) {
+      svqShowValidation("Bitte markiere mindestens einen Entwurf.");
+      return;
+    }
+    const label = selectedIds.length === 1 ? "diesen Entwurf" : `${selectedIds.length} Entwürfe`;
+    if (window.confirm(`${label} wirklich löschen?`)) {
+      SiteVisitQuizStore.removeMany(selectedIds);
+      if (selectedIds.includes(svqState.draftId)) {
+        svqState.draftId = null;
+      }
+      svqClearDraftSelection();
+      svqRender();
+    }
+    return;
+  }
   if (action === "delete-draft") {
     if (window.confirm("Diese Begehung wirklich löschen?")) {
       SiteVisitQuizStore.remove(id);
+      svqDraftSelection().delete(id);
       svqRender();
     }
     return;
@@ -1795,9 +1894,6 @@ async function svqHandleClick(event) {
         svqApplyNoClean(d.activeRoomDraft, objectId);
       } else if (mode === "absent") {
         svqApplyNotPresent(d.activeRoomDraft, objectId);
-      }
-      if (!svqRoomObjectValidationMessage(d)) {
-        svqAdvanceRoomObject(d);
       }
     });
     return;

@@ -1,6 +1,6 @@
 /* Zentrale Konfiguration für das Begehungs-Quiz: Raumarten, Objekte, Intervalle.
    Bewusst schlank gehalten: pro Raum immer "Boden" plus 1-3 themenbezogene Punkte,
-   dazu optional die beiden Standardfragen "Stühle" und "Tische" - mehr nicht.
+   dazu optional die Standardfragen "Stühle", "Tische" und "Mülleimer".
    Neue Raumarten/Objekte werden ausschließlich hier ergänzt, nicht im HTML.
    legacyKey ordnet ein Objekt einem Reinigungspunkt-Schlüssel aus api/site-visits.php
    zu, damit eine fertige Begehung dort als echte Begehung gespeichert werden kann. */
@@ -73,8 +73,9 @@ const SVQ_OBJECTS = {
 
 /* Raumarten mit kurzer, themenbezogener Objektliste (IDs aus SVQ_OBJECTS).
    "Boden" ist immer die Grundfrage; danach 1-3 typische Punkte für den Raum.
-   Stühle/Tische werden - falls nicht schon Teil der Liste - automatisch als
-   letzte Standardfragen ergänzt (siehe svqRoomObjectIds in site-visit-quiz.js). */
+   Stühle/Tische werden - falls nicht schon Teil der Liste - automatisch ergänzt.
+   Mülleimer wird in jedem Raum als Standardfrage ergänzt
+   (siehe svqRoomObjectIds in site-visit-quiz.js). */
 const SVQ_ROOM_TYPES = [
   { id: "office", label: "Büro", icon: "briefcase", legacyType: "Büro", objects: ["floor", "desks", "windowsills"], excludeUniversal: ["tables"] },
   { id: "wc", label: "WC und Sanitärbereich", icon: "shower-head", legacyType: "Sanitär", objects: ["floor", "toilets", "sinks", "mirrors"], excludeUniversal: ["chairs", "tables"] },

@@ -160,6 +160,28 @@ CREATE TABLE IF NOT EXISTS contract_notifications (
 INSERT IGNORE INTO contract_notifications (id, enabled, recipients)
 VALUES (1, 0, '');
 
+CREATE TABLE IF NOT EXISTS email_delivery_settings (
+  id TINYINT UNSIGNED NOT NULL,
+  customer_emails_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  offer_emails_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  contract_emails_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  mailbox_emails_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  internal_contract_notifications_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  test_emails_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  updated_at DATETIME NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO email_delivery_settings (
+  id,
+  customer_emails_enabled,
+  offer_emails_enabled,
+  contract_emails_enabled,
+  mailbox_emails_enabled,
+  internal_contract_notifications_enabled,
+  test_emails_enabled
+) VALUES (1, 1, 1, 1, 1, 1, 1);
+
 CREATE TABLE IF NOT EXISTS branding_settings (
   id TINYINT UNSIGNED NOT NULL,
   logo_filename VARCHAR(190) NULL,
