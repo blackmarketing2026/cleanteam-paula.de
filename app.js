@@ -235,6 +235,8 @@ const titles = {
   "settings-users": "User & Rollen",
 };
 
+const hiddenViews = new Set(["mailbox", "settings-smtp"]);
+
 let currentLogoUrl = null;
 let emailSignatureImageUrl = "";
 let pendingEmailSignatureImageFile = null;
@@ -566,6 +568,10 @@ function toggleNavGroup(group) {
 function switchView(view) {
   if (view === "site-visit-new") {
     view = "site-visit-quiz";
+  }
+
+  if (hiddenViews.has(view)) {
+    view = "overview";
   }
 
   if (view.startsWith("settings-") && !isAdmin()) {
