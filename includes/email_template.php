@@ -210,8 +210,8 @@ function email_signature_html(PDO $pdo, array $options = [], array &$inlineImage
           <td style="padding-top:18px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="width:184px;padding:0 18px 12px 0;vertical-align:top;">' . $imageHtml . '</td>
                 <td style="padding:0 0 12px 0;vertical-align:top;color:#26384d;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;">
+                  <div style="margin:0 0 12px 0;">' . $imageHtml . '</div>
                   <p style="margin:0 0 6px 0;color:#08325f;font-size:15px;font-weight:800;">Mit freundlichen Gr&uuml;&szlig;en</p>
                   <p style="margin:0;color:#0a4f91;font-size:14px;font-weight:800;">' . email_h($senderName) . '</p>
                   ' . $roleHtml . '
