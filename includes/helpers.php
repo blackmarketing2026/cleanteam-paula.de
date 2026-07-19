@@ -71,6 +71,44 @@ function base_url(): string
     return rtrim(config()['base_url'] ?? '', '/');
 }
 
+function request_origin(): ?string
+{
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host === '' || !preg_match('/^[A-Za-z0-9.-]+(?::[0-9]+)?$/', $host)) {
+        return null;
+    }
+
+    $forwardedProto = strtolower(trim((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
+    $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+        || (string) ($_SERVER['SERVER_PORT'] ?? '') === '443'
+        || $forwardedProto === 'https';
+    $scheme = $isHttps ? 'https' : 'http';
+
+    return $scheme . '://' . $host;
+}
+
+function email_asset_base_url(): string
+{
+    $config = config();
+    $configured = trim((string) ($config['email_asset_base_url'] ?? $config['asset_base_url'] ?? ''));
+    if ($configured !== '') {
+        return rtrim($configured, '/');
+    }
+
+    $baseUrl = base_url();
+    $origin = request_origin();
+    $baseHost = parse_url($baseUrl, PHP_URL_HOST);
+    $originHost = $origin !== null ? parse_url($origin, PHP_URL_HOST) : null;
+    $normalizedBaseHost = $baseHost !== null ? preg_replace('/^www\./i', '', (string) $baseHost) : null;
+    $normalizedOriginHost = $originHost !== null ? preg_replace('/^www\./i', '', (string) $originHost) : null;
+
+    if ($origin !== null && $normalizedBaseHost !== null && strcasecmp($normalizedBaseHost, (string) $normalizedOriginHost) === 0) {
+        return rtrim($origin, '/');
+    }
+
+    return $baseUrl;
+}
+
 const OFFER_INTERVAL_FACTORS = [
     'Einmalig' => 1,
     'Wöchentlich' => 4.33,

@@ -77,7 +77,7 @@ function email_signature_image_url(?string $filename): ?string
         return null;
     }
 
-    return base_url() . '/uploads/' . rawurlencode($filename);
+    return email_asset_base_url() . '/uploads/' . rawurlencode($filename);
 }
 
 function email_signature_row_to_response(array $row): array

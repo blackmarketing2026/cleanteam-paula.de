@@ -57,7 +57,7 @@ function email_brand_logo_url(PDO $pdo): ?string
         return null;
     }
 
-    return base_url() . '/uploads/' . rawurlencode($filename);
+    return email_asset_base_url() . '/uploads/' . rawurlencode($filename);
 }
 
 function email_logo_html(PDO $pdo): string
