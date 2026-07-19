@@ -106,8 +106,18 @@ function notify_contract_created(PDO $pdo, string $contractId): void
         }
 
         $pdf = save_contract_pdf($pdo, $contractId, 'cleanteam', false);
-        $messageContent = '<p style="margin:0 0 14px 0;">Ein Vertrag wurde unterschrieben.</p>'
-            . '<p style="margin:0;">Im Anhang finden Sie die CleanTeam-Ausfertigung als PDF inklusive Signaturprotokoll.</p>';
+        $customer = $context['customer'];
+        $customerAddress = trim((string) ($customer['address'] ?? '') . ' ' . (string) ($customer['house_number'] ?? ''));
+        $customerCity = trim((string) ($customer['zip'] ?? '') . ' ' . (string) ($customer['city'] ?? ''));
+        $customerAddressLine = trim($customerAddress . ', ' . $customerCity, ' ,');
+        $messageContent = '<p style="margin:0 0 14px 0;">Ein neuer Vertrag wurde unterschrieben und liegt der Buchhaltung vor.</p>'
+            . '<p style="margin:0 0 18px 0;">Im Anhang befindet sich der Vertrag als PDF inklusive Signaturprotokoll. Bitte ausdrucken, abheften und entsprechend korrekt abspeichern.</p>'
+            . '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 4px 0;">'
+            . '<tr><td style="padding:5px 10px 5px 0;color:#5b6b80;font-weight:700;">Kunde</td><td style="padding:5px 0;">' . email_h((string) ($customer['name'] ?? '')) . '</td></tr>'
+            . '<tr><td style="padding:5px 10px 5px 0;color:#5b6b80;font-weight:700;">Telefon</td><td style="padding:5px 0;">' . email_h((string) ($customer['phone'] ?? '')) . '</td></tr>'
+            . '<tr><td style="padding:5px 10px 5px 0;color:#5b6b80;font-weight:700;">Adresse</td><td style="padding:5px 0;">' . email_h($customerAddressLine) . '</td></tr>'
+            . '<tr><td style="padding:5px 10px 5px 0;color:#5b6b80;font-weight:700;">E-Mail</td><td style="padding:5px 0;">' . email_h((string) ($customer['email'] ?? '')) . '</td></tr>'
+            . '</table>';
 
         $mailer = new SmtpMailer(
             $smtp['host'],
@@ -117,10 +127,10 @@ function notify_contract_created(PDO $pdo, string $contractId): void
             decrypt_secret($smtp['password_encrypted'])
         );
 
-        $subject = 'Unterschriebener Vertrag ' . ($context['contract']['number'] ?? '') . ' – ' . $context['customer']['name'];
+        $subject = 'Neuer Vertrag/Buchhaltung - ' . $context['customer']['name'];
         $message = render_email_template_message($pdo, $messageContent, [
-            'title' => 'Unterschriebener Vertrag',
-            'preheader' => 'Ein Vertrag wurde unterschrieben.',
+            'title' => 'Neuer Vertrag/Buchhaltung',
+            'preheader' => 'Neuer Vertrag fuer die Buchhaltung.',
             'fromName' => $smtp['from_name'] ?? 'CleanTeam',
             'signatureText' => $smtp['signature'] ?? '',
             'signatureContext' => 'internal_contract_notification',
