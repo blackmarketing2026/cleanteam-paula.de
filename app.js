@@ -142,6 +142,7 @@ const els = {
   emailSignatureImagePreview: document.querySelector("#email-signature-image-preview"),
   emailSignatureImageInput: document.querySelector("#email-signature-image-input"),
   emailSignatureImageRemove: document.querySelector("#email-signature-image-remove"),
+  emailSignatureImageStatus: document.querySelector("#email-signature-image-status"),
   emailSignaturePreview: document.querySelector("#email-signature-preview"),
   mailboxNotConfigured: document.querySelector("#mailbox-not-configured"),
   mailboxNotConfiguredAdminText: document.querySelector("#mailbox-not-configured-admin-text"),
@@ -232,6 +233,10 @@ const titles = {
 };
 
 let currentLogoUrl = null;
+let emailSignatureImageUrl = "";
+let pendingEmailSignatureImageFile = null;
+let pendingEmailSignatureImageDataUrl = "";
+let pendingEmailSignatureImageRemoval = false;
 let contractorSignaturePadReady = false;
 let contractorSignatureHasInk = false;
 let contractorSignatureDrawing = false;
@@ -2921,6 +2926,10 @@ function emailSignaturePayload() {
 }
 
 function applyEmailSignature(settings = {}) {
+  emailSignatureImageUrl = settings.imageUrl || "";
+  pendingEmailSignatureImageFile = null;
+  pendingEmailSignatureImageDataUrl = "";
+  pendingEmailSignatureImageRemoval = false;
   els.emailSignatureName.value = settings.senderName || "";
   els.emailSignatureRole.value = settings.senderRole || "";
   els.emailSignaturePhone.value = settings.phone || "";
@@ -2931,13 +2940,30 @@ function applyEmailSignature(settings = {}) {
   els.emailSignatureAddress1.value = settings.addressLine1 || "";
   els.emailSignatureAddress2.value = settings.addressLine2 || "";
   els.emailSignatureExtra.value = settings.extraText || "";
-  renderEmailSignatureImage(settings.imageUrl || "");
-  renderEmailSignaturePreview(settings.imageUrl || "");
+  renderEmailSignatureImage();
+  renderEmailSignaturePreview();
+  updateEmailSignatureImageStatus(
+    emailSignatureImageUrl
+      ? "Bild ist gespeichert. Ein neues Bild auswählen oder entfernen und anschließend speichern."
+      : "PNG, JPG oder WEBP, maximal 2 MB."
+  );
 }
 
-function renderEmailSignatureImage(imageUrl) {
+function currentEmailSignaturePreviewImage() {
+  if (pendingEmailSignatureImageRemoval) return "";
+  return pendingEmailSignatureImageDataUrl || emailSignatureImageUrl || "";
+}
+
+function updateEmailSignatureImageStatus(text = "PNG, JPG oder WEBP, maximal 2 MB.") {
+  if (els.emailSignatureImageStatus) {
+    els.emailSignatureImageStatus.textContent = text;
+  }
+}
+
+function renderEmailSignatureImage() {
   if (!els.emailSignatureImagePreview) return;
 
+  const imageUrl = currentEmailSignaturePreviewImage();
   if (imageUrl) {
     els.emailSignatureImagePreview.className = "email-signature-image-preview";
     els.emailSignatureImagePreview.innerHTML = `<img src="${escapeHtml(imageUrl)}" alt="E-Mail-Signatur" />`;
@@ -2957,12 +2983,12 @@ function emailSignatureContactLine(payload) {
   ].filter(Boolean).join(" | ");
 }
 
-function renderEmailSignaturePreview(imageUrl = "") {
+function renderEmailSignaturePreview() {
   if (!els.emailSignaturePreview) return;
 
   const payload = emailSignaturePayload();
   const contactLine = emailSignatureContactLine(payload);
-  const image = imageUrl || els.emailSignatureImagePreview?.querySelector("img")?.getAttribute("src") || "";
+  const image = currentEmailSignaturePreviewImage();
   const imageHtml = image
     ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(payload.companyName || "CleanTeam")}" />`
     : `<div class="email-signature-logo-fallback">CleanTeam</div>`;
@@ -3008,7 +3034,16 @@ async function handleEmailSignatureSubmit(event) {
   event.preventDefault();
 
   try {
-    const settings = await apiPost("api/email-signature.php", emailSignaturePayload());
+    let settings = await apiPost("api/email-signature.php", emailSignaturePayload());
+
+    if (pendingEmailSignatureImageRemoval) {
+      settings = await deleteEmailSignatureImage();
+    }
+
+    if (pendingEmailSignatureImageFile) {
+      settings = await uploadEmailSignatureImage(pendingEmailSignatureImageFile);
+    }
+
     applyEmailSignature(settings);
     showToast("E-Mail-Signatur wurde gespeichert.");
   } catch (error) {
@@ -3016,47 +3051,74 @@ async function handleEmailSignatureSubmit(event) {
   }
 }
 
-async function handleEmailSignatureImageUpload(event) {
+async function uploadEmailSignatureImage(file) {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const response = await fetch("api/email-signature.php?action=image", { method: "POST", body: formData, credentials: "same-origin" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "Bild konnte nicht hochgeladen werden.");
+  }
+  return data;
+}
+
+async function deleteEmailSignatureImage() {
+  const response = await fetch("api/email-signature.php?action=image", { method: "DELETE", credentials: "same-origin" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "Bild konnte nicht entfernt werden.");
+  }
+  return data;
+}
+
+function handleEmailSignatureImageUpload(event) {
   const file = event.target.files[0];
   if (!file) {
     return;
   }
 
-  const currentPayload = emailSignaturePayload();
-  const formData = new FormData();
-  formData.append("image", file);
-
-  try {
-    await apiPost("api/email-signature.php", currentPayload);
-    const response = await fetch("api/email-signature.php?action=image", { method: "POST", body: formData, credentials: "same-origin" });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || "Bild konnte nicht hochgeladen werden.");
-    }
-    applyEmailSignature(data);
-    showToast("Signaturbild wurde hochgeladen.");
-  } catch (error) {
-    showToast(error.message);
-  } finally {
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    showToast("Nur PNG, JPG oder WEBP sind erlaubt.");
     els.emailSignatureImageInput.value = "";
+    return;
   }
+
+  if (file.size > 2 * 1024 * 1024) {
+    showToast("Datei ist zu groß (max. 2 MB).");
+    els.emailSignatureImageInput.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    pendingEmailSignatureImageFile = file;
+    pendingEmailSignatureImageDataUrl = String(reader.result || "");
+    pendingEmailSignatureImageRemoval = false;
+    renderEmailSignatureImage();
+    renderEmailSignaturePreview();
+    updateEmailSignatureImageStatus(`${file.name} ausgewählt. Zum Übernehmen bitte Signatur speichern.`);
+  };
+  reader.onerror = () => {
+    showToast("Bild konnte nicht gelesen werden.");
+  };
+  reader.readAsDataURL(file);
 }
 
-async function handleEmailSignatureImageRemove() {
-  const currentPayload = emailSignaturePayload();
-
-  try {
-    await apiPost("api/email-signature.php", currentPayload);
-    const response = await fetch("api/email-signature.php?action=image", { method: "DELETE", credentials: "same-origin" });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || "Bild konnte nicht entfernt werden.");
-    }
-    applyEmailSignature(data);
-    showToast("Signaturbild wurde entfernt.");
-  } catch (error) {
-    showToast(error.message);
+function handleEmailSignatureImageRemove() {
+  pendingEmailSignatureImageFile = null;
+  pendingEmailSignatureImageDataUrl = "";
+  pendingEmailSignatureImageRemoval = Boolean(emailSignatureImageUrl);
+  if (els.emailSignatureImageInput) {
+    els.emailSignatureImageInput.value = "";
   }
+  renderEmailSignatureImage();
+  renderEmailSignaturePreview();
+  updateEmailSignatureImageStatus(
+    pendingEmailSignatureImageRemoval
+      ? "Bild wird beim nächsten Speichern entfernt."
+      : "PNG, JPG oder WEBP, maximal 2 MB."
+  );
 }
 
 async function loadMailbox() {
