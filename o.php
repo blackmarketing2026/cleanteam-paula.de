@@ -143,6 +143,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=contract-flow-simplified-20260719-1"></script>
+    <script src="public.js?v=contract-service-layout-20260719-1"></script>
   </body>
 </html>

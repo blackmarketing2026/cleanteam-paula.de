@@ -1988,14 +1988,104 @@ button.compact-item.selected {
   font-size: 15px;
 }
 
-.public-service-card ul {
+.public-service-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
   margin: 0;
-  padding-left: 18px;
-  color: #26384d;
 }
 
-.public-service-card li {
-  margin-bottom: 6px;
+.public-service-facts div {
+  min-width: 0;
+}
+
+.public-service-facts dt {
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.public-service-facts dd {
+  margin: 0;
+  color: #26384d;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.public-service-intro {
+  margin: 0;
+  color: #26384d;
+  line-height: 1.5;
+}
+
+.public-room-list {
+  display: grid;
+  gap: 10px;
+}
+
+.public-room-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #dce8f5;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.public-room-card h4 {
+  margin: 0;
+  color: var(--blue-950);
+  font-size: 14px;
+}
+
+.public-room-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.public-room-meta span {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #31506f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.public-room-services {
+  display: grid;
+  gap: 6px;
+}
+
+.public-room-services div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  color: #26384d;
+  line-height: 1.45;
+}
+
+.public-room-services strong {
+  color: var(--blue-950);
+}
+
+.public-room-services span {
+  overflow-wrap: anywhere;
+}
+
+.public-room-services-standalone {
+  padding: 10px 0 0;
+}
+
+.public-room-note,
+.public-service-empty {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .public-confirm-check {
@@ -2029,6 +2119,15 @@ button.compact-item.selected {
   .data-check {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .public-service-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .public-room-services div {
+    grid-template-columns: 1fr;
+    gap: 2px;
   }
 }
 

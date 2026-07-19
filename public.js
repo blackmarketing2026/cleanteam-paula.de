@@ -144,6 +144,132 @@ function showAuthorizationForm(visible) {
   }
 }
 
+function normalizeServiceLine(line) {
+  return String(line || "")
+    .trim()
+    .replace(/^[\u2022*-]\s*/, "")
+    .trim();
+}
+
+function isServiceNoiseLine(line) {
+  return (
+    /^(Begehungsergebnis|Objektdaten|Zusammenfassung|Leistungsbeschreibung \/ Dienstleistung|Etagen und R(?:ä|Ã¤)ume)$/i.test(line) ||
+    /^(Firma \/ Kunde|Ansprechpartner vor Ort|E-Mail|Telefon|Objektadresse|Objektgr(?:ö|Ã¶)ße|Begehung erfasst am|Etagen\/Bereiche|R(?:ä|Ã¤)ume|Reinigungspositionen):/i.test(line)
+  );
+}
+
+function splitServiceValue(line) {
+  const separator = line.indexOf(":");
+  if (separator === -1) {
+    return ["", line];
+  }
+
+  return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
+}
+
+function parseServiceRooms(notes) {
+  const rawLines = String(notes || "")
+    .split(/\r?\n/)
+    .map(normalizeServiceLine)
+    .filter(Boolean);
+  const startIndex = rawLines.findIndex((line) => /^Etagen und R(?:ä|Ã¤)ume$/i.test(line));
+  const lines = (startIndex >= 0 ? rawLines.slice(startIndex + 1) : rawLines).filter((line) => !isServiceNoiseLine(line));
+  const rooms = [];
+  const looseServices = [];
+  let currentRoom = null;
+  let readingServices = false;
+
+  lines.forEach((line) => {
+    if (/^\d+\.\s+/.test(line)) {
+      return;
+    }
+
+    const roomMatch = line.match(/^\d+\.\d+\s+(.+)$/);
+    if (roomMatch) {
+      currentRoom = { title: roomMatch[1].trim(), details: [], services: [], notes: [] };
+      rooms.push(currentRoom);
+      readingServices = false;
+      return;
+    }
+
+    if (/^Leistungen:?$/i.test(line)) {
+      readingServices = true;
+      return;
+    }
+
+    const [label, value] = splitServiceValue(line);
+    if (/^(Raumart|Bodenart)$/i.test(label) && value !== "") {
+      if (currentRoom) {
+        currentRoom.details.push([label, value]);
+      }
+      return;
+    }
+
+    if (/^(Extra Vereinbarungen|Notiz)$/i.test(label) && value !== "") {
+      if (currentRoom) {
+        currentRoom.notes.push(value);
+      }
+      return;
+    }
+
+    if (readingServices || /^(Boden|Tische|Schreibtische|Fenster|M(?:ü|Ã¼)ll|Sanit(?:ä|Ã¤)r|Toiletten|Waschbecken|Spiegel|K(?:ü|Ã¼)che|Treppe|Flur|Staub):/i.test(line)) {
+      const service = label && value ? { label, value } : { label: "", value: line };
+      if (currentRoom) {
+        currentRoom.services.push(service);
+      } else {
+        looseServices.push(service);
+      }
+    }
+  });
+
+  return { rooms, looseServices };
+}
+
+function renderFactGrid(items) {
+  return `
+    <dl class="public-service-facts">
+      ${items.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+    </dl>
+  `;
+}
+
+function renderServiceRooms(rooms, looseServices) {
+  if (rooms.length === 0 && looseServices.length === 0) {
+    return `<p class="public-service-empty">Die Reinigungsleistungen erfolgen nach der dokumentierten Begehung.</p>`;
+  }
+
+  const roomCards = rooms
+    .map((room) => {
+      const details = room.details.length
+        ? `<div class="public-room-meta">${room.details.map(([label, value]) => `<span>${escapeHtml(label)}: ${escapeHtml(value)}</span>`).join("")}</div>`
+        : "";
+      const services = room.services.length
+        ? `<div class="public-room-services">${room.services
+            .map((service) => `<div><strong>${escapeHtml(service.label || "Leistung")}</strong><span>${escapeHtml(service.value)}</span></div>`)
+            .join("")}</div>`
+        : `<p class="public-service-empty">Reinigung nach Begehung.</p>`;
+      const notes = room.notes.length ? `<p class="public-room-note">${escapeHtml(room.notes.join(" "))}</p>` : "";
+
+      return `
+        <article class="public-room-card">
+          <h4>${escapeHtml(room.title)}</h4>
+          ${details}
+          ${services}
+          ${notes}
+        </article>
+      `;
+    })
+    .join("");
+
+  const loose = looseServices.length
+    ? `<div class="public-room-services public-room-services-standalone">
+        ${looseServices.map((service) => `<div><strong>${escapeHtml(service.label || "Leistung")}</strong><span>${escapeHtml(service.value)}</span></div>`).join("")}
+      </div>`
+    : "";
+
+  return roomCards + loose;
+}
+
 function renderServiceDetails() {
   const offer = state.offer;
   const items = [
@@ -153,27 +279,20 @@ function renderServiceDetails() {
     ["Leistung", offer.service || "Reinigungsleistung"],
   ];
 
-  const notes = String(offer.notes || "")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .filter((line) => !/^Leistungsbeschreibung \/ Dienstleistung$/i.test(line));
+  const service = parseServiceRooms(offer.notes || "");
 
   els.serviceDetails.innerHTML = `
     <div class="public-service-card">
       <h3>Vereinbarte Eckdaten</h3>
-      <ul>
-        ${items.map(([label, value]) => `<li><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</li>`).join("")}
-      </ul>
+      ${renderFactGrid(items)}
     </div>
-    ${
-      notes.length
-        ? `<div class="public-service-card">
-            <h3>Leistungsbeschreibung</h3>
-            <ul>${notes.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
-          </div>`
-        : ""
-    }
+    <div class="public-service-card">
+      <h3>Leistungsbeschreibung</h3>
+      <p class="public-service-intro">Die Reinigung erfolgt nach der dokumentierten Begehung. Vereinbart sind die folgenden Bereiche und Leistungen.</p>
+      <div class="public-room-list">
+        ${renderServiceRooms(service.rooms, service.looseServices)}
+      </div>
+    </div>
   `;
 }
 
