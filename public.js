@@ -106,7 +106,7 @@ function renderOfferSummary() {
     ["Ansprechpartner", contactName(offer.customer)],
     ["Fläche", `${offer.squareMeters} m²`],
   ];
-  entries.push(["Netto-Betrag", formatCurrency(offer.price)]);
+  entries.push(["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`]);
   renderDefinitionList(els.offerSummary, entries);
   els.offerValidity.textContent = `Dieser Kostenvoranschlag ist gültig bis ${formatDate(offer.expiresAt)}.`;
 }
@@ -165,7 +165,7 @@ function renderServiceDetails() {
     ["Fläche", `${offer.squareMeters} m²`],
     ["Startdatum", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
   ];
-  entries.push(["Netto-Betrag", formatCurrency(offer.price)]);
+  entries.push(["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`]);
   if (offer.notes) {
     entries.push(["Besondere Vereinbarungen", offer.notes]);
   }

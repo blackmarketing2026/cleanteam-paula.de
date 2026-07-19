@@ -380,7 +380,7 @@ function render_offer_document(array $offer, array $customer, ?array $siteVisit 
 <dl>
   <dt>Fläche</dt><dd>{$squareMeters} m²</dd>
   <dt>Startdatum</dt><dd>{$startDate}</dd>
-  <dt>Finaler Preis</dt><dd>{$priceFormatted} netto</dd>
+  <dt>Monatlicher Preis</dt><dd>{$priceFormatted} netto monatlich</dd>
   <dt>Gültig bis</dt><dd>{$validUntil}</dd>
 </dl>
 {$notesBlock}
