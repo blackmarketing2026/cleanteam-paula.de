@@ -530,6 +530,39 @@ function setOffersGroupExpanded(expanded) {
   els.offersGroupToggle.setAttribute("aria-expanded", String(expanded));
 }
 
+function collapseNavGroups(except = null) {
+  if (except !== "customers") {
+    setCustomersGroupExpanded(false);
+  }
+  if (except !== "site-visits") {
+    setSiteVisitsGroupExpanded(false);
+  }
+  if (except !== "offers") {
+    setOffersGroupExpanded(false);
+  }
+  if (except !== "settings") {
+    setSettingsGroupExpanded(false);
+  }
+}
+
+function toggleNavGroup(group) {
+  const groups = {
+    customers: [els.customersSubgroup, setCustomersGroupExpanded],
+    "site-visits": [els.siteVisitsSubgroup, setSiteVisitsGroupExpanded],
+    offers: [els.offersSubgroup, setOffersGroupExpanded],
+    settings: [els.settingsSubgroup, setSettingsGroupExpanded],
+  };
+  const target = groups[group];
+  if (!target) {
+    return;
+  }
+
+  const [subgroup, setExpanded] = target;
+  const shouldOpen = subgroup.hidden;
+  collapseNavGroups(group);
+  setExpanded(shouldOpen);
+}
+
 function switchView(view) {
   if (view === "site-visit-new") {
     view = "site-visit-quiz";
@@ -553,27 +586,17 @@ function switchView(view) {
 
   const isSettingsView = view.startsWith("settings-");
   els.settingsGroupToggle.classList.toggle("active", isSettingsView);
-  if (isSettingsView) {
-    setSettingsGroupExpanded(true);
-  }
 
   const isCustomerView = view.startsWith("customer-");
   els.customersGroupToggle.classList.toggle("active", isCustomerView);
-  if (isCustomerView) {
-    setCustomersGroupExpanded(true);
-  }
 
   const isSiteVisitView = view.startsWith("site-visit-");
   els.siteVisitsGroupToggle.classList.toggle("active", isSiteVisitView);
-  if (isSiteVisitView) {
-    setSiteVisitsGroupExpanded(true);
-  }
 
   const isOfferView = view.startsWith("offers-");
   els.offersGroupToggle.classList.toggle("active", isOfferView);
-  if (isOfferView) {
-    setOffersGroupExpanded(true);
-  }
+
+  collapseNavGroups();
 
   closeMobileNav();
 
@@ -4137,15 +4160,15 @@ function bindEvents() {
   });
 
   els.customersGroupToggle.addEventListener("click", () => {
-    setCustomersGroupExpanded(els.customersSubgroup.hidden);
+    toggleNavGroup("customers");
   });
 
   els.siteVisitsGroupToggle.addEventListener("click", () => {
-    setSiteVisitsGroupExpanded(els.siteVisitsSubgroup.hidden);
+    toggleNavGroup("site-visits");
   });
 
   els.offersGroupToggle.addEventListener("click", () => {
-    setOffersGroupExpanded(els.offersSubgroup.hidden);
+    toggleNavGroup("offers");
   });
 
   els.settingsGroupToggle.addEventListener("click", () => {
@@ -4153,7 +4176,7 @@ function bindEvents() {
       showToast("Nur Admins können die Einstellungen öffnen.");
       return;
     }
-    setSettingsGroupExpanded(els.settingsSubgroup.hidden);
+    toggleNavGroup("settings");
   });
 
   els.bottomMenuButton.addEventListener("click", openMobileNav);
