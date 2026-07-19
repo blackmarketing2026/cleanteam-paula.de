@@ -39,8 +39,15 @@ final class SmtpMailer
         string $toName,
         string $subject,
         string $body,
-        bool $isHtml = true
+        bool $isHtml = true,
+        array $inlineImages = []
     ): void {
+        if ($isHtml && $inlineImages !== []) {
+            $payload = $this->buildRelatedPayload($fromEmail, $fromName, $toEmail, $toName, $subject, $body, $inlineImages);
+            $this->transmit($fromEmail, $toEmail, $payload);
+            return;
+        }
+
         $contentType = ($isHtml ? 'text/html' : 'text/plain') . '; charset=UTF-8';
         $payload = $this->buildHeaders($fromEmail, $fromName, $toEmail, $toName, $subject, $contentType)
             . "\r\n" . $this->dotStuff($body);
@@ -57,25 +64,81 @@ final class SmtpMailer
         string $htmlBody,
         string $attachmentFilename,
         string $attachmentContent,
-        string $attachmentMimeType = 'text/html'
+        string $attachmentMimeType = 'text/html',
+        array $inlineImages = []
     ): void {
         $boundary = 'ct-' . bin2hex(random_bytes(12));
         $headers = $this->buildHeaders($fromEmail, $fromName, $toEmail, $toName, $subject, 'multipart/mixed; boundary="' . $boundary . '"');
 
-        $bodyPart = "--{$boundary}\r\n"
-            . "Content-Type: text/html; charset=UTF-8\r\n"
-            . "Content-Transfer-Encoding: 8bit\r\n\r\n"
-            . $htmlBody . "\r\n";
+        if ($inlineImages !== []) {
+            $bodyPart = "--{$boundary}\r\n"
+                . $this->buildRelatedBody($htmlBody, $inlineImages) . "\r\n";
+        } else {
+            $bodyPart = "--{$boundary}\r\n"
+                . "Content-Type: text/html; charset=UTF-8\r\n"
+                . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+                . $htmlBody . "\r\n";
+        }
 
+        $safeAttachmentFilename = $this->sanitizeFilename($attachmentFilename);
+        $safeAttachmentMimeType = $this->sanitizeMimeType($attachmentMimeType);
         $attachmentPart = "--{$boundary}\r\n"
-            . "Content-Type: {$attachmentMimeType}; name=\"{$attachmentFilename}\"\r\n"
+            . "Content-Type: {$safeAttachmentMimeType}; name=\"{$safeAttachmentFilename}\"\r\n"
             . "Content-Transfer-Encoding: base64\r\n"
-            . "Content-Disposition: attachment; filename=\"{$attachmentFilename}\"\r\n\r\n"
+            . "Content-Disposition: attachment; filename=\"{$safeAttachmentFilename}\"\r\n\r\n"
             . chunk_split(base64_encode($attachmentContent)) . "\r\n";
 
         $payload = $headers . "\r\n" . $this->dotStuff($bodyPart . $attachmentPart . "--{$boundary}--");
 
         $this->transmit($fromEmail, $toEmail, $payload);
+    }
+
+    private function buildRelatedPayload(
+        string $fromEmail,
+        string $fromName,
+        string $toEmail,
+        string $toName,
+        string $subject,
+        string $htmlBody,
+        array $inlineImages
+    ): string {
+        $boundary = 'ct-rel-' . bin2hex(random_bytes(12));
+        $headers = $this->buildHeaders($fromEmail, $fromName, $toEmail, $toName, $subject, 'multipart/related; boundary="' . $boundary . '"');
+        $body = $this->buildRelatedBody($htmlBody, $inlineImages, $boundary, false);
+
+        return $headers . "\r\n" . $this->dotStuff($body);
+    }
+
+    private function buildRelatedBody(string $htmlBody, array $inlineImages, ?string $boundary = null, bool $includeContentType = true): string
+    {
+        $boundary = $boundary ?: 'ct-rel-' . bin2hex(random_bytes(12));
+        $body = $includeContentType
+            ? "Content-Type: multipart/related; boundary=\"{$boundary}\"\r\n\r\n"
+            : '';
+
+        $body .= "--{$boundary}\r\n"
+            . "Content-Type: text/html; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: 8bit\r\n\r\n"
+            . $htmlBody . "\r\n";
+
+        foreach ($inlineImages as $image) {
+            $cid = $this->sanitizeContentId((string) ($image['cid'] ?? ''));
+            $mime = $this->sanitizeMimeType((string) ($image['mimeType'] ?? 'application/octet-stream'));
+            $filename = $this->sanitizeFilename((string) ($image['filename'] ?? 'image'));
+            $content = (string) ($image['content'] ?? '');
+            if ($cid === '' || $content === '') {
+                continue;
+            }
+
+            $body .= "--{$boundary}\r\n"
+                . "Content-Type: {$mime}; name=\"{$filename}\"\r\n"
+                . "Content-Transfer-Encoding: base64\r\n"
+                . "Content-ID: <{$cid}>\r\n"
+                . "Content-Disposition: inline; filename=\"{$filename}\"\r\n\r\n"
+                . chunk_split(base64_encode($content)) . "\r\n";
+        }
+
+        return $body . "--{$boundary}--";
     }
 
     private function transmit(string $fromEmail, string $toEmail, string $payload): void
@@ -142,6 +205,22 @@ final class SmtpMailer
     private function sanitizeAddress(string $address): string
     {
         return str_replace(["\r", "\n", '<', '>'], '', trim($address));
+    }
+
+    private function sanitizeContentId(string $contentId): string
+    {
+        return preg_replace('/[^A-Za-z0-9._@-]/', '', $contentId) ?? '';
+    }
+
+    private function sanitizeMimeType(string $mimeType): string
+    {
+        return preg_match('/^[A-Za-z0-9.+-]+\/[A-Za-z0-9.+-]+$/', $mimeType) ? $mimeType : 'application/octet-stream';
+    }
+
+    private function sanitizeFilename(string $filename): string
+    {
+        $filename = str_replace(["\r", "\n", '"', '\\'], '', trim($filename));
+        return $filename !== '' ? $filename : 'image';
     }
 
     private function buildHeaders(

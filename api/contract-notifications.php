@@ -47,7 +47,7 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
     $messageContent = '<p style="margin:0 0 14px 0;">Dies ist eine Test-E-Mail für Vertragsbenachrichtigungen.</p>'
         . '<p style="margin:0;">Im Anhang befindet sich die CleanTeam-Ausfertigung als PDF.</p>';
     $subject = '[Test] Vertragsbenachrichtigung – ' . ($context['contract']['number'] ?? $context['customer']['name']);
-    $message = render_email_template($pdo, $messageContent, [
+    $message = render_email_template_message($pdo, $messageContent, [
         'title' => 'Test: Vertragsbenachrichtigung',
         'preheader' => 'Test-E-Mail für Vertragsbenachrichtigungen.',
         'fromName' => $smtp['from_name'] ?? 'CleanTeam',
@@ -68,13 +68,14 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
                 $smtp['username'],
                 $smtp['from_name'],
                 $recipient,
-                $recipient,
-                $subject,
-                $message,
-                (string) $pdf['filename'],
-                (string) $pdf['content'],
-                'application/pdf'
-            );
+            $recipient,
+            $subject,
+            $message['html'],
+            (string) $pdf['filename'],
+            (string) $pdf['content'],
+            'application/pdf',
+            $message['inlineImages']
+        );
         }
     } catch (Throwable $exception) {
         json_error('Test-E-Mail fehlgeschlagen: ' . $exception->getMessage(), 502);

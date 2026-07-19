@@ -55,13 +55,14 @@ $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName
     . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individueller Kostenvoranschlag steht ab sofort online bereit:</p>'
     . '<p style="margin:18px 0;"><a href="' . email_h($publicUrl) . '" style="display:inline-block;padding:12px 20px;background:#0a4f91;color:#ffffff;text-decoration:none;border-radius:7px;font-weight:700;">Kostenvoranschlag ansehen</a></p>'
     . '<p>Der Link ist bis zum ' . email_h($validUntil) . ' gültig.</p>';
-$body = render_email_template($pdo, $bodyContent, [
+$message = render_email_template_message($pdo, $bodyContent, [
     'title' => 'Ihr Kostenvoranschlag von CleanTeam',
     'preheader' => 'Ihr individueller Kostenvoranschlag steht online bereit.',
     'fromName' => $settings['from_name'] ?? 'CleanTeam',
     'signatureText' => $settings['signature'] ?? '',
     'signatureContext' => 'offer',
 ]);
+$body = $message['html'];
 
 try {
     $mailer = new SmtpMailer(
@@ -79,7 +80,8 @@ try {
         $offer['c_name'],
         'Ihr Kostenvoranschlag von CleanTeam',
         $body,
-        true
+        true,
+        $message['inlineImages']
     );
 } catch (Throwable $exception) {
     json_error('E-Mail-Versand fehlgeschlagen: ' . $exception->getMessage(), 502);

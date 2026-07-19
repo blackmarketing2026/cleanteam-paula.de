@@ -60,17 +60,92 @@ function email_brand_logo_url(PDO $pdo): ?string
     return email_asset_base_url() . '/uploads/' . rawurlencode($filename);
 }
 
-function email_logo_html(PDO $pdo): string
+function email_upload_image_mime_type(string $path): string
 {
-    $logoUrl = email_brand_logo_url($pdo);
-    if ($logoUrl !== null) {
-        return '<img src="' . email_h($logoUrl) . '" alt="CleanTeam" width="168" style="display:block;max-width:168px;max-height:68px;width:auto;height:auto;border:0;">';
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    switch ($extension) {
+        case 'jpg':
+        case 'jpeg':
+            return 'image/jpeg';
+        case 'png':
+            return 'image/png';
+        case 'webp':
+            return 'image/webp';
+        default:
+            return 'application/octet-stream';
+    }
+}
+
+function email_inline_upload_image_html(
+    ?string $filename,
+    string $alt,
+    int $width,
+    string $style,
+    array &$inlineImages,
+    string $fallbackUrl = ''
+): string {
+    $filename = trim((string) $filename);
+    if ($filename === '') {
+        return '';
+    }
+
+    $path = __DIR__ . '/../uploads/' . basename($filename);
+    if (is_file($path)) {
+        $cid = 'ct-' . sha1($filename . '|' . filesize($path) . '|' . filemtime($path)) . '@cleanteam';
+        $inlineImages[$cid] = [
+            'cid' => $cid,
+            'filename' => basename($filename),
+            'mimeType' => email_upload_image_mime_type($path),
+            'content' => (string) file_get_contents($path),
+        ];
+
+        return '<img src="cid:' . email_h($cid) . '" alt="' . email_h($alt) . '" width="' . $width . '" style="' . email_h($style) . '">';
+    }
+
+    if ($fallbackUrl !== '') {
+        return '<img src="' . email_h($fallbackUrl) . '" alt="' . email_h($alt) . '" width="' . $width . '" style="' . email_h($style) . '">';
+    }
+
+    return '';
+}
+
+function email_brand_logo_filename(PDO $pdo): ?string
+{
+    try {
+        $row = $pdo->query('SELECT logo_filename FROM branding_settings WHERE id = 1')->fetch();
+    } catch (Throwable $exception) {
+        return null;
+    }
+
+    if (!is_array($row)) {
+        return null;
+    }
+
+    $filename = trim((string) ($row['logo_filename'] ?? ''));
+    return $filename !== '' ? $filename : null;
+}
+
+function email_logo_html(PDO $pdo, array &$inlineImages = []): string
+{
+    $filename = email_brand_logo_filename($pdo);
+    if ($filename !== null) {
+        $imageHtml = email_inline_upload_image_html(
+            $filename,
+            'CleanTeam',
+            168,
+            'display:block;max-width:168px;max-height:68px;width:auto;height:auto;border:0;',
+            $inlineImages,
+            email_asset_base_url() . '/uploads/' . rawurlencode($filename)
+        );
+        if ($imageHtml !== '') {
+            return $imageHtml;
+        }
     }
 
     return '<div style="display:inline-block;padding:10px 14px;border-radius:8px;background:#0a4f91;color:#ffffff;font-size:18px;font-weight:800;letter-spacing:0;">CleanTeam</div>';
 }
 
-function email_signature_html(PDO $pdo, array $options = []): string
+function email_signature_html(PDO $pdo, array $options = [], array &$inlineImages = []): string
 {
     $settings = load_email_signature_settings($pdo);
     $context = trim((string) ($options['signatureContext'] ?? ''));
@@ -104,9 +179,18 @@ function email_signature_html(PDO $pdo, array $options = []): string
     $extraHtml = $extraText !== ''
         ? '<div style="margin-top:10px;color:#51657d;font-size:12.5px;line-height:1.5;">' . email_plain_text_html($extraText) . '</div>'
         : '';
-    $imageHtml = $settings['imageUrl']
-        ? '<img src="' . email_h($settings['imageUrl']) . '" alt="' . email_h($companyName) . '" width="156" style="display:block;max-width:156px;max-height:86px;width:auto;height:auto;border:0;">'
-        : email_logo_html($pdo);
+    $signatureFilename = trim((string) ($settings['imageFilename'] ?? ''));
+    $imageHtml = $signatureFilename !== ''
+        ? email_inline_upload_image_html(
+            $signatureFilename,
+            $companyName,
+            156,
+            'display:block;max-width:156px;max-height:86px;width:auto;height:auto;border:0;',
+            $inlineImages,
+            (string) ($settings['imageUrl'] ?? '')
+        )
+        : '';
+    $imageHtml = $imageHtml !== '' ? $imageHtml : email_logo_html($pdo, $inlineImages);
     $roleHtml = $senderRole !== ''
         ? '<p style="margin:0 0 10px 0;color:#51657d;font-size:13px;">' . email_h($senderRole) . '</p>'
         : '';
@@ -146,6 +230,13 @@ function email_signature_html(PDO $pdo, array $options = []): string
 
 function render_email_template(PDO $pdo, string $contentHtml, array $options = []): string
 {
+    $message = render_email_template_message($pdo, $contentHtml, $options);
+    return $message['html'];
+}
+
+function render_email_template_message(PDO $pdo, string $contentHtml, array $options = []): array
+{
+    $inlineImages = [];
     $title = trim((string) ($options['title'] ?? ''));
     $preheader = trim((string) ($options['preheader'] ?? $title));
     $signatureText = (string) ($options['signatureText'] ?? '');
@@ -157,7 +248,7 @@ function render_email_template(PDO $pdo, string $contentHtml, array $options = [
         ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">' . email_h($preheader) . '</div>'
         : '';
 
-    return '<!doctype html>
+    $html = '<!doctype html>
 <html lang="de">
   <head>
     <meta charset="utf-8">
@@ -172,14 +263,14 @@ function render_email_template(PDO $pdo, string $contentHtml, array $options = [
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;background:#ffffff;border:1px solid #d7e4f2;border-radius:12px;box-shadow:0 12px 30px rgba(8,50,95,0.08);overflow:hidden;">
             <tr>
               <td style="padding:26px 28px 22px 28px;border-top:5px solid #0a4f91;">
-                ' . email_logo_html($pdo) . '
+                ' . email_logo_html($pdo, $inlineImages) . '
                 ' . $titleHtml . '
                 <div style="color:#26384d;font-size:15px;line-height:1.65;">' . $contentHtml . '</div>
                 ' . email_signature_html($pdo, [
                     'fromName' => $fromName,
                     'signatureText' => $signatureText,
                     'signatureContext' => (string) ($options['signatureContext'] ?? ''),
-                ]) . '
+                ], $inlineImages) . '
               </td>
             </tr>
           </table>
@@ -188,4 +279,9 @@ function render_email_template(PDO $pdo, string $contentHtml, array $options = [
     </table>
   </body>
 </html>';
+
+    return [
+        'html' => $html,
+        'inlineImages' => array_values($inlineImages),
+    ];
 }

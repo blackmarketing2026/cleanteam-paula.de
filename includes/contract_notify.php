@@ -120,7 +120,7 @@ function notify_contract_created(PDO $pdo, string $contractId): void
         );
 
         $subject = 'Neuer Vertrag ' . ($context['contract']['number'] ?? '') . ' – ' . $context['customer']['name'];
-        $message = render_email_template($pdo, $messageContent, [
+        $message = render_email_template_message($pdo, $messageContent, [
             'title' => 'Neuer Vertrag',
             'preheader' => 'Ein Vertrag wurde angelegt oder aktualisiert.',
             'fromName' => $smtp['from_name'] ?? 'CleanTeam',
@@ -136,10 +136,11 @@ function notify_contract_created(PDO $pdo, string $contractId): void
                     $recipient,
                     $recipient,
                     $subject,
-                    $message,
+                    $message['html'],
                     (string) $pdf['filename'],
                     (string) $pdf['content'],
-                    'application/pdf'
+                    'application/pdf',
+                    $message['inlineImages']
                 );
             } catch (Throwable $exception) {
                 error_log('Vertragsbenachrichtigung fehlgeschlagen (' . $recipient . '): ' . $exception->getMessage());
@@ -181,7 +182,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
         $messageContent = '<p style="margin:0 0 14px 0;">Sehr geehrte Damen und Herren,</p>'
             . '<p>herzlich willkommen bei CleanTeam Group! Ihr Vertrag wurde soeben von Ihnen unterschrieben und ist damit gültig.</p>'
             . '<p>Im Anhang finden Sie eine Kopie Ihres Vertrags' . ($number !== '' ? ' (' . email_h($number) . ')' : '') . '.</p>';
-        $message = render_email_template($pdo, $messageContent, [
+        $message = render_email_template_message($pdo, $messageContent, [
             'title' => 'Ihr Vertrag bei CleanTeam Group',
             'preheader' => 'Ihr unterschriebener Vertrag liegt als PDF bei.',
             'fromName' => $smtp['from_name'] ?? 'CleanTeam',
@@ -203,10 +204,11 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             $customerEmail,
             $context['customer']['name'],
             'Ihr Vertrag bei CleanTeam Group',
-            $message,
+            $message['html'],
             (string) $pdf['filename'],
             (string) $pdf['content'],
-            'application/pdf'
+            'application/pdf',
+            $message['inlineImages']
         );
     } catch (Throwable $exception) {
         error_log('Kunden-Vertragsbestätigung fehlgeschlagen: ' . $exception->getMessage());

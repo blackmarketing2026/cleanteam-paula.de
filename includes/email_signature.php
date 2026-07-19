@@ -93,6 +93,7 @@ function email_signature_row_to_response(array $row): array
         'addressLine1' => (string) ($row['address_line1'] ?? ''),
         'addressLine2' => (string) ($row['address_line2'] ?? ''),
         'extraText' => (string) ($row['extra_text'] ?? ''),
+        'imageFilename' => (string) ($row['image_filename'] ?? ''),
         'imageUrl' => email_signature_image_url($row['image_filename'] ?? null),
         'useAllEmails' => (bool) ($row['use_all_emails'] ?? 1),
         'usage' => [

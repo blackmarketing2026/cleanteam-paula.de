@@ -374,13 +374,14 @@ if ($method === 'POST' && $action === 'send') {
     }
 
     $messageHtml = '<div style="margin:0;">' . email_plain_text_html($message) . '</div>';
-    $htmlBody = render_email_template($pdo, $messageHtml, [
+    $emailMessage = render_email_template_message($pdo, $messageHtml, [
         'title' => $subject,
         'preheader' => trim($message),
         'fromName' => $settings['from_name'] ?? 'CleanTeam',
         'signatureText' => $settings['signature'] ?? '',
         'signatureContext' => 'mailbox',
     ]);
+    $htmlBody = $emailMessage['html'];
 
     try {
         $mailer = new SmtpMailer(
@@ -397,7 +398,8 @@ if ($method === 'POST' && $action === 'send') {
             $to,
             $subject,
             $htmlBody,
-            true
+            true,
+            $emailMessage['inlineImages']
         );
     } catch (Throwable $exception) {
         json_error('E-Mail konnte nicht gesendet werden: ' . $exception->getMessage(), 502);

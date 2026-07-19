@@ -60,7 +60,7 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
             $settings['username'],
             decrypt_secret($settings['password_encrypted'])
         );
-        $htmlBody = render_email_template(
+        $message = render_email_template_message(
             $pdo,
             '<p style="margin:0;">Diese Test-E-Mail bestätigt, dass Ihre SMTP-Einstellungen im CleanTeam Dashboard funktionieren.</p>',
             [
@@ -70,6 +70,7 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
                 'signatureContext' => 'test',
             ]
         );
+        $htmlBody = $message['html'];
         $mailer->send(
             $settings['from_email'],
             $settings['from_name'],
@@ -77,7 +78,8 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
             $to,
             'CleanTeam Dashboard – Test-E-Mail',
             $htmlBody,
-            true
+            true,
+            $message['inlineImages']
         );
     } catch (Throwable $exception) {
         json_error('Test-E-Mail fehlgeschlagen: ' . $exception->getMessage(), 502);
