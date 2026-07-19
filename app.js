@@ -2174,7 +2174,7 @@ function renderOfferCard(offer) {
   const contractProcessAction = offer.contractId
     ? ""
     : `
-      <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
+      <button class="secondary-button" type="button" data-action="open-offer-contract-link" data-id="${escapeHtml(offer.id)}">
         <i data-lucide="signature" aria-hidden="true"></i>
         Vertrag erstellen
       </button>
@@ -2754,6 +2754,16 @@ function copyOfferLink(id) {
   }
 
   openLinkModal(offer.publicUrl);
+}
+
+function openOfferContractLink(id) {
+  const offer = getOffer(id);
+  if (!offer || !offer.publicUrl) {
+    showToast("Link wurde nicht gefunden.");
+    return;
+  }
+
+  window.open(offer.publicUrl, "_blank", "noopener");
 }
 
 async function deleteCustomer(id) {
@@ -4049,6 +4059,10 @@ function handleRecordAction(event) {
 
   if (action === "copy-offer-link") {
     copyOfferLink(id);
+  }
+
+  if (action === "open-offer-contract-link") {
+    openOfferContractLink(id);
   }
 
   if (action === "open-contract") {
