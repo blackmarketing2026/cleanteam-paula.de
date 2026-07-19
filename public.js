@@ -13,7 +13,6 @@ const els = {
   offerValidity: document.querySelector("#offer-validity"),
   startContract: document.querySelector("#start-contract"),
   dataCheckList: document.querySelector("#data-check-list"),
-  intervalCheckText: document.querySelector("#interval-check-text"),
   authYes: document.querySelector("#auth-yes"),
   authNo: document.querySelector("#auth-no"),
   authorizationQuestionActions: document.querySelector("#authorization-question-actions"),
@@ -22,8 +21,9 @@ const els = {
   authorizationAddress: document.querySelector("#authorization-address"),
   authorizationBack: document.querySelector("#authorization-back"),
   representationContinue: document.querySelector("#representation-continue"),
-  partnerDetails: document.querySelector("#partner-details"),
   serviceDetails: document.querySelector("#service-details"),
+  termsConfirmation: document.querySelector("#terms-confirmation"),
+  termsContinue: document.querySelector("#terms-continue"),
   signaturePad: document.querySelector("#signature-pad"),
   clearSignature: document.querySelector("#clear-signature"),
   saveSignature: document.querySelector("#save-signature"),
@@ -122,10 +122,6 @@ function renderDataCheck() {
   ]);
 }
 
-function renderIntervalCheck() {
-  els.intervalCheckText.textContent = "Sind die im Kostenvoranschlag aufgeführten Reinigungsintervalle korrekt?";
-}
-
 function renderAuthorizationAddressOptions() {
   const options = state.offer?.authorizationAddressOptions || [];
   els.authorizationAddress.innerHTML = options.length
@@ -148,28 +144,37 @@ function showAuthorizationForm(visible) {
   }
 }
 
-function renderPartnerDetails() {
-  const offer = state.offer;
-  renderDefinitionList(els.partnerDetails, [
-    ["Kunde", offer.customer.name],
-    ["Ansprechpartner", contactName(offer.customer)],
-    ["E-Mail", offer.customer.email],
-    ["Telefon", offer.customer.phone],
-    ["Adresse", customerAddress(offer.customer)],
-  ]);
-}
-
 function renderServiceDetails() {
   const offer = state.offer;
-  const entries = [
+  const items = [
     ["Fläche", `${offer.squareMeters} m²`],
     ["Startdatum", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
+    ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
+    ["Leistung", offer.service || "Reinigungsleistung"],
   ];
-  entries.push(["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`]);
-  if (offer.notes) {
-    entries.push(["Besondere Vereinbarungen", offer.notes]);
-  }
-  renderDefinitionList(els.serviceDetails, entries);
+
+  const notes = String(offer.notes || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^Leistungsbeschreibung \/ Dienstleistung$/i.test(line));
+
+  els.serviceDetails.innerHTML = `
+    <div class="public-service-card">
+      <h3>Vereinbarte Eckdaten</h3>
+      <ul>
+        ${items.map(([label, value]) => `<li><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</li>`).join("")}
+      </ul>
+    </div>
+    ${
+      notes.length
+        ? `<div class="public-service-card">
+            <h3>Leistungsbeschreibung</h3>
+            <ul>${notes.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+          </div>`
+        : ""
+    }
+  `;
 }
 
 function renderFinalContract() {
@@ -210,15 +215,9 @@ function routeToState(data) {
     case "daten":
       renderDataCheck();
       break;
-    case "intervall":
-      renderIntervalCheck();
-      break;
     case "vollmacht":
       renderAuthorizationAddressOptions();
       showAuthorizationForm(false);
-      break;
-    case "vertragspartner":
-      renderPartnerDetails();
       break;
     case "leistung":
       renderServiceDetails();
@@ -322,16 +321,25 @@ function bindEvents() {
       const confirmed = yesNoButton.dataset.yesno === "yes";
       if (screen.id === "screen-daten") {
         handleAction("confirm-data", { confirmed });
-      } else if (screen.id === "screen-intervall") {
-        handleAction("confirm-interval", { confirmed });
       }
       return;
     }
 
     const nextButton = event.target.closest("[data-next]");
     if (nextButton) {
-      handleAction("advance", { step: nextButton.dataset.next });
+      if (nextButton.dataset.next === "signatur" && !els.termsConfirmation.checked) {
+        showToast("Bitte bestätigen Sie zuerst den Auftrag.");
+        return;
+      }
+      handleAction("advance", {
+        step: nextButton.dataset.next,
+        termsAccepted: nextButton.dataset.next === "signatur" ? els.termsConfirmation.checked : undefined,
+      });
     }
+  });
+
+  els.termsConfirmation.addEventListener("change", () => {
+    els.termsContinue.disabled = !els.termsConfirmation.checked;
   });
 
   els.authYes.addEventListener("click", () => {

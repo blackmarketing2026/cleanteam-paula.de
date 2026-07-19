@@ -14,7 +14,7 @@ if ($token === '') {
     json_error('Kein Kostenvoranschlags-Link angegeben.', 404);
 }
 
-const STEP_ORDER = ['daten', 'intervall', 'vollmacht', 'vertragspartner', 'leistung', 'bedingungen', 'signatur', 'fertig'];
+const STEP_ORDER = ['daten', 'vollmacht', 'leistung', 'bedingungen', 'signatur', 'fertig'];
 const TERMINAL_STATUSES = ['daten_abgelehnt', 'intervall_abgelehnt'];
 
 function load_offer(PDO $pdo, string $token): array
@@ -117,6 +117,14 @@ function offer_is_expired(array $offer): bool
 
 function public_state(array $offer, ?array $contract): array
 {
+    $currentStep = $contract['current_step'] ?? null;
+    if ($currentStep === 'intervall') {
+        $currentStep = 'vollmacht';
+    }
+    if ($currentStep === 'vertragspartner') {
+        $currentStep = 'leistung';
+    }
+
     return [
         'offer' => [
             'squareMeters' => (int) $offer['square_meters'],
@@ -147,7 +155,7 @@ function public_state(array $offer, ?array $contract): array
         ],
         'contract' => $contract === null ? null : [
             'status' => $contract['status'],
-            'currentStep' => $contract['current_step'],
+            'currentStep' => $currentStep,
             'dataConfirmed' => (bool) $contract['data_confirmed'],
             'intervalConfirmed' => (bool) $contract['interval_confirmed'],
             'authorized' => $contract['authorized'] === null ? null : (bool) $contract['authorized'],
@@ -233,7 +241,7 @@ if ($method === 'POST' && $action === 'confirm-data') {
     $confirmed = (bool) ($body['confirmed'] ?? false);
 
     if ($confirmed) {
-        $pdo->prepare("UPDATE contracts SET data_confirmed = 1, current_step = 'intervall' WHERE id = :id")
+        $pdo->prepare("UPDATE contracts SET data_confirmed = 1, interval_confirmed = 1, current_step = 'vollmacht' WHERE id = :id")
             ->execute(['id' => $contract['id']]);
     } else {
         $pdo->prepare("UPDATE contracts SET status = 'daten_abgelehnt' WHERE id = :id")
@@ -287,7 +295,7 @@ if ($method === 'POST' && $action === 'authorization') {
     $stmt = $pdo->prepare(
         "UPDATE contracts SET authorized = :authorized, representation_note = :note,
             authorization_grantor_name = :grantor_name, authorization_company_address = :company_address,
-            current_step = 'vertragspartner' WHERE id = :id"
+            current_step = 'leistung' WHERE id = :id"
     );
     $stmt->execute([
         'authorized' => $authorized ? 1 : 0,
@@ -308,15 +316,25 @@ if ($method === 'POST' && $action === 'advance') {
     $contract = require_active_contract(load_contract($pdo, $offer['id']));
     $body = read_json_body();
     $targetStep = (string) ($body['step'] ?? '');
+    $currentStep = (string) $contract['current_step'];
+    if ($currentStep === 'intervall') {
+        $currentStep = 'vollmacht';
+    }
+    if ($currentStep === 'vertragspartner') {
+        $currentStep = 'leistung';
+    }
 
-    $currentIndex = array_search($contract['current_step'], STEP_ORDER, true);
+    $currentIndex = array_search($currentStep, STEP_ORDER, true);
     $targetIndex = array_search($targetStep, STEP_ORDER, true);
 
     if ($targetIndex === false || $currentIndex === false || $targetIndex < $currentIndex || $targetIndex > $currentIndex + 1) {
         json_error('Ungültiger Schrittwechsel.', 422);
     }
 
-    if ($contract['current_step'] === 'bedingungen' && $targetStep === 'signatur') {
+    if ($currentStep === 'bedingungen' && $targetStep === 'signatur') {
+        if (empty($body['termsAccepted'])) {
+            json_error('Bitte bestaetigen Sie zuerst den Auftrag.', 422);
+        }
         $pdo->prepare('UPDATE contracts SET current_step = :step, terms_accepted_at = UTC_TIMESTAMP() WHERE id = :id')
             ->execute(['step' => $targetStep, 'id' => $contract['id']]);
     } else {
