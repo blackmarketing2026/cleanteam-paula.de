@@ -69,6 +69,7 @@ const els = {
   sidebar: document.querySelector(".sidebar"),
   bottomMenuButton: document.querySelector("#bottom-menu-button"),
   mobileBackdrop: document.querySelector("#mobile-backdrop"),
+  topbarActions: document.querySelector("#topbar-actions"),
   quickCustomer: document.querySelector("#quick-customer"),
   quickOffer: document.querySelector("#quick-offer"),
   newCustomerButton: document.querySelector("#new-customer-button"),
@@ -127,6 +128,21 @@ const els = {
   emailSettingsMailboxEnabled: document.querySelector("#email-settings-mailbox-enabled"),
   emailSettingsInternalContractEnabled: document.querySelector("#email-settings-internal-contract-enabled"),
   emailSettingsTestEnabled: document.querySelector("#email-settings-test-enabled"),
+  emailSignatureForm: document.querySelector("#email-signature-form"),
+  emailSignatureName: document.querySelector("#email-signature-name"),
+  emailSignatureRole: document.querySelector("#email-signature-role"),
+  emailSignaturePhone: document.querySelector("#email-signature-phone"),
+  emailSignatureMobile: document.querySelector("#email-signature-mobile"),
+  emailSignatureEmail: document.querySelector("#email-signature-email"),
+  emailSignatureWebsite: document.querySelector("#email-signature-website"),
+  emailSignatureCompany: document.querySelector("#email-signature-company"),
+  emailSignatureAddress1: document.querySelector("#email-signature-address-1"),
+  emailSignatureAddress2: document.querySelector("#email-signature-address-2"),
+  emailSignatureExtra: document.querySelector("#email-signature-extra"),
+  emailSignatureImagePreview: document.querySelector("#email-signature-image-preview"),
+  emailSignatureImageInput: document.querySelector("#email-signature-image-input"),
+  emailSignatureImageRemove: document.querySelector("#email-signature-image-remove"),
+  emailSignaturePreview: document.querySelector("#email-signature-preview"),
   mailboxNotConfigured: document.querySelector("#mailbox-not-configured"),
   mailboxNotConfiguredAdminText: document.querySelector("#mailbox-not-configured-admin-text"),
   mailboxNotConfiguredUserText: document.querySelector("#mailbox-not-configured-user-text"),
@@ -207,6 +223,7 @@ const titles = {
   mailbox: "Postfach",
   "settings-smtp": "SMTP-Server-Einstellungen",
   "settings-email": "E-Mail-Einstellungen",
+  "settings-email-signature": "E-Mail-Signatur",
   "settings-notify": "Vertragsbenachrichtigungen-Einstellungen",
   "settings-logo": "Logo-Einstellungen",
   "settings-signature": "Signatur",
@@ -517,6 +534,9 @@ function switchView(view) {
 
   state.currentView = view;
   els.viewTitle.textContent = titles[view];
+  if (els.topbarActions) {
+    els.topbarActions.hidden = view === "site-visit-quiz";
+  }
 
   els.navLinks.forEach((button) => {
     button.classList.toggle("active", button.dataset.view === view);
@@ -558,6 +578,10 @@ function switchView(view) {
 
   if (view === "settings-email") {
     loadEmailSettings();
+  }
+
+  if (view === "settings-email-signature") {
+    loadEmailSignature();
   }
 
   if (view === "settings-notify") {
@@ -1794,6 +1818,11 @@ function renderSiteVisitRoomSummary(room) {
   `;
 }
 
+function siteVisitNotesForOffer(visit) {
+  const notes = String(visit?.notes || "").trim();
+  return notes === "Über das Begehungs-Quiz erfasst." ? "" : notes;
+}
+
 function siteVisitOfferNotes(visit) {
   const lines = [
     "Leistungsbeschreibung / Dienstleistung",
@@ -1848,8 +1877,9 @@ function siteVisitOfferNotes(visit) {
     });
   }
 
-  if (visit.notes) {
-    lines.push("", "Allgemeine Notizen:", visit.notes);
+  const visitNotes = siteVisitNotesForOffer(visit);
+  if (visitNotes) {
+    lines.push("", "Allgemeine Notizen:", visitNotes);
   }
 
   return lines.join("\n");
@@ -1878,7 +1908,7 @@ function completeSiteVisitOfferNotes(visit) {
   const lines = [
     "Leistungsbeschreibung / Dienstleistung",
     "",
-    "Begehungsergebnis aus dem Quiz",
+    "Begehungsergebnis",
     "",
     "Objektdaten",
     `- Firma / Kunde: ${siteVisitCompanyName(visit)}`,
@@ -1935,8 +1965,9 @@ function completeSiteVisitOfferNotes(visit) {
     });
   }
 
-  if (visit.notes) {
-    lines.push("", "Allgemeine Notizen zur Begehung", ...String(visit.notes).split(/\r?\n/).filter(Boolean).map((line) => `- ${line}`));
+  const visitNotes = siteVisitNotesForOffer(visit);
+  if (visitNotes) {
+    lines.push("", "Allgemeine Notizen zur Begehung", ...visitNotes.split(/\r?\n/).filter(Boolean).map((line) => `- ${line}`));
   }
 
   return lines.join("\n");
@@ -2869,6 +2900,160 @@ async function handleEmailSettingsSubmit(event) {
     await apiPost("api/email-settings.php", payload);
     showToast("E-Mail-Einstellungen wurden gespeichert.");
     await loadEmailSettings();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function emailSignaturePayload() {
+  return {
+    senderName: els.emailSignatureName.value.trim(),
+    senderRole: els.emailSignatureRole.value.trim(),
+    phone: els.emailSignaturePhone.value.trim(),
+    mobile: els.emailSignatureMobile.value.trim(),
+    email: els.emailSignatureEmail.value.trim(),
+    website: els.emailSignatureWebsite.value.trim(),
+    companyName: els.emailSignatureCompany.value.trim(),
+    addressLine1: els.emailSignatureAddress1.value.trim(),
+    addressLine2: els.emailSignatureAddress2.value.trim(),
+    extraText: els.emailSignatureExtra.value.trim(),
+  };
+}
+
+function applyEmailSignature(settings = {}) {
+  els.emailSignatureName.value = settings.senderName || "";
+  els.emailSignatureRole.value = settings.senderRole || "";
+  els.emailSignaturePhone.value = settings.phone || "";
+  els.emailSignatureMobile.value = settings.mobile || "";
+  els.emailSignatureEmail.value = settings.email || "";
+  els.emailSignatureWebsite.value = settings.website || "";
+  els.emailSignatureCompany.value = settings.companyName || "";
+  els.emailSignatureAddress1.value = settings.addressLine1 || "";
+  els.emailSignatureAddress2.value = settings.addressLine2 || "";
+  els.emailSignatureExtra.value = settings.extraText || "";
+  renderEmailSignatureImage(settings.imageUrl || "");
+  renderEmailSignaturePreview(settings.imageUrl || "");
+}
+
+function renderEmailSignatureImage(imageUrl) {
+  if (!els.emailSignatureImagePreview) return;
+
+  if (imageUrl) {
+    els.emailSignatureImagePreview.className = "email-signature-image-preview";
+    els.emailSignatureImagePreview.innerHTML = `<img src="${escapeHtml(imageUrl)}" alt="E-Mail-Signatur" />`;
+    els.emailSignatureImageRemove.hidden = false;
+  } else {
+    els.emailSignatureImagePreview.className = "email-signature-image-preview empty-state";
+    els.emailSignatureImagePreview.textContent = "Kein Bild hinterlegt.";
+    els.emailSignatureImageRemove.hidden = true;
+  }
+}
+
+function emailSignatureContactLine(payload) {
+  return [
+    payload.phone ? `Tel.: ${payload.phone}` : "",
+    payload.mobile ? `Mobil: ${payload.mobile}` : "",
+    payload.email ? `E-Mail: ${payload.email}` : "",
+  ].filter(Boolean).join(" | ");
+}
+
+function renderEmailSignaturePreview(imageUrl = "") {
+  if (!els.emailSignaturePreview) return;
+
+  const payload = emailSignaturePayload();
+  const contactLine = emailSignatureContactLine(payload);
+  const image = imageUrl || els.emailSignatureImagePreview?.querySelector("img")?.getAttribute("src") || "";
+  const imageHtml = image
+    ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(payload.companyName || "CleanTeam")}" />`
+    : `<div class="email-signature-logo-fallback">CleanTeam</div>`;
+  const websiteHtml = payload.website
+    ? `<a href="${escapeHtml(payload.website)}" target="_blank" rel="noreferrer">${escapeHtml(payload.website)}</a>`
+    : "";
+  const extraHtml = payload.extraText
+    ? `<p class="email-signature-preview-extra">${escapeHtml(payload.extraText).replace(/\n/g, "<br>")}</p>`
+    : "";
+
+  els.emailSignaturePreview.innerHTML = `
+    <div class="email-signature-preview-card">
+      <div class="email-signature-preview-image">${imageHtml}</div>
+      <div class="email-signature-preview-content">
+        <p class="email-signature-preview-greeting">Mit freundlichen Grüßen</p>
+        <strong>${escapeHtml(payload.senderName || "Ihr CleanTeam-Team")}</strong>
+        ${payload.senderRole ? `<span>${escapeHtml(payload.senderRole)}</span>` : ""}
+        <p><b>${escapeHtml(payload.companyName || "Clean Team Group SRLS")}</b></p>
+        ${contactLine ? `<p>${escapeHtml(contactLine)}</p>` : ""}
+        ${payload.addressLine1 ? `<p>${escapeHtml(payload.addressLine1)}</p>` : ""}
+        ${payload.addressLine2 ? `<p>${escapeHtml(payload.addressLine2)}</p>` : ""}
+        ${websiteHtml ? `<p>${websiteHtml}</p>` : ""}
+        ${extraHtml}
+      </div>
+    </div>
+  `;
+}
+
+async function loadEmailSignature() {
+  if (!els.emailSignatureForm) {
+    return;
+  }
+
+  try {
+    const settings = await apiGet("api/email-signature.php");
+    applyEmailSignature(settings);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleEmailSignatureSubmit(event) {
+  event.preventDefault();
+
+  try {
+    const settings = await apiPost("api/email-signature.php", emailSignaturePayload());
+    applyEmailSignature(settings);
+    showToast("E-Mail-Signatur wurde gespeichert.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleEmailSignatureImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+
+  const currentPayload = emailSignaturePayload();
+  const formData = new FormData();
+  formData.append("image", file);
+
+  try {
+    await apiPost("api/email-signature.php", currentPayload);
+    const response = await fetch("api/email-signature.php?action=image", { method: "POST", body: formData, credentials: "same-origin" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Bild konnte nicht hochgeladen werden.");
+    }
+    applyEmailSignature(data);
+    showToast("Signaturbild wurde hochgeladen.");
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    els.emailSignatureImageInput.value = "";
+  }
+}
+
+async function handleEmailSignatureImageRemove() {
+  const currentPayload = emailSignaturePayload();
+
+  try {
+    await apiPost("api/email-signature.php", currentPayload);
+    const response = await fetch("api/email-signature.php?action=image", { method: "DELETE", credentials: "same-origin" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Bild konnte nicht entfernt werden.");
+    }
+    applyEmailSignature(data);
+    showToast("Signaturbild wurde entfernt.");
   } catch (error) {
     showToast(error.message);
   }
@@ -3920,6 +4105,16 @@ function bindEvents() {
   els.smtpForm.addEventListener("submit", handleSmtpSubmit);
   els.sendTestMail.addEventListener("click", sendTestMail);
   els.emailSettingsForm.addEventListener("submit", handleEmailSettingsSubmit);
+  if (els.emailSignatureForm) {
+    els.emailSignatureForm.addEventListener("submit", handleEmailSignatureSubmit);
+    els.emailSignatureForm.addEventListener("input", () => renderEmailSignaturePreview());
+  }
+  if (els.emailSignatureImageInput) {
+    els.emailSignatureImageInput.addEventListener("change", handleEmailSignatureImageUpload);
+  }
+  if (els.emailSignatureImageRemove) {
+    els.emailSignatureImageRemove.addEventListener("click", handleEmailSignatureImageRemove);
+  }
 
   els.mailboxList.addEventListener("click", handleRecordAction);
   els.mailboxRefresh.addEventListener("click", loadMailboxInbox);

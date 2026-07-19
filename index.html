@@ -122,6 +122,10 @@
               <i data-lucide="mail-check" aria-hidden="true"></i>
               <span>E-Mails</span>
             </button>
+            <button class="nav-link" type="button" data-view="settings-email-signature">
+              <i data-lucide="badge" aria-hidden="true"></i>
+              <span>E-Mail-Signatur</span>
+            </button>
             <button class="nav-link" type="button" data-view="settings-notify">
               <i data-lucide="bell" aria-hidden="true"></i>
               <span>Vertragsbenachrichtigungen</span>
@@ -156,7 +160,7 @@
             <p class="eyebrow">CleanTeam</p>
             <h2 id="view-title">Übersicht</h2>
           </div>
-          <div class="topbar-actions">
+          <div id="topbar-actions" class="topbar-actions">
             <button id="quick-customer" class="secondary-button" type="button">
               <i data-lucide="user-plus" aria-hidden="true"></i>
               Kunde
@@ -450,14 +454,7 @@
           </section>
         </section>
 
-        <section id="site-visit-quiz-view" class="view" aria-labelledby="site-visit-quiz-heading">
-          <div class="section-heading">
-            <div>
-              <h3 id="site-visit-quiz-heading">Neue Begehung erstellen</h3>
-              <p class="muted">Geführtes Quiz für die digitale Objektbegehung vor Ort.</p>
-            </div>
-          </div>
-
+        <section id="site-visit-quiz-view" class="view" aria-labelledby="view-title">
           <section class="panel svq-panel">
             <div id="site-visit-quiz-root"></div>
           </section>
@@ -859,6 +856,93 @@
                 <button class="primary-button" type="submit">
                   <i data-lucide="save" aria-hidden="true"></i>
                   Einstellungen speichern
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+
+        <section id="settings-email-signature-view" class="view" aria-labelledby="settings-email-signature-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="settings-email-signature-heading">E-Mail-Signatur</h3>
+              <p class="muted">Professionelle Signatur f&uuml;r automatische E-Mails und Postfach-Nachrichten.</p>
+            </div>
+          </div>
+
+          <section class="panel form-panel" aria-labelledby="email-signature-form-heading">
+            <div class="panel-header wrap-header">
+              <div>
+                <h4 id="email-signature-form-heading">Einstellung E-Mail-Signatur</h4>
+                <p class="muted">Kontaktdaten, Zusatztext und Bild werden zentral in die E-Mail-Vorlage eingef&uuml;gt.</p>
+              </div>
+            </div>
+            <form id="email-signature-form" class="form-grid email-signature-editor">
+              <label>
+                Name / Team
+                <input id="email-signature-name" type="text" placeholder="Ihr CleanTeam-Team" />
+              </label>
+              <label>
+                Position / Zusatz
+                <input id="email-signature-role" type="text" placeholder="Meisterbetrieb Geb&auml;udereinigung" />
+              </label>
+              <label>
+                Telefon
+                <input id="email-signature-phone" type="text" placeholder="+49 ..." />
+              </label>
+              <label>
+                Mobil
+                <input id="email-signature-mobile" type="text" placeholder="+49 ..." />
+              </label>
+              <label>
+                E-Mail
+                <input id="email-signature-email" type="email" placeholder="info@cleanteam-group.com" />
+              </label>
+              <label>
+                Website
+                <input id="email-signature-website" type="url" placeholder="https://cleanteam-group.com" />
+              </label>
+              <label class="span-2">
+                Firma
+                <input id="email-signature-company" type="text" placeholder="Clean Team Group SRLS" />
+              </label>
+              <label class="span-2">
+                Adresszeile 1
+                <input id="email-signature-address-1" type="text" placeholder="Service Point: Ober der M&uuml;hle 30, 42699 Solingen" />
+              </label>
+              <label class="span-2">
+                Adresszeile 2
+                <input id="email-signature-address-2" type="text" placeholder="Sitz: Via Dorsale 11, 54100 Massa, Italien" />
+              </label>
+              <label class="span-2">
+                Zusatztext
+                <textarea id="email-signature-extra" rows="4" placeholder="Optional: &Ouml;ffnungszeiten, Hinweis oder rechtlicher Zusatz"></textarea>
+              </label>
+
+              <div class="span-2 email-signature-image-row">
+                <div id="email-signature-image-preview" class="email-signature-image-preview empty-state">Kein Bild hinterlegt.</div>
+                <div class="form-actions">
+                  <label class="ghost-button" for="email-signature-image-input" style="display:inline-flex;">
+                    <i data-lucide="upload" aria-hidden="true"></i>
+                    Bild ausw&auml;hlen
+                  </label>
+                  <input id="email-signature-image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+                  <button id="email-signature-image-remove" class="ghost-button" type="button" hidden>
+                    <i data-lucide="trash-2" aria-hidden="true"></i>
+                    Bild entfernen
+                  </button>
+                </div>
+              </div>
+
+              <div class="span-2 email-signature-preview-wrap">
+                <h5>Vorschau</h5>
+                <div id="email-signature-preview" class="email-signature-preview"></div>
+              </div>
+
+              <div class="form-actions span-2">
+                <button class="primary-button" type="submit">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Signatur speichern
                 </button>
               </div>
             </form>

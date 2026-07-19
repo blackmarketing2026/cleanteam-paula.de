@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/contract_template.php';
+require_once __DIR__ . '/email_signature.php';
 
 function email_h(?string $value): string
 {
@@ -21,7 +22,7 @@ function email_plain_text_html(string $text): string
 function email_normalize_signature_extra(string $text): string
 {
     $lines = preg_split('/\R/', $text) ?: [];
-    $genericLines = ['--', 'mit freundlichen grüßen', 'ihr cleanteam', 'ihr cleanteam-team'];
+    $genericLines = ['--', 'mit freundlichen gruessen', 'mit freundlichen grüßen', 'ihr cleanteam', 'ihr cleanteam-team'];
     $filtered = [];
 
     foreach ($lines as $line) {
@@ -71,14 +72,47 @@ function email_logo_html(PDO $pdo): string
 
 function email_signature_html(PDO $pdo, array $options = []): string
 {
+    $settings = load_email_signature_settings($pdo);
     $fromName = trim((string) ($options['fromName'] ?? ''));
     $signatureText = email_normalize_signature_extra((string) ($options['signatureText'] ?? ''));
-    $teamLine = $fromName !== '' ? $fromName : 'Ihr CleanTeam-Team';
-    $servicePoint = CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'];
-    $registeredSeat = CONTRACTOR['street'] . ', ' . CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city'] . ', ' . CONTRACTOR['country'];
-    $website = (string) CONTRACTOR['website'];
-    $customText = $signatureText !== ''
-        ? '<div style="margin-top:12px;color:#51657d;font-size:13px;line-height:1.55;">' . email_plain_text_html($signatureText) . '</div>'
+    $senderName = trim($settings['senderName']) !== '' ? $settings['senderName'] : ($fromName !== '' ? $fromName : 'Ihr CleanTeam-Team');
+    $senderRole = trim($settings['senderRole']);
+    $companyName = trim($settings['companyName']) !== '' ? $settings['companyName'] : CONTRACTOR['legal_name'];
+    $website = trim($settings['website']) !== '' ? $settings['website'] : CONTRACTOR['website'];
+    $contactLines = [];
+
+    if (trim($settings['phone']) !== '') {
+        $contactLines[] = 'Tel.: ' . trim($settings['phone']);
+    }
+    if (trim($settings['mobile']) !== '') {
+        $contactLines[] = 'Mobil: ' . trim($settings['mobile']);
+    }
+    if (trim($settings['email']) !== '') {
+        $contactLines[] = 'E-Mail: ' . trim($settings['email']);
+    }
+
+    $addressLines = array_values(array_filter([
+        trim($settings['addressLine1']),
+        trim($settings['addressLine2']),
+    ]));
+    $extraText = email_normalize_signature_extra(trim($settings['extraText'] . "\n" . $signatureText));
+    $extraHtml = $extraText !== ''
+        ? '<div style="margin-top:10px;color:#51657d;font-size:12.5px;line-height:1.5;">' . email_plain_text_html($extraText) . '</div>'
+        : '';
+    $imageHtml = $settings['imageUrl']
+        ? '<img src="' . email_h($settings['imageUrl']) . '" alt="' . email_h($companyName) . '" width="156" style="display:block;max-width:156px;max-height:86px;width:auto;height:auto;border:0;">'
+        : email_logo_html($pdo);
+    $roleHtml = $senderRole !== ''
+        ? '<p style="margin:0 0 10px 0;color:#51657d;font-size:13px;">' . email_h($senderRole) . '</p>'
+        : '';
+    $contactHtml = $contactLines !== []
+        ? '<p style="margin:8px 0 0 0;color:#51657d;">' . email_h(implode(' | ', $contactLines)) . '</p>'
+        : '';
+    $addressHtml = $addressLines !== []
+        ? '<p style="margin:8px 0 0 0;color:#51657d;">' . implode('<br>', array_map('email_h', $addressLines)) . '</p>'
+        : '';
+    $websiteHtml = $website !== ''
+        ? '<p style="margin:8px 0 0 0;"><a href="' . email_h($website) . '" style="color:#0a4f91;text-decoration:none;font-weight:700;">' . email_h($website) . '</a></p>'
         : '';
 
     return '
@@ -87,14 +121,16 @@ function email_signature_html(PDO $pdo, array $options = []): string
           <td style="padding-top:18px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="width:190px;padding:0 18px 12px 0;vertical-align:top;">' . email_logo_html($pdo) . '</td>
+                <td style="width:184px;padding:0 18px 12px 0;vertical-align:top;">' . $imageHtml . '</td>
                 <td style="padding:0 0 12px 0;vertical-align:top;color:#26384d;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;">
-                  <p style="margin:0 0 6px 0;color:#08325f;font-size:15px;font-weight:800;">Mit freundlichen Grüßen</p>
-                  <p style="margin:0 0 10px 0;color:#0a4f91;font-size:14px;font-weight:800;">' . email_h($teamLine) . '</p>
-                  <p style="margin:0;color:#26384d;"><strong>' . email_h(CONTRACTOR['legal_name']) . '</strong><br>' . email_h(CONTRACTOR['trade_description']) . '</p>
-                  <p style="margin:8px 0 0 0;color:#51657d;">Service Point: ' . email_h($servicePoint) . '<br>Sitz: ' . email_h($registeredSeat) . '</p>
-                  <p style="margin:8px 0 0 0;"><a href="' . email_h($website) . '" style="color:#0a4f91;text-decoration:none;font-weight:700;">' . email_h($website) . '</a></p>
-                  ' . $customText . '
+                  <p style="margin:0 0 6px 0;color:#08325f;font-size:15px;font-weight:800;">Mit freundlichen Gr&uuml;&szlig;en</p>
+                  <p style="margin:0;color:#0a4f91;font-size:14px;font-weight:800;">' . email_h($senderName) . '</p>
+                  ' . $roleHtml . '
+                  <p style="margin:0;color:#26384d;"><strong>' . email_h($companyName) . '</strong></p>
+                  ' . $contactHtml . '
+                  ' . $addressHtml . '
+                  ' . $websiteHtml . '
+                  ' . $extraHtml . '
                 </td>
               </tr>
             </table>

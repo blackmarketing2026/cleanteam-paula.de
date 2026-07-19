@@ -191,6 +191,35 @@ CREATE TABLE IF NOT EXISTS branding_settings (
 
 INSERT IGNORE INTO branding_settings (id, logo_filename) VALUES (1, NULL);
 
+CREATE TABLE IF NOT EXISTS email_signature_settings (
+  id TINYINT UNSIGNED NOT NULL,
+  sender_name VARCHAR(190) NOT NULL DEFAULT '',
+  sender_role VARCHAR(190) NOT NULL DEFAULT '',
+  phone VARCHAR(80) NOT NULL DEFAULT '',
+  mobile VARCHAR(80) NOT NULL DEFAULT '',
+  email VARCHAR(190) NOT NULL DEFAULT '',
+  website VARCHAR(190) NOT NULL DEFAULT '',
+  company_name VARCHAR(190) NOT NULL DEFAULT '',
+  address_line1 VARCHAR(190) NOT NULL DEFAULT '',
+  address_line2 VARCHAR(190) NOT NULL DEFAULT '',
+  extra_text TEXT NULL,
+  image_filename VARCHAR(190) NULL,
+  updated_at DATETIME NULL,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO email_signature_settings (
+  id, sender_name, sender_role, website, company_name, address_line1, address_line2
+) VALUES (
+  1,
+  'Ihr CleanTeam-Team',
+  'Meisterbetrieb Gebaeudereinigung',
+  'https://cleanteam-group.com',
+  'Clean Team Group SRLS',
+  'Service Point: Ober der Muehle 30, 42699 Solingen',
+  'Sitz: Via Dorsale 11, 54100 Massa, Italien'
+);
+
 -- Mustervertrag: bearbeitbarer Vertragstext mit {{platzhalter}}-Tokens, siehe
 -- includes/contract_template.php::default_contract_template_html() fuer den Startwert.
 CREATE TABLE IF NOT EXISTS contract_template_settings (

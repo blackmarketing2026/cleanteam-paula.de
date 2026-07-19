@@ -469,6 +469,10 @@ button svg {
   gap: 10px;
 }
 
+.topbar-actions[hidden] {
+  display: none;
+}
+
 .mobile-only {
   display: none;
 }
@@ -1005,6 +1009,107 @@ button.compact-item.selected {
 .logo-preview img {
   max-width: 100%;
   max-height: 100%;
+}
+
+.email-signature-editor h5 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.email-signature-image-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.email-signature-image-preview {
+  display: grid;
+  place-items: center;
+  width: 190px;
+  height: 104px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--blue-050);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px;
+  text-align: center;
+}
+
+.email-signature-image-preview img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.email-signature-preview-wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: #fff;
+}
+
+.email-signature-preview-card {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 18px;
+  border-top: 1px solid #d7e4f2;
+  padding-top: 16px;
+  color: #26384d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.email-signature-preview-image img {
+  display: block;
+  max-width: 156px;
+  max-height: 86px;
+}
+
+.email-signature-logo-fallback {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--blue-800);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.email-signature-preview-content {
+  min-width: 0;
+}
+
+.email-signature-preview-content strong,
+.email-signature-preview-content span {
+  display: block;
+}
+
+.email-signature-preview-content strong {
+  color: var(--blue-800);
+}
+
+.email-signature-preview-content p {
+  margin: 8px 0 0;
+}
+
+.email-signature-preview-content a {
+  color: var(--blue-800);
+  font-weight: 700;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.email-signature-preview-greeting {
+  margin-top: 0 !important;
+  color: var(--blue-900);
+  font-weight: 800;
+}
+
+.email-signature-preview-extra {
+  color: var(--muted);
+  font-size: 12.5px;
 }
 
 .checkbox-row {
@@ -1863,6 +1968,10 @@ button.compact-item.selected {
 
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .email-signature-preview-card {
+    grid-template-columns: 1fr;
   }
 
   .dashboard-grid,

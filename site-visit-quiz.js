@@ -817,7 +817,7 @@ function svqBuildSiteVisitPayload(draft) {
     onsiteContact: `${draft.contact.firstName} ${draft.contact.lastName}`.trim() || "Ansprechpartner vor Ort",
     squareMeters: areaValue > 0 ? areaValue : 1,
     floors,
-    notes: "Über das Begehungs-Quiz erfasst.",
+    notes: "",
   };
 }
 
