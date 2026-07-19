@@ -795,9 +795,11 @@ function contract_pdf_filename(array $contract, string $audience): string
     if ($audience === 'checklist') {
         return 'Mitarbeiter-Checkliste-' . trim($safeNumber, '-') . '.pdf';
     }
+    if ($audience === 'customer') {
+        return 'Vertrag-CleanTeam-Group.pdf';
+    }
 
-    $suffix = $audience === 'cleanteam' ? 'CleanTeam' : 'Kunde';
-    return 'Vertrag-' . trim($safeNumber, '-') . '-' . $suffix . '.pdf';
+    return 'Vertrag-' . trim($safeNumber, '-') . '-CleanTeam.pdf';
 }
 
 function normalize_contract_pdf_audience(string $audience): string

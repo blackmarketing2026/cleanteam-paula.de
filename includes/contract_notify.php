@@ -174,12 +174,11 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             return;
         }
 
-        $pdf = save_contract_pdf($pdo, $contractId, 'customer', false);
-        $number = (string) ($context['contract']['number'] ?? '');
+        $pdf = save_contract_pdf($pdo, $contractId, 'customer', true);
 
         $messageContent = '<p style="margin:0 0 14px 0;">Sehr geehrte Damen und Herren,</p>'
             . '<p>herzlichen Gl&uuml;ckwunsch und herzlich willkommen bei CleanTeam Group! Wir freuen uns sehr auf die Zusammenarbeit mit Ihnen.</p>'
-            . '<p>Der Vertrag' . ($number !== '' ? ' (' . email_h($number) . ')' : '') . ' befindet sich im Anhang und kann bei Bedarf ausgedruckt werden.</p>';
+            . '<p>Der Vertrag befindet sich im Anhang und kann bei Bedarf ausgedruckt werden.</p>';
         $message = render_email_template_message($pdo, $messageContent, [
             'title' => 'Willkommen bei CleanTeam Group',
             'preheader' => 'Herzlich willkommen bei CleanTeam Group.',
