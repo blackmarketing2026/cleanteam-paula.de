@@ -2176,7 +2176,7 @@ function renderOfferCard(offer) {
     : `
       <button class="secondary-button" type="button" data-action="open-offer-contract-link" data-id="${escapeHtml(offer.id)}">
         <i data-lucide="signature" aria-hidden="true"></i>
-        Vertrag erstellen
+        Neuen Vertrag erstellen
       </button>
     `;
 
@@ -2828,8 +2828,21 @@ async function deleteOffer(id) {
 }
 
 async function deleteContract(id) {
-  const confirmed = window.confirm("Vertrag löschen?");
-  if (!confirmed) {
+  const contract = getContract(id);
+  const contractLabel = contract
+    ? `${contract.number} f\u00fcr ${contract.customer.name}`
+    : "diesen Vertrag";
+  const firstConfirmed = window.confirm(
+    `Vertrag ${contractLabel} wirklich l\u00f6schen? Die gespeicherten Vertragsdokumente werden ebenfalls entfernt.`,
+  );
+  if (!firstConfirmed) {
+    return;
+  }
+
+  const finalConfirmed = window.confirm(
+    "Letzte Nachfrage: Vertrag endg\u00fcltig l\u00f6schen? Danach kann aus dem Kostenvoranschlag ein neuer Vertrag erstellt werden.",
+  );
+  if (!finalConfirmed) {
     return;
   }
 
@@ -2839,7 +2852,7 @@ async function deleteContract(id) {
       state.selectedContractId = null;
     }
     await loadAll();
-    showToast("Vertrag wurde gelöscht.");
+    showToast("Vertrag wurde gel\u00f6scht. Der Kostenvoranschlag ist wieder f\u00fcr einen neuen Vertrag frei.");
   } catch (error) {
     showToast(error.message);
   }

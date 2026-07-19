@@ -105,6 +105,12 @@ ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
 ensure_offers_site_visit_id_column($pdo);
 
+function contract_documents_table_exists(PDO $pdo): bool
+{
+    $stmt = $pdo->query("SHOW TABLES LIKE 'contract_documents'");
+    return (bool) $stmt->fetch();
+}
+
 if ($method === 'GET') {
     $rows = $pdo->query(CONTRACT_SELECT . ' ORDER BY c.name ASC, ct.created_at DESC')->fetchAll();
     json_response(array_map('contract_row_to_json', $rows));
@@ -120,8 +126,27 @@ if ($method === 'DELETE') {
         json_error('Vertrags-ID fehlt.', 422);
     }
 
-    $stmt = $pdo->prepare('DELETE FROM contracts WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id FROM contracts WHERE id = :id');
     $stmt->execute(['id' => $id]);
+    if (!$stmt->fetch()) {
+        json_error('Vertrag wurde nicht gefunden.', 404);
+    }
+
+    $pdo->beginTransaction();
+    try {
+        if (contract_documents_table_exists($pdo)) {
+            $stmt = $pdo->prepare('DELETE FROM contract_documents WHERE contract_id = :id');
+            $stmt->execute(['id' => $id]);
+        }
+
+        $stmt = $pdo->prepare('DELETE FROM contracts WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+        $pdo->commit();
+    } catch (Throwable $exception) {
+        $pdo->rollBack();
+        throw $exception;
+    }
+
     json_response(['ok' => true]);
 }
 
