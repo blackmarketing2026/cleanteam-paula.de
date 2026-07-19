@@ -125,6 +125,7 @@ function notify_contract_created(PDO $pdo, string $contractId): void
             'preheader' => 'Ein Vertrag wurde angelegt oder aktualisiert.',
             'fromName' => $smtp['from_name'] ?? 'CleanTeam',
             'signatureText' => $smtp['signature'] ?? '',
+            'signatureContext' => 'internal_contract_notification',
         ]);
 
         foreach ($recipients as $recipient) {
@@ -185,6 +186,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             'preheader' => 'Ihr unterschriebener Vertrag liegt als PDF bei.',
             'fromName' => $smtp['from_name'] ?? 'CleanTeam',
             'signatureText' => $smtp['signature'] ?? '',
+            'signatureContext' => 'contract_customer',
         ]);
 
         $mailer = new SmtpMailer(

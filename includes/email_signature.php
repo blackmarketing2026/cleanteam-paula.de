@@ -21,6 +21,10 @@ function ensure_email_signature_settings_table(PDO $pdo): void
           address_line2 VARCHAR(190) NOT NULL DEFAULT \'\',
           extra_text TEXT NULL,
           image_filename VARCHAR(190) NULL,
+          use_all_emails TINYINT(1) NOT NULL DEFAULT 1,
+          use_offer_email TINYINT(1) NOT NULL DEFAULT 1,
+          use_contract_customer_email TINYINT(1) NOT NULL DEFAULT 1,
+          use_mailbox_email TINYINT(1) NOT NULL DEFAULT 1,
           updated_at DATETIME NULL,
           PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
@@ -38,7 +42,11 @@ function ensure_email_signature_settings_table(PDO $pdo): void
         'address_line2' => 'ALTER TABLE email_signature_settings ADD COLUMN address_line2 VARCHAR(190) NOT NULL DEFAULT \'\' AFTER address_line1',
         'extra_text' => 'ALTER TABLE email_signature_settings ADD COLUMN extra_text TEXT NULL AFTER address_line2',
         'image_filename' => 'ALTER TABLE email_signature_settings ADD COLUMN image_filename VARCHAR(190) NULL AFTER extra_text',
-        'updated_at' => 'ALTER TABLE email_signature_settings ADD COLUMN updated_at DATETIME NULL AFTER image_filename',
+        'use_all_emails' => 'ALTER TABLE email_signature_settings ADD COLUMN use_all_emails TINYINT(1) NOT NULL DEFAULT 1 AFTER image_filename',
+        'use_offer_email' => 'ALTER TABLE email_signature_settings ADD COLUMN use_offer_email TINYINT(1) NOT NULL DEFAULT 1 AFTER use_all_emails',
+        'use_contract_customer_email' => 'ALTER TABLE email_signature_settings ADD COLUMN use_contract_customer_email TINYINT(1) NOT NULL DEFAULT 1 AFTER use_offer_email',
+        'use_mailbox_email' => 'ALTER TABLE email_signature_settings ADD COLUMN use_mailbox_email TINYINT(1) NOT NULL DEFAULT 1 AFTER use_contract_customer_email',
+        'updated_at' => 'ALTER TABLE email_signature_settings ADD COLUMN updated_at DATETIME NULL AFTER use_mailbox_email',
     ];
 
     foreach ($columns as $column => $statement) {
@@ -86,8 +94,34 @@ function email_signature_row_to_response(array $row): array
         'addressLine2' => (string) ($row['address_line2'] ?? ''),
         'extraText' => (string) ($row['extra_text'] ?? ''),
         'imageUrl' => email_signature_image_url($row['image_filename'] ?? null),
+        'useAllEmails' => (bool) ($row['use_all_emails'] ?? 1),
+        'usage' => [
+            'offer' => (bool) ($row['use_offer_email'] ?? 1),
+            'contractCustomer' => (bool) ($row['use_contract_customer_email'] ?? 1),
+            'mailbox' => (bool) ($row['use_mailbox_email'] ?? 1),
+        ],
         'updatedAt' => to_iso($row['updated_at'] ?? null),
     ];
+}
+
+function email_signature_should_apply(array $settings, string $context): bool
+{
+    if (($settings['useAllEmails'] ?? true) === true) {
+        return true;
+    }
+
+    $usage = is_array($settings['usage'] ?? null) ? $settings['usage'] : [];
+
+    switch ($context) {
+        case 'offer':
+            return (bool) ($usage['offer'] ?? false);
+        case 'contract_customer':
+            return (bool) ($usage['contractCustomer'] ?? false);
+        case 'mailbox':
+            return (bool) ($usage['mailbox'] ?? false);
+        default:
+            return false;
+    }
 }
 
 function load_email_signature_settings(PDO $pdo): array
@@ -110,6 +144,10 @@ function load_email_signature_settings(PDO $pdo): array
             'address_line2' => 'Sitz: ' . CONTRACTOR['street'] . ', ' . CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city'] . ', ' . CONTRACTOR['country'],
             'extra_text' => '',
             'image_filename' => null,
+            'use_all_emails' => 1,
+            'use_offer_email' => 1,
+            'use_contract_customer_email' => 1,
+            'use_mailbox_email' => 1,
             'updated_at' => null,
         ];
     }
@@ -136,6 +174,10 @@ function save_email_signature_settings(PDO $pdo, array $input): array
         'address_line2' => trim((string) ($input['addressLine2'] ?? '')),
         'extra_text' => trim((string) ($input['extraText'] ?? '')),
         'image_filename' => $current['image_filename'] ?? null,
+        'use_all_emails' => !empty($input['useAllEmails']) ? 1 : 0,
+        'use_offer_email' => !empty($input['usage']['offer']) ? 1 : 0,
+        'use_contract_customer_email' => !empty($input['usage']['contractCustomer']) ? 1 : 0,
+        'use_mailbox_email' => !empty($input['usage']['mailbox']) ? 1 : 0,
     ];
 
     if ($settings['email'] !== '' && !filter_var($settings['email'], FILTER_VALIDATE_EMAIL)) {
@@ -145,10 +187,12 @@ function save_email_signature_settings(PDO $pdo, array $input): array
     $stmt = $pdo->prepare(
         'INSERT INTO email_signature_settings (
           id, sender_name, sender_role, phone, mobile, email, website, company_name,
-          address_line1, address_line2, extra_text, image_filename, updated_at
+          address_line1, address_line2, extra_text, image_filename, use_all_emails,
+          use_offer_email, use_contract_customer_email, use_mailbox_email, updated_at
         ) VALUES (
           1, :sender_name, :sender_role, :phone, :mobile, :email, :website, :company_name,
-          :address_line1, :address_line2, :extra_text, :image_filename, UTC_TIMESTAMP()
+          :address_line1, :address_line2, :extra_text, :image_filename, :use_all_emails,
+          :use_offer_email, :use_contract_customer_email, :use_mailbox_email, UTC_TIMESTAMP()
         )
         ON DUPLICATE KEY UPDATE
           sender_name = :sender_name2,
@@ -162,6 +206,10 @@ function save_email_signature_settings(PDO $pdo, array $input): array
           address_line2 = :address_line2_update,
           extra_text = :extra_text2,
           image_filename = :image_filename2,
+          use_all_emails = :use_all_emails2,
+          use_offer_email = :use_offer_email2,
+          use_contract_customer_email = :use_contract_customer_email2,
+          use_mailbox_email = :use_mailbox_email2,
           updated_at = UTC_TIMESTAMP()'
     );
 
@@ -177,6 +225,10 @@ function save_email_signature_settings(PDO $pdo, array $input): array
         'address_line2_update' => $settings['address_line2'],
         'extra_text2' => $settings['extra_text'],
         'image_filename2' => $settings['image_filename'],
+        'use_all_emails2' => $settings['use_all_emails'],
+        'use_offer_email2' => $settings['use_offer_email'],
+        'use_contract_customer_email2' => $settings['use_contract_customer_email'],
+        'use_mailbox_email2' => $settings['use_mailbox_email'],
     ]);
 
     return load_email_signature_settings($pdo);

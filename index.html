@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=offer-send-recipient-20260718-1" />
+    <link rel="stylesheet" href="styles.css?v=email-signature-usage-20260719-1" />
     <link rel="stylesheet" href="site-visit-quiz.css?v=quiz-draft-selection-20260718-1" />
   </head>
   <body>
@@ -909,6 +909,28 @@
                 <textarea id="email-signature-extra" rows="4" placeholder="Optional: &Ouml;ffnungszeiten, Hinweis oder rechtlicher Zusatz"></textarea>
               </label>
 
+              <fieldset class="span-2 email-signature-usage">
+                <legend>Signatur verwenden bei</legend>
+                <label class="checkbox-row">
+                  <input id="email-signature-use-all" type="checkbox" />
+                  E-Mail-Signatur &uuml;berall benutzen
+                </label>
+                <div class="email-signature-usage-grid">
+                  <label class="checkbox-row">
+                    <input id="email-signature-use-offer" type="checkbox" data-email-signature-use="offer" />
+                    Kostenvoranschl&auml;ge an Kunden
+                  </label>
+                  <label class="checkbox-row">
+                    <input id="email-signature-use-contract" type="checkbox" data-email-signature-use="contractCustomer" />
+                    Vertrags-E-Mails an Kunden
+                  </label>
+                  <label class="checkbox-row">
+                    <input id="email-signature-use-mailbox" type="checkbox" data-email-signature-use="mailbox" />
+                    Manuelle E-Mails aus dem Postfach
+                  </label>
+                </div>
+              </fieldset>
+
               <div class="span-2 email-signature-image-row">
                 <div id="email-signature-image-preview" class="email-signature-image-preview empty-state">Kein Bild hinterlegt.</div>
                 <div class="form-actions">
@@ -1235,6 +1257,6 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="site-visit-quiz-data.js?v=quiz-trash-send-20260718-1"></script>
     <script src="site-visit-quiz.js?v=quiz-draft-selection-20260718-1"></script>
-    <script src="app.js?v=dashboard-init-fallback-20260719-1"></script>
+    <script src="app.js?v=email-signature-usage-20260719-1"></script>
   </body>
 </html>

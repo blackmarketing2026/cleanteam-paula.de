@@ -1013,6 +1013,32 @@ button.compact-item.selected {
   color: var(--ink);
 }
 
+.email-signature-usage {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.email-signature-usage legend {
+  padding: 0 6px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.email-signature-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.email-signature-usage input[type="checkbox"]:disabled {
+  opacity: 0.55;
+}
+
 .email-signature-image-row {
   display: flex;
   align-items: center;
@@ -1967,6 +1993,10 @@ button.compact-item.selected {
   }
 
   .email-signature-preview-card {
+    grid-template-columns: 1fr;
+  }
+
+  .email-signature-usage-grid {
     grid-template-columns: 1fr;
   }
 

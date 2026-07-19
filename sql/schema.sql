@@ -204,6 +204,10 @@ CREATE TABLE IF NOT EXISTS email_signature_settings (
   address_line2 VARCHAR(190) NOT NULL DEFAULT '',
   extra_text TEXT NULL,
   image_filename VARCHAR(190) NULL,
+  use_all_emails TINYINT(1) NOT NULL DEFAULT 1,
+  use_offer_email TINYINT(1) NOT NULL DEFAULT 1,
+  use_contract_customer_email TINYINT(1) NOT NULL DEFAULT 1,
+  use_mailbox_email TINYINT(1) NOT NULL DEFAULT 1,
   updated_at DATETIME NULL,
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

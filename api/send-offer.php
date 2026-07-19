@@ -60,6 +60,7 @@ $body = render_email_template($pdo, $bodyContent, [
     'preheader' => 'Ihr individueller Kostenvoranschlag steht online bereit.',
     'fromName' => $settings['from_name'] ?? 'CleanTeam',
     'signatureText' => $settings['signature'] ?? '',
+    'signatureContext' => 'offer',
 ]);
 
 try {

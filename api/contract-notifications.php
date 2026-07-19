@@ -52,6 +52,7 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
         'preheader' => 'Test-E-Mail für Vertragsbenachrichtigungen.',
         'fromName' => $smtp['from_name'] ?? 'CleanTeam',
         'signatureText' => $smtp['signature'] ?? '',
+        'signatureContext' => 'internal_contract_notification',
     ]);
 
     try {

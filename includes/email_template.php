@@ -73,6 +73,11 @@ function email_logo_html(PDO $pdo): string
 function email_signature_html(PDO $pdo, array $options = []): string
 {
     $settings = load_email_signature_settings($pdo);
+    $context = trim((string) ($options['signatureContext'] ?? ''));
+    if ($context !== '' && !email_signature_should_apply($settings, $context)) {
+        return '';
+    }
+
     $fromName = trim((string) ($options['fromName'] ?? ''));
     $signatureText = email_normalize_signature_extra((string) ($options['signatureText'] ?? ''));
     $senderName = trim($settings['senderName']) !== '' ? $settings['senderName'] : ($fromName !== '' ? $fromName : 'Ihr CleanTeam-Team');
@@ -170,7 +175,11 @@ function render_email_template(PDO $pdo, string $contentHtml, array $options = [
                 ' . email_logo_html($pdo) . '
                 ' . $titleHtml . '
                 <div style="color:#26384d;font-size:15px;line-height:1.65;">' . $contentHtml . '</div>
-                ' . email_signature_html($pdo, ['fromName' => $fromName, 'signatureText' => $signatureText]) . '
+                ' . email_signature_html($pdo, [
+                    'fromName' => $fromName,
+                    'signatureText' => $signatureText,
+                    'signatureContext' => (string) ($options['signatureContext'] ?? ''),
+                ]) . '
               </td>
             </tr>
           </table>

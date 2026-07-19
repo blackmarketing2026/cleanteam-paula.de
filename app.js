@@ -136,6 +136,11 @@ const els = {
   emailSignatureAddress1: document.querySelector("#email-signature-address-1"),
   emailSignatureAddress2: document.querySelector("#email-signature-address-2"),
   emailSignatureExtra: document.querySelector("#email-signature-extra"),
+  emailSignatureUseAll: document.querySelector("#email-signature-use-all"),
+  emailSignatureUseOffer: document.querySelector("#email-signature-use-offer"),
+  emailSignatureUseContract: document.querySelector("#email-signature-use-contract"),
+  emailSignatureUseMailbox: document.querySelector("#email-signature-use-mailbox"),
+  emailSignatureUsageOptions: document.querySelectorAll("[data-email-signature-use]"),
   emailSignatureImagePreview: document.querySelector("#email-signature-image-preview"),
   emailSignatureImageInput: document.querySelector("#email-signature-image-input"),
   emailSignatureImageRemove: document.querySelector("#email-signature-image-remove"),
@@ -2917,10 +2922,24 @@ function emailSignaturePayload() {
     addressLine1: els.emailSignatureAddress1.value.trim(),
     addressLine2: els.emailSignatureAddress2.value.trim(),
     extraText: els.emailSignatureExtra.value.trim(),
+    useAllEmails: Boolean(els.emailSignatureUseAll?.checked),
+    usage: {
+      offer: Boolean(els.emailSignatureUseOffer?.checked),
+      contractCustomer: Boolean(els.emailSignatureUseContract?.checked),
+      mailbox: Boolean(els.emailSignatureUseMailbox?.checked),
+    },
   };
 }
 
+function syncEmailSignatureUsageControls() {
+  const useAll = Boolean(els.emailSignatureUseAll?.checked);
+  els.emailSignatureUsageOptions.forEach((checkbox) => {
+    checkbox.disabled = useAll;
+  });
+}
+
 function applyEmailSignature(settings = {}) {
+  const usage = settings.usage || {};
   emailSignatureImageUrl = settings.imageUrl || "";
   pendingEmailSignatureImageFile = null;
   pendingEmailSignatureImageDataUrl = "";
@@ -2935,6 +2954,19 @@ function applyEmailSignature(settings = {}) {
   els.emailSignatureAddress1.value = settings.addressLine1 || "";
   els.emailSignatureAddress2.value = settings.addressLine2 || "";
   els.emailSignatureExtra.value = settings.extraText || "";
+  if (els.emailSignatureUseAll) {
+    els.emailSignatureUseAll.checked = settings.useAllEmails !== false;
+  }
+  if (els.emailSignatureUseOffer) {
+    els.emailSignatureUseOffer.checked = usage.offer !== false;
+  }
+  if (els.emailSignatureUseContract) {
+    els.emailSignatureUseContract.checked = usage.contractCustomer !== false;
+  }
+  if (els.emailSignatureUseMailbox) {
+    els.emailSignatureUseMailbox.checked = usage.mailbox !== false;
+  }
+  syncEmailSignatureUsageControls();
   renderEmailSignatureImage();
   renderEmailSignaturePreview();
   updateEmailSignatureImageStatus(
@@ -4176,6 +4208,9 @@ function bindEvents() {
       renderEmailSignaturePreview();
       markEmailSignatureUnsaved();
     });
+  }
+  if (els.emailSignatureUseAll) {
+    els.emailSignatureUseAll.addEventListener("change", syncEmailSignatureUsageControls);
   }
   if (els.emailSignatureImageInput) {
     els.emailSignatureImageInput.addEventListener("change", handleEmailSignatureImageUpload);

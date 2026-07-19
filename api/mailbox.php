@@ -379,6 +379,7 @@ if ($method === 'POST' && $action === 'send') {
         'preheader' => trim($message),
         'fromName' => $settings['from_name'] ?? 'CleanTeam',
         'signatureText' => $settings['signature'] ?? '',
+        'signatureContext' => 'mailbox',
     ]);
 
     try {

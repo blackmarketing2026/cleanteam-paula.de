@@ -67,6 +67,7 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
                 'title' => 'CleanTeam Dashboard – Test-E-Mail',
                 'preheader' => 'Ihre SMTP-Einstellungen funktionieren.',
                 'fromName' => $settings['from_name'],
+                'signatureContext' => 'test',
             ]
         );
         $mailer->send(
