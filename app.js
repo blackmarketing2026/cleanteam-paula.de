@@ -4279,8 +4279,14 @@ function bindEvents() {
 }
 
 async function init() {
-  bindEvents();
-  els.offerStartDate.value = todayAsInputValue();
+  try {
+    bindEvents();
+  } catch (error) {
+    console.error("Dashboard event binding failed.", error);
+  }
+  if (els.offerStartDate) {
+    els.offerStartDate.value = todayAsInputValue();
+  }
   loadBranding();
 
   try {
@@ -4297,4 +4303,8 @@ async function init() {
   refreshIcons();
 }
 
-init();
+init().catch((error) => {
+  console.error("Dashboard init failed.", error);
+  showLogin();
+  refreshIcons();
+});
