@@ -69,9 +69,6 @@ const els = {
   sidebar: document.querySelector(".sidebar"),
   bottomMenuButton: document.querySelector("#bottom-menu-button"),
   mobileBackdrop: document.querySelector("#mobile-backdrop"),
-  topbarActions: document.querySelector("#topbar-actions"),
-  quickCustomer: document.querySelector("#quick-customer"),
-  quickOffer: document.querySelector("#quick-offer"),
   newCustomerButton: document.querySelector("#new-customer-button"),
   customerForm: document.querySelector("#customer-form"),
   customerSearch: document.querySelector("#customer-search"),
@@ -540,9 +537,6 @@ function switchView(view) {
 
   state.currentView = view;
   els.viewTitle.textContent = titles[view];
-  if (els.topbarActions) {
-    els.topbarActions.hidden = view === "site-visit-quiz";
-  }
 
   els.navLinks.forEach((button) => {
     button.classList.toggle("active", button.dataset.view === view);
@@ -4105,15 +4099,6 @@ function bindEvents() {
 
   els.bottomMenuButton.addEventListener("click", openMobileNav);
   els.mobileBackdrop.addEventListener("click", closeMobileNav);
-  els.quickCustomer.addEventListener("click", () => {
-    state.pendingQuizCustomerReturn = false;
-    switchView("customer-new");
-  });
-  els.quickOffer.addEventListener("click", () => {
-    state.pendingOfferSiteVisitId = null;
-    clearOfferSiteVisitFields();
-    switchView("offers-new");
-  });
   document.querySelectorAll("[data-overview-target]").forEach((button) => {
     button.addEventListener("click", () => {
       const target = button.dataset.overviewTarget;

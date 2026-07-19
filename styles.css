@@ -469,10 +469,6 @@ button svg {
   gap: 10px;
 }
 
-.topbar-actions[hidden] {
-  display: none;
-}
-
 .mobile-only {
   display: none;
 }
