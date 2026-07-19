@@ -224,6 +224,37 @@ final class SimplePdfDocument
         return true;
     }
 
+    public function imageFile(string $path, float $maxWidth = 120.0, float $maxHeight = 48.0): bool
+    {
+        $image = $this->parseImageFile($path);
+        if ($image === null) {
+            return false;
+        }
+
+        $ratio = min($maxWidth / $image['width'], $maxHeight / $image['height'], 1.0);
+        $width = max(1.0, $image['width'] * $ratio);
+        $height = max(1.0, $image['height'] * $ratio);
+
+        $this->ensureSpace($height + 12.0);
+        $name = 'Im' . (count($this->images) + 1);
+        $this->images[$name] = $image;
+        $this->pages[$this->pageIndex]['images'][$name] = true;
+
+        $x = self::MARGIN_LEFT;
+        $y = $this->y - $height;
+        $this->write(sprintf(
+            "q %.2F 0 0 %.2F %.2F %.2F cm /%s Do Q\n",
+            $width,
+            $height,
+            $x,
+            $y,
+            $name
+        ));
+        $this->y -= $height + 12.0;
+
+        return true;
+    }
+
     public function output(): string
     {
         $objectCount = 4;
@@ -248,8 +279,14 @@ final class SimplePdfDocument
         $objects[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
 
         foreach ($this->images as $name => $image) {
-            $compressed = gzcompress($image['rgb']);
-            $objects[$imageObjects[$name]] = "<< /Type /XObject /Subtype /Image /Width {$image['width']} /Height {$image['height']} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length " . strlen($compressed) . " >>\nstream\n" . $compressed . "\nendstream";
+            if (($image['filter'] ?? 'FlateDecode') === 'DCTDecode') {
+                $stream = $image['data'];
+                $colorSpace = $image['colorSpace'] ?? 'DeviceRGB';
+                $objects[$imageObjects[$name]] = "<< /Type /XObject /Subtype /Image /Width {$image['width']} /Height {$image['height']} /ColorSpace /{$colorSpace} /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream";
+            } else {
+                $compressed = gzcompress($image['rgb']);
+                $objects[$imageObjects[$name]] = "<< /Type /XObject /Subtype /Image /Width {$image['width']} /Height {$image['height']} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length " . strlen($compressed) . " >>\nstream\n" . $compressed . "\nendstream";
+            }
         }
 
         $kids = [];
@@ -413,7 +450,54 @@ final class SimplePdfDocument
         }
 
         $binary = base64_decode(substr($dataUrl, 22), true);
-        if ($binary === false || substr($binary, 0, 8) !== "\x89PNG\r\n\x1a\n") {
+        if ($binary === false) {
+            return null;
+        }
+
+        return $this->parsePngBinary($binary);
+    }
+
+    private function parseImageFile(string $path): ?array
+    {
+        if (!is_file($path) || !is_readable($path)) {
+            return null;
+        }
+
+        $info = @getimagesize($path);
+        if ($info === false) {
+            return null;
+        }
+
+        $mime = (string) ($info['mime'] ?? '');
+        if ($mime === 'image/png') {
+            $binary = @file_get_contents($path);
+            return is_string($binary) ? $this->parsePngBinary($binary) : null;
+        }
+
+        if ($mime === 'image/jpeg') {
+            $binary = @file_get_contents($path);
+            if (!is_string($binary) || $binary === '') {
+                return null;
+            }
+
+            $channels = (int) ($info['channels'] ?? 3);
+            $colorSpace = $channels === 1 ? 'DeviceGray' : ($channels === 4 ? 'DeviceCMYK' : 'DeviceRGB');
+
+            return [
+                'width' => (int) $info[0],
+                'height' => (int) $info[1],
+                'data' => $binary,
+                'filter' => 'DCTDecode',
+                'colorSpace' => $colorSpace,
+            ];
+        }
+
+        return null;
+    }
+
+    private function parsePngBinary(string $binary): ?array
+    {
+        if (substr($binary, 0, 8) !== "\x89PNG\r\n\x1a\n") {
             return null;
         }
 
@@ -1123,6 +1207,23 @@ function cleaning_checklist_items_from_offer_notes(string $notes): array
     return array_values(array_unique($items));
 }
 
+function contract_pdf_brand_logo_path(PDO $pdo): ?string
+{
+    try {
+        $row = $pdo->query('SELECT logo_filename FROM branding_settings WHERE id = 1')->fetch();
+    } catch (Throwable $exception) {
+        return null;
+    }
+
+    $filename = trim((string) ($row['logo_filename'] ?? ''));
+    if ($filename === '') {
+        return null;
+    }
+
+    $path = __DIR__ . '/../uploads/' . basename($filename);
+    return is_file($path) ? $path : null;
+}
+
 function render_cleaning_checklist_pdf(array $offer, array $customer, array $contract, ?array $siteVisit = null): string
 {
     $pdf = new SimplePdfDocument();
@@ -1133,6 +1234,10 @@ function render_cleaning_checklist_pdf(array $offer, array $customer, array $con
     $startDate = !empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'Nach Absprache';
     $createdAt = contract_format_date($contract['created_at'] ?? null);
 
+    $logoPath = contract_pdf_brand_logo_path(db());
+    if ($logoPath !== null) {
+        $pdf->imageFile($logoPath, 118.0, 46.0);
+    }
     $pdf->title('Mitarbeiter-Reinigungscheckliste');
     $pdf->label('Aus der Begehung zum Vertrag ' . $contractNumber);
     $pdf->meta('Vertrag: ' . $contractNumber . ' | Erstellt: ' . $createdAt . ' | Start: ' . $startDate);
