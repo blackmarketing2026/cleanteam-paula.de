@@ -228,7 +228,6 @@ if ($method === 'POST' && $action === 'start') {
             'status' => 'entwurf',
             'current_step' => 'daten',
         ]);
-        notify_contract_created($pdo, $id);
         $contract = load_contract($pdo, $offer['id']);
     }
 

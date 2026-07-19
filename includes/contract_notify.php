@@ -75,10 +75,8 @@ function load_mailbox_smtp(PDO $pdo): ?array
     return $smtp;
 }
 
-// Sendet den gerade erstellten/unterschriebenen Vertrag als E-Mail an die unter
-// Einstellungen konfigurierten Empfaenger (z. B. Buchhaltung). Wird sowohl beim manuellen
-// Anlegen im Dashboard als auch beim automatischen Anlegen und beim Unterschreiben ueber
-// den Kunden-Vertragswizard aufgerufen. Fehler hier duerfen den eigentlichen Vorgang nicht
+// Sendet den unterschriebenen Vertrag als E-Mail an die unter Einstellungen konfigurierten
+// Empfaenger (z. B. Buchhaltung). Fehler hier duerfen den eigentlichen Vorgang nicht
 // abbrechen, daher best effort mit Logging.
 function notify_contract_created(PDO $pdo, string $contractId): void
 {
@@ -108,7 +106,7 @@ function notify_contract_created(PDO $pdo, string $contractId): void
         }
 
         $pdf = save_contract_pdf($pdo, $contractId, 'cleanteam', false);
-        $messageContent = '<p style="margin:0 0 14px 0;">Ein Vertrag wurde angelegt oder aktualisiert.</p>'
+        $messageContent = '<p style="margin:0 0 14px 0;">Ein Vertrag wurde unterschrieben.</p>'
             . '<p style="margin:0;">Im Anhang finden Sie die CleanTeam-Ausfertigung als PDF inklusive Signaturprotokoll.</p>';
 
         $mailer = new SmtpMailer(
@@ -119,10 +117,10 @@ function notify_contract_created(PDO $pdo, string $contractId): void
             decrypt_secret($smtp['password_encrypted'])
         );
 
-        $subject = 'Neuer Vertrag ' . ($context['contract']['number'] ?? '') . ' – ' . $context['customer']['name'];
+        $subject = 'Unterschriebener Vertrag ' . ($context['contract']['number'] ?? '') . ' – ' . $context['customer']['name'];
         $message = render_email_template_message($pdo, $messageContent, [
-            'title' => 'Neuer Vertrag',
-            'preheader' => 'Ein Vertrag wurde angelegt oder aktualisiert.',
+            'title' => 'Unterschriebener Vertrag',
+            'preheader' => 'Ein Vertrag wurde unterschrieben.',
             'fromName' => $smtp['from_name'] ?? 'CleanTeam',
             'signatureText' => $smtp['signature'] ?? '',
             'signatureContext' => 'internal_contract_notification',
