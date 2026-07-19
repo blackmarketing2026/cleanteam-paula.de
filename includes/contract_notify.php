@@ -178,11 +178,11 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
         $number = (string) ($context['contract']['number'] ?? '');
 
         $messageContent = '<p style="margin:0 0 14px 0;">Sehr geehrte Damen und Herren,</p>'
-            . '<p>herzlich willkommen bei CleanTeam Group! Ihr Vertrag wurde soeben von Ihnen unterschrieben und ist damit gültig.</p>'
-            . '<p>Im Anhang finden Sie eine Kopie Ihres Vertrags' . ($number !== '' ? ' (' . email_h($number) . ')' : '') . '.</p>';
+            . '<p>herzlichen Gl&uuml;ckwunsch und herzlich willkommen bei CleanTeam Group! Wir freuen uns sehr auf die Zusammenarbeit mit Ihnen.</p>'
+            . '<p>Der Vertrag' . ($number !== '' ? ' (' . email_h($number) . ')' : '') . ' befindet sich im Anhang und kann bei Bedarf ausgedruckt werden.</p>';
         $message = render_email_template_message($pdo, $messageContent, [
-            'title' => 'Ihr Vertrag bei CleanTeam Group',
-            'preheader' => 'Ihr unterschriebener Vertrag liegt als PDF bei.',
+            'title' => 'Willkommen bei CleanTeam Group',
+            'preheader' => 'Herzlich willkommen bei CleanTeam Group.',
             'fromName' => $smtp['from_name'] ?? 'CleanTeam',
             'signatureText' => $smtp['signature'] ?? '',
             'signatureContext' => 'contract_customer',
@@ -201,7 +201,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             $smtp['from_name'],
             $customerEmail,
             $context['customer']['name'],
-            'Ihr Vertrag bei CleanTeam Group',
+            'Willkommen bei CleanTeam Group',
             $message['html'],
             (string) $pdf['filename'],
             (string) $pdf['content'],
