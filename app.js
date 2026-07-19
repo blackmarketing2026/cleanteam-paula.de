@@ -144,6 +144,7 @@ const els = {
   emailSignatureImageRemove: document.querySelector("#email-signature-image-remove"),
   emailSignatureImageStatus: document.querySelector("#email-signature-image-status"),
   emailSignaturePreview: document.querySelector("#email-signature-preview"),
+  emailSignatureSaveStatus: document.querySelector("#email-signature-save-status"),
   mailboxNotConfigured: document.querySelector("#mailbox-not-configured"),
   mailboxNotConfiguredAdminText: document.querySelector("#mailbox-not-configured-admin-text"),
   mailboxNotConfiguredUserText: document.querySelector("#mailbox-not-configured-user-text"),
@@ -2947,6 +2948,11 @@ function applyEmailSignature(settings = {}) {
       ? "Bild ist gespeichert. Ein neues Bild auswählen oder entfernen und anschließend speichern."
       : "PNG, JPG oder WEBP, maximal 2 MB."
   );
+  updateEmailSignatureSaveStatus(
+    settings.updatedAt
+      ? `Gespeichert am ${formatDate(settings.updatedAt)}.`
+      : "Bestehende Signatur geladen. Änderungen bitte speichern."
+  );
 }
 
 function currentEmailSignaturePreviewImage() {
@@ -2958,6 +2964,16 @@ function updateEmailSignatureImageStatus(text = "PNG, JPG oder WEBP, maximal 2 M
   if (els.emailSignatureImageStatus) {
     els.emailSignatureImageStatus.textContent = text;
   }
+}
+
+function updateEmailSignatureSaveStatus(text) {
+  if (els.emailSignatureSaveStatus) {
+    els.emailSignatureSaveStatus.textContent = text;
+  }
+}
+
+function markEmailSignatureUnsaved() {
+  updateEmailSignatureSaveStatus("Änderungen noch nicht gespeichert.");
 }
 
 function renderEmailSignatureImage() {
@@ -3097,6 +3113,7 @@ function handleEmailSignatureImageUpload(event) {
     pendingEmailSignatureImageRemoval = false;
     renderEmailSignatureImage();
     renderEmailSignaturePreview();
+    markEmailSignatureUnsaved();
     updateEmailSignatureImageStatus(`${file.name} ausgewählt. Zum Übernehmen bitte Signatur speichern.`);
   };
   reader.onerror = () => {
@@ -3114,6 +3131,7 @@ function handleEmailSignatureImageRemove() {
   }
   renderEmailSignatureImage();
   renderEmailSignaturePreview();
+  markEmailSignatureUnsaved();
   updateEmailSignatureImageStatus(
     pendingEmailSignatureImageRemoval
       ? "Bild wird beim nächsten Speichern entfernt."
@@ -4169,7 +4187,10 @@ function bindEvents() {
   els.emailSettingsForm.addEventListener("submit", handleEmailSettingsSubmit);
   if (els.emailSignatureForm) {
     els.emailSignatureForm.addEventListener("submit", handleEmailSignatureSubmit);
-    els.emailSignatureForm.addEventListener("input", () => renderEmailSignaturePreview());
+    els.emailSignatureForm.addEventListener("input", () => {
+      renderEmailSignaturePreview();
+      markEmailSignatureUnsaved();
+    });
   }
   if (els.emailSignatureImageInput) {
     els.emailSignatureImageInput.addEventListener("change", handleEmailSignatureImageUpload);
