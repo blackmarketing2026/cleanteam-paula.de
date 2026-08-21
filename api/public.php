@@ -11,7 +11,7 @@ $action = (string) ($_GET['action'] ?? '');
 $token = trim((string) ($_GET['token'] ?? ''));
 
 if ($token === '') {
-    json_error('Kein Kostenvoranschlags-Link angegeben.', 404);
+    json_error('Kein Vertragslink angegeben.', 404);
 }
 
 const STEP_ORDER = ['daten', 'vollmacht', 'leistung', 'bedingungen', 'signatur', 'fertig'];
@@ -31,7 +31,7 @@ function load_offer(PDO $pdo, string $token): array
     $offer = $stmt->fetch();
 
     if (!$offer) {
-        json_error('Dieser Kostenvoranschlags-Link ist ungültig.', 404);
+        json_error('Dieser Vertragslink ist ungültig.', 404);
     }
 
     return $offer;
@@ -194,7 +194,7 @@ if ($method === 'GET' && $action === 'offer') {
 }
 
 if (offer_is_expired($offer) && $method === 'POST') {
-    json_error('Dieser Kostenvoranschlag ist abgelaufen. Bitte kontaktieren Sie CleanTeam für einen neuen Kostenvoranschlag.', 410);
+    json_error('Dieser Vertrag ist abgelaufen. Bitte kontaktieren Sie CleanTeam für einen neuen Vertrag.', 410);
 }
 
 if ($method === 'POST' && $action === 'start') {

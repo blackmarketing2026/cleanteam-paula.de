@@ -16,8 +16,8 @@ $download = (string) ($_GET['download'] ?? '') === '1';
 $isPublicTokenAccess = $token !== '';
 
 if ($isPublicTokenAccess) {
-    // Oeffentlicher Zugriff ueber den Kostenvoranschlags-Token (z. B. von der "fertig"-Seite des
-    // Kunden-Vertragswizards). Der Token beweist bereits den Zugriff auf genau diesen Kostenvoranschlag,
+    // Oeffentlicher Zugriff ueber den Vertrags-Token (z. B. von der "fertig"-Seite des
+    // Kunden-Vertragswizards). Der Token beweist bereits den Zugriff auf genau diesen Vertragsentwurf,
     // dieselbe Berechtigung wie api/public.php verwendet, daher keine zusaetzliche Admin-Session
     // noetig.
     $stmt = $pdo->prepare('SELECT * FROM offers WHERE token = :token');
@@ -26,7 +26,7 @@ if ($isPublicTokenAccess) {
 
     if (!$offer) {
         http_response_code(404);
-        echo 'Kostenvoranschlag nicht gefunden.';
+        echo 'Vertrag nicht gefunden.';
         exit;
     }
 
@@ -63,7 +63,7 @@ if ($isPublicTokenAccess) {
 
     if ($offerId === '') {
         http_response_code(400);
-        echo 'Kostenvoranschlag fehlt.';
+        echo 'Vertrag fehlt.';
         exit;
     }
 
@@ -73,7 +73,7 @@ if ($isPublicTokenAccess) {
 
     if (!$offer) {
         http_response_code(404);
-        echo 'Kostenvoranschlag nicht gefunden.';
+        echo 'Vertrag nicht gefunden.';
         exit;
     }
 

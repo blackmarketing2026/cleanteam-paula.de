@@ -35,7 +35,7 @@ function render_offer_document(array $offer, array $customer): string
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<title>Ihr Kostenvoranschlag von {$contractorLegalName}</title>
+<title>Ihr Vertrag von {$contractorLegalName}</title>
 <style>
   body { font-family: Georgia, "Times New Roman", serif; max-width: 700px; margin: 40px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.55; }
   .doc-logo { max-height: 64px; max-width: 260px; margin-bottom: 16px; }
@@ -61,7 +61,7 @@ function render_offer_document(array $offer, array $customer): string
 <body>
 
 {$logoHtml}
-<h1>Ihr individueller Reinigungs-Kostenvoranschlag</h1>
+<h1>Ihr individueller Reinigungsvertrag</h1>
 <p class="muted">{$contractorLegalName} – {$contractorTrade}</p>
 
 <h2>Kunde</h2>
@@ -73,7 +73,7 @@ function render_offer_document(array $offer, array $customer): string
   <dt>Objekt / Anschrift</dt><dd>{$customerAddress}, {$customerZipCity}</dd>
 </dl>
 
-<h2>Kostenvoranschlag</h2>
+<h2>Vertragsdaten</h2>
 <dl>
   <dt>Fläche</dt><dd>{$squareMeters} m²</dd>
   <dt>Startdatum</dt><dd>{$startDate}</dd>

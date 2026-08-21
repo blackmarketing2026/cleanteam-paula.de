@@ -1058,7 +1058,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->protocolKeyValue('Vertragsnummer', $contractNumber);
         $pdf->protocolKeyValue('Kunde', $customerName);
         $pdf->protocolKeyValue('Unterzeichner', $signatoryName);
-        $pdf->protocolKeyValue('Kostenvoranschlag erstellt', contract_format_datetime($offer['created_at'] ?? null));
+        $pdf->protocolKeyValue('Vertragsentwurf erstellt', contract_format_datetime($offer['created_at'] ?? null));
         $pdf->protocolKeyValue('Vertrag erstellt', contract_format_datetime($contract['created_at'] ?? null));
         $pdf->protocolKeyValue('Vertrag elektronisch signiert', $signedAtDisplay);
         $pdf->protocolKeyValue('AGB / Vertragsbedingungen zugestimmt', $termsAccepted ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt');

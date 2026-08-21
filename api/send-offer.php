@@ -16,7 +16,7 @@ email_delivery_assert_allowed($pdo, 'offer');
 
 $offerId = (string) ($_GET['id'] ?? '');
 if ($offerId === '') {
-    json_error('Kostenvoranschlags-ID fehlt.', 422);
+    json_error('Vertrags-ID fehlt.', 422);
 }
 
 $stmt = $pdo->prepare(
@@ -27,7 +27,7 @@ $stmt->execute(['id' => $offerId]);
 $offer = $stmt->fetch();
 
 if (!$offer) {
-    json_error('Kostenvoranschlag wurde nicht gefunden.', 404);
+    json_error('Vertrag wurde nicht gefunden.', 404);
 }
 
 $requestBody = read_json_body();
@@ -52,12 +52,12 @@ $validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC
 $contactName = $offer['c_salutation'] . ' ' . $offer['c_contact_last_name'];
 
 $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
-    . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individueller Kostenvoranschlag steht ab sofort online bereit:</p>'
-    . '<p style="margin:18px 0;"><a href="' . email_h($publicUrl) . '" style="display:inline-block;padding:12px 20px;background:#0a4f91;color:#ffffff;text-decoration:none;border-radius:7px;font-weight:700;">Kostenvoranschlag ansehen</a></p>'
+    . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individueller Vertrag steht ab sofort online bereit:</p>'
+    . '<p style="margin:18px 0;"><a href="' . email_h($publicUrl) . '" style="display:inline-block;padding:12px 20px;background:#0a4f91;color:#ffffff;text-decoration:none;border-radius:7px;font-weight:700;">Vertrag ansehen</a></p>'
     . '<p>Der Link ist bis zum ' . email_h($validUntil) . ' gültig.</p>';
 $message = render_email_template_message($pdo, $bodyContent, [
-    'title' => 'Ihr Kostenvoranschlag von CleanTeam',
-    'preheader' => 'Ihr individueller Kostenvoranschlag steht online bereit.',
+    'title' => 'Ihr Vertrag von CleanTeam',
+    'preheader' => 'Ihr individueller Vertrag steht online bereit.',
     'fromName' => $settings['from_name'] ?? 'CleanTeam',
     'signatureText' => $settings['signature'] ?? '',
     'signatureContext' => 'offer',
@@ -78,7 +78,7 @@ try {
         $settings['from_name'],
         $toEmail,
         $offer['c_name'],
-        'Ihr Kostenvoranschlag von CleanTeam',
+        'Ihr Vertrag von CleanTeam',
         $body,
         true,
         $message['inlineImages']

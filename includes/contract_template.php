@@ -236,7 +236,7 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
     <dt>Vertragsnummer</dt><dd>{$contractNumber}</dd>
     <dt>Kunde</dt><dd>{$customerName}</dd>
     <dt>Unterzeichner</dt><dd>{$signatoryName}</dd>
-    <dt>Kostenvoranschlag erstellt</dt><dd>{$offerCreatedAt}</dd>
+    <dt>Vertragsentwurf erstellt</dt><dd>{$offerCreatedAt}</dd>
     <dt>Vertrag erstellt</dt><dd>{$contractCreatedAt}</dd>
     <dt>Vertrag elektronisch signiert</dt><dd>{$signedAtDisplay}</dd>
     <dt>AGB / Vertragsbedingungen zugestimmt</dt><dd>{$termsAcceptedDisplay}</dd>
@@ -440,7 +440,7 @@ function contract_template_placeholder_definitions(): array
             'leistungsort' => 'Adresse des zu reinigenden Objekts',
             'intervall' => 'Reinigungsintervall',
             'leistung' => 'Leistungsbeschreibung inkl. Quadratmeter',
-            'zusatzhinweis_block' => 'Zusatzhinweis aus dem Kostenvoranschlag (falls vorhanden)',
+            'zusatzhinweis_block' => 'Zusatzhinweis aus dem Vertragsentwurf (falls vorhanden)',
             'leistungsverzeichnis' => 'Leistungsverzeichnis (Standardkatalog)',
             'beginn_datum' => 'Vertragsbeginn',
         ],

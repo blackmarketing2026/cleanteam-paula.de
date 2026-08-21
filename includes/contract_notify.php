@@ -29,7 +29,7 @@ function contract_notification_recipients(string $raw): array
     return array_values(array_unique($emails));
 }
 
-// Laedt Vertrag, Kostenvoranschlag und Kunde zusammen. Gibt null zurueck, wenn irgendetwas davon fehlt.
+// Laedt Vertrag, Vertragsentwurf und Kunde zusammen. Gibt null zurueck, wenn irgendetwas davon fehlt.
 function load_contract_context(PDO $pdo, string $contractId): ?array
 {
     $stmt = $pdo->prepare(
@@ -62,7 +62,7 @@ function load_contract_context(PDO $pdo, string $contractId): ?array
     return ['contract' => $contract, 'offer' => $offer, 'customer' => $customer];
 }
 
-// Liefert das Kundenmanagement-Postfach (dasselbe Konto wie beim Kostenvoranschlagsversand und im
+// Liefert das Kundenmanagement-Postfach (dasselbe Konto wie beim Vertragsversand und im
 // Postfach-Bereich), sofern vollstaendig konfiguriert, sonst null. Bewusst nicht die separaten
 // "SMTP-Server-Einstellungen" - die sind oft nie befuellt, das Postfach dagegen schon.
 function load_mailbox_smtp(PDO $pdo): ?array

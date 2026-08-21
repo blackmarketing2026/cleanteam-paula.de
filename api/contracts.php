@@ -105,7 +105,7 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-    json_error('Verträge werden nur über den Kostenvoranschlags-Link erstellt.', 405);
+    json_error('Verträge werden nur über den Vertragslink erstellt.', 405);
 }
 
 if ($method === 'DELETE') {

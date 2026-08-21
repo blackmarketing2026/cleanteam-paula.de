@@ -55,8 +55,8 @@ const els = {
   navLinks: document.querySelectorAll(".nav-link[data-view]"),
   customersGroupToggle: document.querySelector("#customers-group-toggle"),
   customersSubgroup: document.querySelector("#customers-subgroup"),
-  offersGroupToggle: document.querySelector("#offers-group-toggle"),
-  offersSubgroup: document.querySelector("#offers-subgroup"),
+  offersGroupToggle: document.querySelector("#contracts-group-toggle"),
+  offersSubgroup: document.querySelector("#contracts-subgroup"),
   settingsGroupToggle: document.querySelector("#settings-group-toggle"),
   settingsSubgroup: document.querySelector("#settings-subgroup"),
   views: document.querySelectorAll(".view"),
@@ -203,8 +203,8 @@ const titles = {
   overview: "Übersicht",
   "customer-new": "Kunden anlegen",
   "customer-list": "Kundenliste",
-  "offers-new": "Neue Kostenvoranschläge",
-  "offers-saved": "Gespeicherte Kostenvoranschläge",
+  "offers-new": "Neuer Vertrag",
+  "offers-saved": "Vertragsentwürfe",
   contracts: "Verträge",
   mailbox: "Postfach",
   "settings-smtp": "SMTP-Server-Einstellungen",
@@ -530,7 +530,7 @@ function switchView(view) {
   const isCustomerView = view.startsWith("customer-");
   els.customersGroupToggle.classList.toggle("active", isCustomerView);
 
-  const isOfferView = view.startsWith("offers-");
+  const isOfferView = view.startsWith("offers-") || view === "contracts";
   els.offersGroupToggle.classList.toggle("active", isOfferView);
 
   collapseNavGroups();
@@ -638,7 +638,7 @@ function renderMetrics() {
           `;
         })
         .join("")
-    : `<div class="empty-state">Noch keine Kostenvoranschläge vorhanden.</div>`;
+    : `<div class="empty-state">Noch keine Vertragsentwürfe vorhanden.</div>`;
 
   const openContracts = state.data.contracts.filter((contract) => contract.status === "entwurf").length;
   const signedContracts = state.data.contracts.filter((contract) => contract.status === "signiert").length;
@@ -1300,7 +1300,7 @@ function renderOffers() {
 
   els.offerList.innerHTML = offers.length
     ? offers.map(renderOfferCard).join("")
-    : `<div class="empty-state">Noch keine Kostenvoranschläge erstellt.</div>`;
+    : `<div class="empty-state">Noch keine Vertragsentwürfe erstellt.</div>`;
 }
 
 function renderOfferCard(offer) {
@@ -1353,11 +1353,11 @@ function renderOfferCard(offer) {
       <div class="record-actions">
         <a class="secondary-button" href="offer.php?offerId=${encodeURIComponent(offer.id)}" target="_blank" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
-          Kostenvoranschlag Vorschau
+          Vertrag Vorschau
         </a>
         <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
-          Kostenvoranschlag senden
+          Vertrag senden
         </button>
         ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
@@ -1673,7 +1673,7 @@ async function handleOfferSubmit(event) {
     els.offerStartDate.value = todayAsInputValue();
     updateOfferPreview();
     switchView("offers-saved");
-    showToast("Kostenvoranschlag wurde erstellt.");
+    showToast("Vertrag wurde erstellt.");
   } catch (error) {
     showToast(error.message);
   }
@@ -1700,7 +1700,7 @@ function setOfferSendRecipientMode(mode) {
 function openOfferSendModal(id) {
   const offer = getOffer(id);
   if (!offer) {
-    showToast("Kostenvoranschlag wurde nicht gefunden.");
+    showToast("Vertrag wurde nicht gefunden.");
     return;
   }
 
@@ -1745,7 +1745,7 @@ async function sendOffer(id, toEmail) {
     } catch (error) {
       // Der Versand war erfolgreich; ein spätes Listen-Refresh darf den Nutzer nicht irritieren.
     }
-    showToast(`Kostenvoranschlag wurde an ${result.sentTo || toEmail} versendet.`);
+    showToast(`Vertrag wurde an ${result.sentTo || toEmail} versendet.`);
     return true;
   } catch (error) {
     showToast(error.message);
@@ -1759,7 +1759,7 @@ async function submitOfferSendForm(event) {
   const toEmail = els.offerSendEmail.value.trim();
 
   if (!id) {
-    showToast("Kostenvoranschlag wurde nicht gefunden.");
+    showToast("Vertrag wurde nicht gefunden.");
     closeOfferSendModal();
     return;
   }
@@ -1842,7 +1842,7 @@ async function deleteCustomer(id) {
 
 
 async function deleteOffer(id) {
-  const confirmed = window.confirm("Kostenvoranschlag löschen? Ein bereits gestarteter Vertrag wird ebenfalls entfernt.");
+  const confirmed = window.confirm("Vertragsentwurf löschen? Ein bereits gestarteter Vertrag wird ebenfalls entfernt.");
   if (!confirmed) {
     return;
   }
@@ -1853,7 +1853,7 @@ async function deleteOffer(id) {
       state.selectedContractId = null;
     }
     await loadAll();
-    showToast("Kostenvoranschlag wurde gelöscht.");
+    showToast("Vertragsentwurf wurde gelöscht.");
   } catch (error) {
     showToast(error.message);
   }
@@ -1872,7 +1872,7 @@ async function deleteContract(id) {
   }
 
   const finalConfirmed = window.confirm(
-    "Letzte Nachfrage: Vertrag endg\u00fcltig l\u00f6schen? Danach kann aus dem Kostenvoranschlag ein neuer Vertrag erstellt werden.",
+    "Letzte Nachfrage: Vertrag endg\u00fcltig l\u00f6schen? Danach kann aus dem Vertragsentwurf ein neuer Vertrag erstellt werden.",
   );
   if (!finalConfirmed) {
     return;
@@ -1884,7 +1884,7 @@ async function deleteContract(id) {
       state.selectedContractId = null;
     }
     await loadAll();
-    showToast("Vertrag wurde gel\u00f6scht. Der Kostenvoranschlag ist wieder f\u00fcr einen neuen Vertrag frei.");
+    showToast("Vertrag wurde gel\u00f6scht. Der Vertragsentwurf ist wieder f\u00fcr einen neuen Vertrag frei.");
   } catch (error) {
     showToast(error.message);
   }

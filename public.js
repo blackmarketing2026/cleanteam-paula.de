@@ -108,7 +108,7 @@ function renderOfferSummary() {
   ];
   entries.push(["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`]);
   renderDefinitionList(els.offerSummary, entries);
-  els.offerValidity.textContent = `Dieser Kostenvoranschlag ist gültig bis ${formatDate(offer.expiresAt)}.`;
+  els.offerValidity.textContent = `Dieser Vertrag ist gültig bis ${formatDate(offer.expiresAt)}.`;
 }
 
 function renderDataCheck() {
@@ -235,7 +235,7 @@ function renderFactGrid(items) {
 
 function renderServiceRooms(rooms, looseServices) {
   if (rooms.length === 0 && looseServices.length === 0) {
-    return `<p class="public-service-empty">Die Reinigungsleistungen sind im Kostenvoranschlag beschrieben.</p>`;
+    return `<p class="public-service-empty">Die Reinigungsleistungen sind im Vertrag beschrieben.</p>`;
   }
 
   const roomCards = rooms
@@ -306,7 +306,7 @@ function routeToState(data) {
   state.contract = data.contract;
 
   if (data.offer.expired) {
-    els.errorMessage.textContent = "Dieser Kostenvoranschlag ist leider abgelaufen. Bitte kontaktieren Sie CleanTeam für einen neuen Kostenvoranschlag.";
+    els.errorMessage.textContent = "Dieser Vertrag ist leider abgelaufen. Bitte kontaktieren Sie CleanTeam für einen neuen Vertrag.";
     showScreen("error");
     return;
   }
@@ -525,7 +525,7 @@ async function loadBranding() {
 
 function init() {
   if (!token) {
-    els.errorMessage.textContent = "Dieser Link enthält keinen gültigen Kostenvoranschlag.";
+    els.errorMessage.textContent = "Dieser Link enthält keinen gültigen Vertrag.";
     showScreen("error");
     return;
   }
