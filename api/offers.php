@@ -9,16 +9,6 @@ require_login();
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
 
-function ensure_offers_site_visit_id_column(PDO $pdo): void
-{
-    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'site_visit_id'");
-    if ($stmt->fetch()) {
-        return;
-    }
-
-    $pdo->exec('ALTER TABLE offers ADD COLUMN site_visit_id VARCHAR(64) NULL AFTER customer_id');
-}
-
 function ensure_offers_pricing_columns(PDO $pdo): void
 {
     $columns = [
@@ -45,7 +35,6 @@ function offer_row_to_json(array $row): array
     return [
         'id' => $row['id'],
         'customerId' => $row['customer_id'],
-        'siteVisitId' => $row['site_visit_id'] ?? null,
         'customer' => [
             'id' => $row['customer_id'],
             'name' => $row['c_name'],
@@ -85,7 +74,6 @@ const OFFER_SELECT = 'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone 
     INNER JOIN customers c ON c.id = o.customer_id
     LEFT JOIN contracts ct ON ct.offer_id = o.id';
 
-ensure_offers_site_visit_id_column($pdo);
 ensure_offers_pricing_columns($pdo);
 
 if ($method === 'GET') {
@@ -97,18 +85,13 @@ if ($method === 'POST') {
     $body = read_json_body();
     $customerId = trim((string) ($body['customerId'] ?? ''));
     $squareMeters = (float) ($body['squareMeters'] ?? 0);
-    $interval = trim((string) ($body['interval'] ?? '')) ?: 'laut Begehung';
-    $service = trim((string) ($body['service'] ?? '')) ?: 'Reinigung nach Begehung';
-    $siteVisitId = trim((string) ($body['siteVisitId'] ?? ''));
+    $interval = trim((string) ($body['interval'] ?? ''));
+    $service = trim((string) ($body['service'] ?? ''));
     $manualPrice = round((float) ($body['manualPrice'] ?? 0), 2);
     $priceAdjustmentNote = trim((string) ($body['priceAdjustmentNote'] ?? ''));
 
-    if ($siteVisitId === '') {
-        json_error('Bitte zuerst eine offene Begehung auswählen.', 422);
-    }
-
-    if ($customerId === '' || $squareMeters <= 0) {
-        json_error('Begehung, Kunde, Quadratmeter und Preis sind erforderlich.', 422);
+    if ($customerId === '' || $squareMeters <= 0 || $interval === '' || $service === '') {
+        json_error('Kunde, Quadratmeter, Intervall, Leistung und Preis sind erforderlich.', 422);
     }
 
     if ($manualPrice <= 0) {
@@ -121,18 +104,6 @@ if ($method === 'POST') {
         json_error('Kunde wurde nicht gefunden.', 404);
     }
 
-    $visitStmt = $pdo->prepare('SELECT id FROM site_visits WHERE id = :id');
-    $visitStmt->execute(['id' => $siteVisitId]);
-    if (!$visitStmt->fetch()) {
-        json_error('Begehung wurde nicht gefunden.', 404);
-    }
-
-    $processedStmt = $pdo->prepare('SELECT id FROM offers WHERE site_visit_id = :site_visit_id LIMIT 1');
-    $processedStmt->execute(['site_visit_id' => $siteVisitId]);
-    if ($processedStmt->fetch()) {
-        json_error('Diese Begehung wurde bereits abgearbeitet.', 409);
-    }
-
     $basePrice = calculate_offer_price($squareMeters, $interval, $service);
     $price = $manualPrice;
     $priceAdjustment = round($price - $basePrice, 2);
@@ -141,13 +112,12 @@ if ($method === 'POST') {
     $startDate = trim((string) ($body['startDate'] ?? ''));
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, site_visit_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, token, created_at, expires_at)
-         VALUES (:id, :customer_id, :site_visit_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, :price_adjustment, :price_adjustment_note, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
+        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, token, created_at, expires_at)
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, :price_adjustment, :price_adjustment_note, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
     );
     $stmt->execute([
         'id' => $id,
         'customer_id' => $customerId,
-        'site_visit_id' => $siteVisitId !== '' ? $siteVisitId : null,
         'square_meters' => (int) $squareMeters,
         'interval_label' => $interval,
         'service' => $service,

@@ -644,8 +644,7 @@ button svg {
   top: 28px;
 }
 
-.customer-form-panel,
-.site-visit-form-panel {
+.customer-form-panel {
   position: static;
 }
 
@@ -1265,18 +1264,6 @@ button.compact-item.selected {
 .floor-builder {
   display: grid;
   gap: 12px;
-}
-
-.site-visit-editor-panel {
-  margin-top: 18px;
-}
-
-.site-visit-editor-form {
-  align-items: start;
-}
-
-.site-visit-editor-panel[hidden] {
-  display: none;
 }
 
 .floor-builder-header,

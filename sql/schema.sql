@@ -33,24 +33,9 @@ CREATE TABLE IF NOT EXISTS customers (
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS site_visits (
-  id VARCHAR(64) NOT NULL,
-  customer_name VARCHAR(190) NOT NULL,
-  email VARCHAR(190) NOT NULL,
-  phone VARCHAR(60) NOT NULL,
-  address VARCHAR(255) NOT NULL,
-  onsite_contact VARCHAR(190) NOT NULL,
-  square_meters INT UNSIGNED NOT NULL,
-  floors_json LONGTEXT NOT NULL,
-  notes TEXT NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 CREATE TABLE IF NOT EXISTS offers (
   id VARCHAR(64) NOT NULL,
   customer_id VARCHAR(64) NOT NULL,
-  site_visit_id VARCHAR(64) NULL,
   square_meters INT UNSIGNED NOT NULL,
   interval_label VARCHAR(40) NOT NULL,
   service VARCHAR(80) NOT NULL,
@@ -67,7 +52,6 @@ CREATE TABLE IF NOT EXISTS offers (
   PRIMARY KEY (id),
   UNIQUE KEY uniq_offers_token (token),
   KEY idx_offers_customer (customer_id),
-  UNIQUE KEY uniq_offers_site_visit (site_visit_id),
   -- Bewusst kein ON DELETE CASCADE: ein Kunde mit bestehenden Kostenvoranschlaegen/Vertraegen
   -- darf nicht geloescht werden, damit Vertragshistorie nicht verloren geht.
   CONSTRAINT fk_offers_customer FOREIGN KEY (customer_id) REFERENCES customers (id)

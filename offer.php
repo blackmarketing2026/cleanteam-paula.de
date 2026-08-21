@@ -54,12 +54,4 @@ if (!$customer) {
     exit;
 }
 
-$siteVisit = null;
-$siteVisitId = trim((string) ($offer['site_visit_id'] ?? ''));
-if ($siteVisitId !== '') {
-    $stmt = $pdo->prepare('SELECT * FROM site_visits WHERE id = :id');
-    $stmt->execute(['id' => $siteVisitId]);
-    $siteVisit = $stmt->fetch() ?: null;
-}
-
-echo render_offer_document($offer, $customer, $siteVisit);
+echo render_offer_document($offer, $customer);

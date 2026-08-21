@@ -153,8 +153,8 @@ function normalizeServiceLine(line) {
 
 function isServiceNoiseLine(line) {
   return (
-    /^(Begehungsergebnis|Objektdaten|Zusammenfassung|Leistungsbeschreibung \/ Dienstleistung|Etagen und R(?:ä|Ã¤)ume)$/i.test(line) ||
-    /^(Firma \/ Kunde|Ansprechpartner vor Ort|E-Mail|Telefon|Objektadresse|Objektgr(?:ö|Ã¶)ße|Begehung erfasst am|Etagen\/Bereiche|R(?:ä|Ã¤)ume|Reinigungspositionen):/i.test(line)
+    /^(Objektdaten|Zusammenfassung|Leistungsbeschreibung \/ Dienstleistung|Etagen und R(?:ä|Ã¤)ume)$/i.test(line) ||
+    /^(Firma \/ Kunde|Ansprechpartner vor Ort|E-Mail|Telefon|Objektadresse|Objektgr(?:ö|Ã¶)ße|Etagen\/Bereiche|R(?:ä|Ã¤)ume|Reinigungspositionen):/i.test(line)
   );
 }
 
@@ -235,7 +235,7 @@ function renderFactGrid(items) {
 
 function renderServiceRooms(rooms, looseServices) {
   if (rooms.length === 0 && looseServices.length === 0) {
-    return `<p class="public-service-empty">Die Reinigungsleistungen erfolgen nach der dokumentierten Begehung.</p>`;
+    return `<p class="public-service-empty">Die Reinigungsleistungen sind im Kostenvoranschlag beschrieben.</p>`;
   }
 
   const roomCards = rooms
@@ -247,7 +247,7 @@ function renderServiceRooms(rooms, looseServices) {
         ? `<div class="public-room-services">${room.services
             .map((service) => `<div><strong>${escapeHtml(service.label || "Leistung")}</strong><span>${escapeHtml(service.value)}</span></div>`)
             .join("")}</div>`
-        : `<p class="public-service-empty">Reinigung nach Begehung.</p>`;
+        : `<p class="public-service-empty">Keine Leistungsdetails hinterlegt.</p>`;
       const notes = room.notes.length ? `<p class="public-room-note">${escapeHtml(room.notes.join(" "))}</p>` : "";
 
       return `
@@ -288,7 +288,7 @@ function renderServiceDetails() {
     </div>
     <div class="public-service-card">
       <h3>Leistungsbeschreibung</h3>
-      <p class="public-service-intro">Die Reinigung erfolgt nach der dokumentierten Begehung. Vereinbart sind die folgenden Bereiche und Leistungen.</p>
+      <p class="public-service-intro">Vereinbart sind die folgenden Bereiche und Leistungen.</p>
       <div class="public-room-list">
         ${renderServiceRooms(service.rooms, service.looseServices)}
       </div>

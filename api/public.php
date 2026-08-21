@@ -22,10 +22,9 @@ function load_offer(PDO $pdo, string $token): array
     $stmt = $pdo->prepare(
         'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone AS c_phone, c.salutation AS c_salutation,
             c.contact_last_name AS c_contact_last_name, c.address AS c_address, c.house_number AS c_house_number,
-            c.zip AS c_zip, c.city AS c_city, sv.address AS sv_address
+            c.zip AS c_zip, c.city AS c_city
          FROM offers o
          INNER JOIN customers c ON c.id = o.customer_id
-         LEFT JOIN site_visits sv ON sv.id = o.site_visit_id
          WHERE o.token = :token'
     );
     $stmt->execute(['token' => $token]);
@@ -71,16 +70,6 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
     }
 }
 
-function ensure_offers_site_visit_id_column(PDO $pdo): void
-{
-    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'site_visit_id'");
-    if ($stmt->fetch()) {
-        return;
-    }
-
-    $pdo->exec('ALTER TABLE offers ADD COLUMN site_visit_id VARCHAR(64) NULL AFTER customer_id');
-}
-
 function authorization_address_options(array $offer): array
 {
     $options = [];
@@ -88,11 +77,9 @@ function authorization_address_options(array $offer): array
     $customerAddress = trim((string) ($offer['c_address'] ?? '') . ' ' . (string) ($offer['c_house_number'] ?? ''));
     $customerZipCity = trim((string) ($offer['c_zip'] ?? '') . ' ' . (string) ($offer['c_city'] ?? ''));
     $customerFullAddress = trim($customerAddress . ($customerZipCity !== '' ? ', ' . $customerZipCity : ''));
-    $siteVisitAddress = trim((string) ($offer['sv_address'] ?? ''));
 
     foreach ([
         ['label' => 'Firmenadresse', 'value' => $customerFullAddress],
-        ['label' => 'Objektadresse', 'value' => $siteVisitAddress],
     ] as $option) {
         if ($option['value'] === '' || isset($seen[$option['value']])) {
             continue;
@@ -197,7 +184,6 @@ function require_active_contract(?array $contract): array
     return $contract;
 }
 
-ensure_offers_site_visit_id_column($pdo);
 $offer = load_offer($pdo, $token);
 ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);

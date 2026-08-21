@@ -22,7 +22,7 @@ const CONTRACT_STATUS_LABELS = {
 };
 
 const state = {
-  data: { customers: [], siteVisits: [], offers: [], contracts: [] },
+  data: { customers: [], offers: [], contracts: [] },
   session: {
     email: "",
     role: "role_one",
@@ -34,17 +34,14 @@ const state = {
   currentUserId: null,
   currentView: "overview",
   selectedContractId: null,
-  pendingOfferSiteVisitId: null,
   pendingSendOfferId: null,
   offerSendRecipientMode: "customer",
-  editingSiteVisitId: null,
   contractFilters: {
     search: "",
     period: "all",
     sortKey: "customerName",
     sortDirection: "asc",
   },
-  pendingQuizCustomerReturn: false,
 };
 
 const els = {
@@ -58,8 +55,6 @@ const els = {
   navLinks: document.querySelectorAll(".nav-link[data-view]"),
   customersGroupToggle: document.querySelector("#customers-group-toggle"),
   customersSubgroup: document.querySelector("#customers-subgroup"),
-  siteVisitsGroupToggle: document.querySelector("#site-visits-group-toggle"),
-  siteVisitsSubgroup: document.querySelector("#site-visits-subgroup"),
   offersGroupToggle: document.querySelector("#offers-group-toggle"),
   offersSubgroup: document.querySelector("#offers-subgroup"),
   settingsGroupToggle: document.querySelector("#settings-group-toggle"),
@@ -75,17 +70,7 @@ const els = {
   customerList: document.querySelector("#customer-list"),
   customerId: document.querySelector("#customer-id"),
   cancelCustomerEdit: document.querySelector("#cancel-customer-edit"),
-  siteVisitForm: document.querySelector("#site-visit-form"),
-  addSiteVisitFloor: document.querySelector("#add-site-visit-floor"),
-  siteVisitFloors: document.querySelector("#site-visit-floors"),
-  siteVisitEditorPanel: document.querySelector("#site-visit-editor-panel"),
-  siteVisitEditorHeading: document.querySelector("#site-visit-editor-heading"),
-  siteVisitEditorMeta: document.querySelector("#site-visit-editor-meta"),
-  cancelSiteVisitEdit: document.querySelector("#cancel-site-visit-edit"),
-  siteVisitSubmitLabel: document.querySelector("#site-visit-submit-label"),
-  siteVisitList: document.querySelector("#site-visit-list"),
   offerForm: document.querySelector("#offer-form"),
-  offerSiteVisit: document.querySelector("#offer-site-visit"),
   offerCustomer: document.querySelector("#offer-customer"),
   offerSquareMeters: document.querySelector("#offer-square-meters"),
   offerInterval: document.querySelector("#offer-interval"),
@@ -206,7 +191,6 @@ const els = {
   brandMarks: document.querySelectorAll(".brand-mark"),
   toast: document.querySelector("#toast"),
   metricCustomers: document.querySelector("#metric-customers"),
-  metricSiteVisits: document.querySelector("#metric-site-visits"),
   metricOffers: document.querySelector("#metric-offers"),
   metricContracts: document.querySelector("#metric-contracts"),
   metricSigned: document.querySelector("#metric-signed"),
@@ -219,8 +203,6 @@ const titles = {
   overview: "Übersicht",
   "customer-new": "Kunden anlegen",
   "customer-list": "Kundenliste",
-  "site-visit-saved": "Gespeicherte Begehungen",
-  "site-visit-quiz": "Neue Begehung erstellen",
   "offers-new": "Neue Kostenvoranschläge",
   "offers-saved": "Gespeicherte Kostenvoranschläge",
   contracts: "Verträge",
@@ -320,9 +302,6 @@ function getCustomer(id) {
 
 window.ctCustomerList = () => [...state.data.customers];
 
-function getSiteVisit(id) {
-  return state.data.siteVisits.find((visit) => visit.id === id);
-}
 
 function getOffer(id) {
   return state.data.offers.find((offer) => offer.id === id);
@@ -345,45 +324,12 @@ function signedContractOfferIds() {
   return ids;
 }
 
-function contractLinkedSiteVisitIds() {
-  const ids = new Set(
-    state.data.contracts
-      .map((contract) => contract.offer?.siteVisitId)
-      .filter(Boolean),
-  );
-
-  state.data.offers.forEach((offer) => {
-    if (offer.siteVisitId && (offer.contractId || offer.contractStatus)) {
-      ids.add(offer.siteVisitId);
-    }
-  });
-
-  return ids;
-}
-
-window.ctContractLinkedSiteVisitIds = () => [...contractLinkedSiteVisitIds()];
-
 function visibleSavedOffers() {
   const hiddenOfferIds = signedContractOfferIds();
   return state.data.offers.filter((offer) => !hiddenOfferIds.has(offer.id));
 }
 
-function visibleSavedSiteVisits() {
-  const hiddenVisitIds = contractLinkedSiteVisitIds();
-  return state.data.siteVisits.filter((visit) => !hiddenVisitIds.has(visit.id));
-}
 
-function getOpenSiteVisits() {
-  const processedVisitIds = new Set(
-    state.data.offers
-      .map((offer) => offer.siteVisitId)
-      .filter(Boolean),
-  );
-
-  return [...state.data.siteVisits]
-    .filter((visit) => !processedVisitIds.has(visit.id))
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-}
 
 function getContract(id) {
   return state.data.contracts.find((contract) => contract.id === id);
@@ -522,10 +468,6 @@ function setCustomersGroupExpanded(expanded) {
   els.customersGroupToggle.setAttribute("aria-expanded", String(expanded));
 }
 
-function setSiteVisitsGroupExpanded(expanded) {
-  els.siteVisitsSubgroup.hidden = !expanded;
-  els.siteVisitsGroupToggle.setAttribute("aria-expanded", String(expanded));
-}
 
 function setOffersGroupExpanded(expanded) {
   els.offersSubgroup.hidden = !expanded;
@@ -535,9 +477,6 @@ function setOffersGroupExpanded(expanded) {
 function collapseNavGroups(except = null) {
   if (except !== "customers") {
     setCustomersGroupExpanded(false);
-  }
-  if (except !== "site-visits") {
-    setSiteVisitsGroupExpanded(false);
   }
   if (except !== "offers") {
     setOffersGroupExpanded(false);
@@ -550,7 +489,6 @@ function collapseNavGroups(except = null) {
 function toggleNavGroup(group) {
   const groups = {
     customers: [els.customersSubgroup, setCustomersGroupExpanded],
-    "site-visits": [els.siteVisitsSubgroup, setSiteVisitsGroupExpanded],
     offers: [els.offersSubgroup, setOffersGroupExpanded],
     settings: [els.settingsSubgroup, setSettingsGroupExpanded],
   };
@@ -566,10 +504,6 @@ function toggleNavGroup(group) {
 }
 
 function switchView(view) {
-  if (view === "site-visit-new") {
-    view = "site-visit-quiz";
-  }
-
   if (hiddenViews.has(view)) {
     view = "overview";
   }
@@ -595,9 +529,6 @@ function switchView(view) {
 
   const isCustomerView = view.startsWith("customer-");
   els.customersGroupToggle.classList.toggle("active", isCustomerView);
-
-  const isSiteVisitView = view.startsWith("site-visit-");
-  els.siteVisitsGroupToggle.classList.toggle("active", isSiteVisitView);
 
   const isOfferView = view.startsWith("offers-");
   els.offersGroupToggle.classList.toggle("active", isOfferView);
@@ -638,10 +569,6 @@ function switchView(view) {
     loadMailbox();
   }
 
-  if (view === "site-visit-quiz" && typeof svqShow === "function") {
-    svqShow();
-  }
-
   loadAll();
 }
 
@@ -657,15 +584,13 @@ function closeMobileNav() {
 
 async function loadAll() {
   try {
-    const [customers, siteVisits, offers, contracts] = await Promise.all([
+    const [customers, offers, contracts] = await Promise.all([
       apiGet("api/customers.php"),
-      apiGet("api/site-visits.php"),
       apiGet("api/offers.php"),
       apiGet("api/contracts.php"),
     ]);
 
     state.data.customers = customers;
-    state.data.siteVisits = siteVisits;
     state.data.offers = offers;
     state.data.contracts = contracts;
     renderAll();
@@ -675,30 +600,19 @@ async function loadAll() {
 }
 
 function renderAll() {
-  const prunedQuizVisits = typeof window.svqPruneContractLinkedCompletedVisits === "function"
-    ? window.svqPruneContractLinkedCompletedVisits()
-    : false;
-
   renderMetrics();
   renderCustomerOptions();
-  renderOfferSiteVisitOptions();
   renderCustomers();
-  renderSiteVisits();
   renderOffers();
   renderContracts();
   updateOfferPreview();
-  if (prunedQuizVisits && state.currentView === "site-visit-quiz" && typeof svqShow === "function") {
-    svqShow();
-  }
   refreshIcons();
 }
 
 function renderMetrics() {
-  const savedSiteVisits = visibleSavedSiteVisits();
   const savedOffers = visibleSavedOffers();
 
   els.metricCustomers.textContent = state.data.customers.length;
-  els.metricSiteVisits.textContent = savedSiteVisits.length;
   els.metricOffers.textContent = savedOffers.length;
   els.metricContracts.textContent = state.data.contracts.length;
   els.metricSigned.textContent = state.data.contracts.filter((contract) => contract.status === "signiert").length;
@@ -753,53 +667,17 @@ function renderCustomerOptions() {
     .join("");
 
   els.offerCustomer.innerHTML = state.data.customers.length
-    ? options
+    ? `<option value="">Bitte wählen</option>` + options
     : `<option value="">Bitte zuerst Kunden anlegen</option>`;
-  els.offerCustomer.disabled = true;
+  els.offerCustomer.disabled = state.data.customers.length === 0;
 
   if (previousValue && getCustomer(previousValue)) {
     els.offerCustomer.value = previousValue;
   }
 }
 
-function clearOfferSiteVisitFields() {
-  els.offerCustomer.value = "";
-  els.offerSquareMeters.value = "";
-  els.offerManualPrice.value = "";
-  els.offerNotes.value = "";
-  updateOfferPreview();
-}
 
-function siteVisitCompanyName(visit) {
-  return String(visit.companyName || visit.customerName || "").trim();
-}
 
-function renderOfferSiteVisitOptions() {
-  const openVisits = getOpenSiteVisits();
-  const selectedVisitId = state.pendingOfferSiteVisitId;
-  const selectedVisitIsOpen = selectedVisitId && openVisits.some((visit) => visit.id === selectedVisitId);
-  const submitButton = els.offerForm.querySelector('button[type="submit"]');
-
-  els.offerSiteVisit.innerHTML = openVisits.length
-    ? `<option value="">Offene Begehung auswählen</option>` + openVisits
-        .map((visit) => {
-          const label = `${siteVisitCompanyName(visit)} · ${formatDate(visit.createdAt)} · ${visit.squareMeters} m²`;
-          return `<option value="${escapeHtml(visit.id)}">${escapeHtml(label)}</option>`;
-        })
-        .join("")
-    : `<option value="">Keine offenen Begehungen verfügbar</option>`;
-  els.offerSiteVisit.disabled = openVisits.length === 0;
-
-  if (selectedVisitIsOpen) {
-    els.offerSiteVisit.value = selectedVisitId;
-  } else {
-    state.pendingOfferSiteVisitId = null;
-    els.offerSiteVisit.value = "";
-    clearOfferSiteVisitFields();
-  }
-
-  submitButton.disabled = !state.pendingOfferSiteVisitId;
-}
 
 function renderCustomers() {
   const query = els.customerSearch.value.trim().toLowerCase();
@@ -1219,95 +1097,8 @@ function counterMarkup(name, label, value, options = {}) {
   `;
 }
 
-function ensureSiteVisitFloorEmptyState() {
-  if (els.siteVisitFloors.querySelector(".floor-section")) {
-    return;
-  }
 
-  els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage hinzugefügt.</div>`;
-}
 
-function renumberSiteVisitFloors() {
-  els.siteVisitFloors.querySelectorAll(".floor-section").forEach((section, index) => {
-    const name = section.querySelector('[name="floorName"]').value.trim();
-    section.querySelector("legend").textContent = name || `Etage ${index + 1}`;
-    renumberSiteVisitRooms(section);
-  });
-}
-
-function renumberSiteVisitRooms(floorSection) {
-  floorSection.querySelectorAll(".room-section").forEach((section, index) => {
-    const name = section.querySelector('[name="roomName"]')?.value.trim();
-    const title = name || "Neuer Raum";
-    section.querySelector("legend").textContent = title;
-    const roomTitle = section.querySelector(".room-section-title");
-    if (roomTitle) {
-      roomTitle.textContent = title;
-    }
-  });
-}
-
-function setRoomSectionCollapsed(roomSection, collapsed) {
-  const body = roomSection.querySelector(".room-section-body");
-  const button = roomSection.querySelector('[data-action="toggle-site-visit-room"]');
-  roomSection.classList.toggle("is-collapsed", collapsed);
-  if (body) {
-    body.hidden = collapsed;
-  }
-  if (button) {
-    button.setAttribute("aria-expanded", String(!collapsed));
-    button.setAttribute("aria-label", collapsed ? "Raum aufklappen" : "Raum zuklappen");
-    const label = button.querySelector("span");
-    if (label) {
-      label.textContent = collapsed ? "Aufklappen" : "Zuklappen";
-    }
-  }
-}
-
-function saveSiteVisitRoom(roomSection) {
-  const roomName = roomSection.querySelector('[name="roomName"]');
-  if (!roomName.value.trim()) {
-    showToast("Bitte zuerst einen Raumnamen eintragen.");
-    roomName.focus();
-    return;
-  }
-
-  const floorSection = roomSection.closest(".floor-section");
-  if (floorSection) {
-    renumberSiteVisitRooms(floorSection);
-  }
-  syncCleaningTaskSections(roomSection);
-  setRoomSectionCollapsed(roomSection, true);
-  showToast("Raum wurde gespeichert.");
-}
-
-function ensureFloorRoomEmptyState(floorSection) {
-  const roomList = floorSection.querySelector(".room-list");
-  if (!roomList || roomList.querySelector(".room-section")) {
-    return;
-  }
-
-  roomList.innerHTML = `<div class="empty-state room-empty-state">Noch kein Raum hinzugefügt.</div>`;
-}
-
-function addSiteVisitRoomFromToolbar(floorSection) {
-  const roomNameInput = floorSection.querySelector('[name="newRoomName"]');
-  const roomName = roomNameInput?.value.trim() || "";
-
-  if (!roomName) {
-    showToast("Bitte zuerst den Raumnamen eintragen.");
-    roomNameInput?.focus();
-    return;
-  }
-
-  floorSection.querySelectorAll(".room-section").forEach((roomSection) => {
-    setRoomSectionCollapsed(roomSection, true);
-  });
-
-  const roomSection = addSiteVisitRoom(floorSection, { name: roomName }, { focus: false });
-  roomNameInput.value = "";
-  roomSection.querySelector('[name="roomType"]')?.focus();
-}
 
 function findCounterInput(button) {
   const target = button.dataset.counterTarget;
@@ -1333,10 +1124,6 @@ function updateCounterControl(input, value) {
     display.textContent = String(nextValue);
   }
 
-  const floorSection = input.closest(".floor-section");
-  if (floorSection) {
-    renumberSiteVisitRooms(floorSection);
-  }
 }
 
 function changeCounter(button, direction) {
@@ -1349,63 +1136,6 @@ function changeCounter(button, direction) {
   updateCounterControl(input, (Number(input.value) || 0) + direction * step);
 }
 
-function addSiteVisitFloor(values = {}, options = {}) {
-  const emptyState = els.siteVisitFloors.querySelector(".floor-empty-state");
-  if (emptyState) {
-    emptyState.remove();
-  }
-
-  const floor = {
-    name: values.name || "",
-    rooms: floorRoomsForDisplay(values),
-  };
-
-  const section = document.createElement("fieldset");
-  section.className = "floor-section";
-  section.innerHTML = `
-    <legend>Etage</legend>
-    <div class="floor-section-toolbar">
-      <button class="ghost-button" type="button" data-action="remove-site-visit-floor">
-        <i data-lucide="x" aria-hidden="true"></i>
-        Etage entfernen
-      </button>
-    </div>
-    <div class="form-grid">
-      <label class="span-2">
-        Etagenname
-        <input name="floorName" type="text" placeholder="z. B. Erdgeschoss, 1. OG" value="${escapeHtml(floor.name)}" />
-      </label>
-      <div class="room-builder span-2">
-        <div class="floor-section-toolbar room-add-toolbar">
-          <strong>Räume</strong>
-          <div class="room-add-controls">
-            <label class="room-add-name">
-              Neuer Raum
-              <input name="newRoomName" type="text" placeholder="z. B. Empfang, WC Damen, Konferenzraum" />
-            </label>
-            <button class="secondary-button" type="button" data-action="add-site-visit-room">
-              <i data-lucide="plus" aria-hidden="true"></i>
-              Raum hinzufügen
-            </button>
-          </div>
-        </div>
-        <div class="room-list"></div>
-      </div>
-    </div>
-  `;
-
-  els.siteVisitFloors.appendChild(section);
-  if (floor.rooms.length) {
-    floor.rooms.forEach((room) => addSiteVisitRoom(section, room, { focus: false }));
-  } else {
-    ensureFloorRoomEmptyState(section);
-  }
-  renumberSiteVisitFloors();
-  refreshIcons();
-  if (options.focus !== false) {
-    section.querySelector('[name="floorName"]').focus();
-  }
-}
 
 function cleaningFrequencyOptions(selectedFrequency) {
   return CLEANING_FREQUENCIES
@@ -1532,399 +1262,17 @@ function syncCleaningTaskSections(roomSection) {
   });
 }
 
-function addSiteVisitRoom(floorSection, values = {}, options = {}) {
-  const roomList = floorSection.querySelector(".room-list");
-  const emptyState = roomList.querySelector(".room-empty-state");
-  if (emptyState) {
-    emptyState.remove();
-  }
 
-  const room = {
-    name: values.name || "",
-    roomType: values.roomType || "Büro",
-    squareMeters: Number(values.squareMeters) || 0,
-    cleaningItems: cleaningItemsForDisplay(values),
-    sinks: Number(values.sinks) || 0,
-    mirrors: Number(values.mirrors) || 0,
-    toilets: Number(values.toilets) || 0,
-    desks: Number(values.desks) || 0,
-    windows: Number(values.windows) || 0,
-    cleaningType: normalizeCleaningType(values.cleaningType),
-    floorCondition: values.floorCondition || "Teppich",
-    extraAgreements: values.extraAgreements || "",
-    notes: values.notes || values.areaNotes || "",
-  };
 
-  const section = document.createElement("fieldset");
-  section.className = "room-section";
-  section.innerHTML = `
-    <legend>Raum</legend>
-    <div class="room-section-header">
-      <button class="ghost-button room-toggle-button" type="button" data-action="toggle-site-visit-room" aria-expanded="true">
-        <i data-lucide="chevron-up" aria-hidden="true"></i>
-        <span>Zuklappen</span>
-      </button>
-      <strong class="room-section-title">Raum</strong>
-      <button class="ghost-button" type="button" data-action="remove-site-visit-room">
-        <i data-lucide="x" aria-hidden="true"></i>
-        Raum entfernen
-      </button>
-    </div>
-    <div class="form-grid room-section-body">
-      <label>
-        Raumname
-        <input name="roomName" type="text" placeholder="z. B. Empfang, WC Damen, Konferenzraum" value="${escapeHtml(room.name)}" />
-      </label>
-      <label>
-        Raumart
-        <select name="roomType">
-          <option value="Büro"${optionSelected("Büro", room.roomType)}>Büro</option>
-          <option value="Behandlungsräume"${optionSelected("Behandlungsräume", room.roomType)}>Behandlungsräume</option>
-          <option value="Sanitär"${optionSelected("Sanitär", room.roomType)}>Sanitär</option>
-          <option value="Küche"${optionSelected("Küche", room.roomType)}>Küche</option>
-          <option value="Flur"${optionSelected("Flur", room.roomType)}>Flur</option>
-          <option value="Treppenhaus"${optionSelected("Treppenhaus", room.roomType)}>Treppenhaus</option>
-          <option value="Empfang"${optionSelected("Empfang", room.roomType)}>Empfang</option>
-          <option value="Lager"${optionSelected("Lager", room.roomType)}>Lager</option>
-          <option value="Sonstiger Raum"${optionSelected("Sonstiger Raum", room.roomType)}>Sonstiger Raum</option>
-        </select>
-      </label>
-      <div class="cleaning-task-list span-2">
-        ${CLEANING_TASKS.map((task) => cleaningTaskMarkup(task, room.cleaningItems)).join("")}
-      </div>
-      <label class="span-2">
-        Extra Vereinbarungen
-        <textarea name="roomExtraAgreements" rows="2" placeholder="Besondere Absprachen für diesen Raum">${escapeHtml(room.extraAgreements)}</textarea>
-      </label>
-      <label class="span-2">
-        Notiz zum Raum
-        <textarea name="roomNotes" rows="2" placeholder="Notizen zu diesem Raum">${escapeHtml(room.notes)}</textarea>
-      </label>
-      <div class="room-section-actions span-2">
-        <button class="primary-button" type="button" data-action="save-site-visit-room">
-          <i data-lucide="save" aria-hidden="true"></i>
-          Speichern
-        </button>
-      </div>
-    </div>
-  `;
 
-  roomList.appendChild(section);
-  syncCleaningTaskSections(section);
-  renumberSiteVisitRooms(floorSection);
-  setRoomSectionCollapsed(section, Boolean(options.collapsed));
-  refreshIcons();
-  if (options.focus !== false) {
-    section.querySelector('[name="roomName"]').focus();
-  }
 
-  return section;
-}
 
-function collectSiteVisitFloors() {
-  return [...els.siteVisitFloors.querySelectorAll(".floor-section")].map((section, index) => {
-    const field = (name) => section.querySelector(`[name="${name}"]`);
-    const rooms = [...section.querySelectorAll(".room-section")].map((roomSection, roomIndex) => {
-      const roomField = (name) => roomSection.querySelector(`[name="${name}"]`);
-      const roomType = roomField("roomType").value;
-      const cleaningItems = [...roomSection.querySelectorAll('[name="cleaningItem"]:checked')]
-        .filter((checkbox) => !checkbox.closest(".cleaning-task-row")?.hidden)
-        .map((checkbox) => {
-          const key = checkbox.value;
-          const frequency = roomSection.querySelector(`[name="cleaningFrequency"][data-cleaning-key="${key}"]`)?.value || "Täglich";
-          const customFrequency = roomSection.querySelector(`[name="cleaningCustomFrequency"][data-cleaning-key="${key}"]`)?.value.trim() || "";
-          return {
-            key,
-            label: cleaningTaskLabel(key),
-            frequency,
-            customFrequency: frequency === "Individuell" ? customFrequency : "",
-            method: key === "floor"
-              ? roomSection.querySelector(`[name="cleaningMethod"][data-cleaning-key="${key}"]`)?.value || "Gesaugt und gewischt"
-              : "",
-            bagMode: key === "trash"
-              ? roomSection.querySelector(`[name="cleaningTrashBagMode"][data-cleaning-key="${key}"]`)?.value || "Mit Mülltüte"
-              : "",
-            quantity: Number(roomSection.querySelector(`[name="cleaningQuantity"][data-cleaning-key="${key}"]`)?.value) || 0,
-          };
-        });
-      return {
-        name: roomField("roomName").value.trim() || `Raum ${roomIndex + 1}`,
-        roomType,
-        quantity: 1,
-        squareMeters: 0,
-        cleaningItems,
-        sinks: 0,
-        mirrors: 0,
-        toilets: 0,
-        desks: 0,
-        windows: 0,
-        cleaningType: cleaningItems.some((item) => item.key === "floor") ? "Nach Rhythmus" : "",
-        floorCondition: "",
-        extraAgreements: roomField("roomExtraAgreements").value.trim(),
-        notes: roomField("roomNotes").value.trim(),
-      };
-    });
-    const sanitaryRooms = rooms.filter((room) => room.roomType === "Sanitär").length;
-    const officeRooms = rooms.filter((room) => room.roomType === "Büro").length;
-    return {
-      name: field("floorName").value.trim() || `Etage ${index + 1}`,
-      rooms,
-      sanitaryRooms,
-      sinks: 0,
-      mirrors: 0,
-      toilets: 0,
-      officeRooms,
-      desks: 0,
-      windows: 0,
-      cleaningType: rooms[0]?.cleaningType || "Gesaugt und gewischt",
-      floorCondition: rooms[0]?.floorCondition || "Teppich",
-      areaName: rooms[0]?.name || "",
-      extraAgreements: rooms.map((room) => room.extraAgreements).filter(Boolean).join("\n"),
-      areaNotes: rooms.map((room) => room.notes).filter(Boolean).join("\n"),
-      notes: rooms.map((room) => room.notes).filter(Boolean).join("\n"),
-    };
-  });
-}
 
-function resetSiteVisitForm() {
-  if (!els.siteVisitForm || !els.siteVisitFloors) {
-    return;
-  }
 
-  els.siteVisitForm.reset();
-  updateCounterControl(document.querySelector("#site-visit-square-meters"), 0);
-  els.siteVisitFloors.innerHTML = `<div class="empty-state floor-empty-state">Noch keine Etage hinzugefügt.</div>`;
-  refreshIcons();
-}
 
-function closeSiteVisitEditor() {
-  state.editingSiteVisitId = null;
-  if (els.siteVisitEditorPanel) {
-    els.siteVisitEditorPanel.hidden = true;
-  }
-  resetSiteVisitForm();
-}
 
-function openSiteVisitEditor(id) {
-  const visit = getSiteVisit(id);
-  if (!visit || !els.siteVisitForm || !els.siteVisitFloors || !els.siteVisitEditorPanel) {
-    showToast("Begehung konnte nicht zum Bearbeiten geoeffnet werden.");
-    return;
-  }
 
-  state.editingSiteVisitId = id;
-  els.siteVisitEditorPanel.hidden = false;
-  if (els.siteVisitEditorHeading) {
-    els.siteVisitEditorHeading.textContent = `Begehung bearbeiten: ${siteVisitCompanyName(visit)}`;
-  }
-  if (els.siteVisitEditorMeta) {
-    const floors = Array.isArray(visit.floors) ? visit.floors : [];
-    const roomCount = floors.reduce((sum, floor) => sum + floorRoomsForDisplay(floor).length, 0);
-    els.siteVisitEditorMeta.textContent = [
-      visit.createdAt ? `Erfasst am ${formatDate(visit.createdAt)}` : "",
-      `${Number(visit.squareMeters) || 0} m²`,
-      `${floors.length} Etage${floors.length === 1 ? "" : "n"}`,
-      `${roomCount} Raum${roomCount === 1 ? "" : "e"}`,
-    ].filter(Boolean).join(" · ");
-  }
 
-  document.querySelector("#site-visit-customer-name").value = siteVisitCompanyName(visit);
-  document.querySelector("#site-visit-email").value = visit.email || "";
-  document.querySelector("#site-visit-phone").value = visit.phone || "";
-  document.querySelector("#site-visit-address").value = visit.address || "";
-  document.querySelector("#site-visit-onsite-contact").value = visit.onsiteContact || "";
-  document.querySelector("#site-visit-square-meters").value = Number(visit.squareMeters) || 0;
-  document.querySelector("#site-visit-notes").value = visit.notes || "";
-
-  els.siteVisitFloors.innerHTML = "";
-  const floors = Array.isArray(visit.floors) ? visit.floors : [];
-  if (floors.length) {
-    floors.forEach((floor) => addSiteVisitFloor(floor, { focus: false }));
-  } else {
-    ensureSiteVisitFloorEmptyState();
-  }
-  renumberSiteVisitFloors();
-  refreshIcons();
-  els.siteVisitEditorPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function renderSiteVisits() {
-  const visits = [...visibleSavedSiteVisits()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  els.siteVisitList.innerHTML = visits.length
-    ? visits.map(renderSiteVisitCard).join("")
-    : `<div class="empty-state">Noch keine Begehung gespeichert.</div>`;
-}
-
-function renderSiteVisitCard(visit) {
-  const floors = Array.isArray(visit.floors) ? visit.floors : [];
-  const companyName = siteVisitCompanyName(visit);
-  const roomTotal = floors.reduce((sum, floor) => {
-    return sum + floorRoomsForDisplay(floor).reduce((roomSum, room) => roomSum + (Number(room.quantity) || 1), 0);
-  }, 0);
-  const floorLabel = floors.length === 1 ? "1 Etage" : `${floors.length} Etagen`;
-  const roomLabel = roomTotal === 1 ? "1 Raum" : `${roomTotal} Räume`;
-  const notes = visit.notes
-    ? `<div class="record-lines"><span>${escapeHtml(visit.notes)}</span></div>`
-    : "";
-
-  return `
-    <article class="record-item">
-      <div class="record-main">
-        <div>
-          <div class="record-title">${escapeHtml(companyName)}</div>
-          <div class="record-meta">
-            <span>${escapeHtml(visit.onsiteContact)} vor Ort</span>
-            <span>${escapeHtml(visit.email)} · ${escapeHtml(visit.phone)}</span>
-            <span>Erfasst am ${formatDate(visit.createdAt)}</span>
-          </div>
-        </div>
-        <div class="record-side">
-          <span class="badge">${visit.squareMeters} m²</span>
-          <span class="badge">${escapeHtml(floorLabel)}</span>
-        </div>
-      </div>
-      <div class="record-lines">
-        <span>${escapeHtml(visit.address)}</span>
-        <span>${escapeHtml(roomLabel)}</span>
-      </div>
-      ${notes}
-      <details class="visit-details">
-        <summary>Etagen anzeigen</summary>
-        <div class="floor-summary-list">
-          ${floors.map(renderSiteVisitFloorSummary).join("")}
-        </div>
-      </details>
-      <div class="record-actions">
-        <button class="secondary-button" type="button" data-action="edit-site-visit" data-id="${escapeHtml(visit.id)}">
-          <i data-lucide="pencil" aria-hidden="true"></i>
-          Bearbeiten
-        </button>
-        <button class="primary-button" type="button" data-action="offer-from-site-visit" data-id="${escapeHtml(visit.id)}">
-          <i data-lucide="file-plus-2" aria-hidden="true"></i>
-          Kostenvoranschlag
-        </button>
-        <button class="ghost-button" type="button" data-action="delete-site-visit" data-id="${escapeHtml(visit.id)}">
-          <i data-lucide="trash-2" aria-hidden="true"></i>
-          Löschen
-        </button>
-      </div>
-    </article>
-  `;
-}
-
-function renderSiteVisitFloorSummary(floor, index) {
-  const title = floor.name || `Etage ${index + 1}`;
-  const rooms = floorRoomsForDisplay(floor);
-  const roomRows = rooms.length
-    ? rooms.map(renderSiteVisitRoomSummary).join("")
-    : `<div class="record-lines"><span>Keine Räume hinterlegt.</span></div>`;
-
-  return `
-    <article class="floor-summary-item">
-      <strong>${escapeHtml(title)}</strong>
-      <div class="room-summary-list">${roomRows}</div>
-    </article>
-  `;
-}
-
-function renderSiteVisitRoomSummary(room) {
-  const details = roomDetailParts(room).join(" · ");
-  const detailLine = details ? `<span>${escapeHtml(details)}</span>` : "";
-  const cleaning = cleaningItemsText(room);
-  const cleaningLine = cleaning ? `<span>Reinigung: ${escapeHtml(cleaning)}</span>` : "";
-  const extraAgreements = room.extraAgreements
-    ? `<span>Extra Vereinbarungen: ${escapeHtml(room.extraAgreements)}</span>`
-    : "";
-  const notes = room.notes ? `<span>Notiz: ${escapeHtml(room.notes)}</span>` : "";
-
-  return `
-    <article class="room-summary-item">
-      <strong>${escapeHtml(formatRoomQuantity(room) + room.name)}</strong>
-      <div class="record-lines">
-        <span>${escapeHtml(room.roomType)}</span>
-        ${detailLine}
-        ${cleaningLine}
-        ${extraAgreements}
-        ${notes}
-      </div>
-    </article>
-  `;
-}
-
-function siteVisitNotesForOffer(visit) {
-  const notes = String(visit?.notes || "").trim();
-  return notes === "Über das Begehungs-Quiz erfasst." ? "" : notes;
-}
-
-function siteVisitOfferNotes(visit) {
-  const lines = [
-    "Leistungsbeschreibung / Dienstleistung",
-    "",
-    `Firma: ${siteVisitCompanyName(visit)}`,
-    `Ansprechpartner vor Ort: ${visit.onsiteContact || "nicht angegeben"}`,
-    `Adresse: ${visit.address || "nicht angegeben"}`,
-    `Objektgröße: ${visit.squareMeters || 0} m²`,
-  ];
-
-  if (visit.createdAt) {
-    lines.push(`Begehung erfasst am: ${formatDate(visit.createdAt)}`);
-  }
-
-  const floors = Array.isArray(visit.floors) ? visit.floors : [];
-  if (floors.length > 0) {
-    lines.push("", "Etagen und Räume:");
-    floors.forEach((floor, floorIndex) => {
-      const floorName = floor.name || `Etage ${floorIndex + 1}`;
-      const rooms = floorRoomsForDisplay(floor);
-      lines.push("", `${floorIndex + 1}. ${floorName}`);
-
-      if (rooms.length === 0) {
-        lines.push("- Keine Räume hinterlegt.");
-        return;
-      }
-
-      rooms.forEach((room) => {
-        const roomTitle = `${formatRoomQuantity(room)}${room.name}`;
-        const roomDetails = [
-          room.roomType,
-          ...roomDetailParts(room),
-        ].filter(Boolean);
-        lines.push(`- ${roomTitle}${roomDetails.length ? ` (${roomDetails.join(", ")})` : ""}`);
-
-        const cleaningItems = cleaningItemsForDisplay(room);
-        if (cleaningItems.length > 0) {
-          cleaningItems.forEach((item) => {
-            lines.push(`  • ${cleaningItemText(item, room)}`);
-          });
-        } else {
-          lines.push("  • Keine Reinigungsposition hinterlegt.");
-        }
-
-        if (room.extraAgreements) {
-          lines.push(`  Extra Vereinbarungen: ${room.extraAgreements}`);
-        }
-        if (room.notes) {
-          lines.push(`  Notiz: ${room.notes}`);
-        }
-      });
-    });
-  }
-
-  const visitNotes = siteVisitNotesForOffer(visit);
-  if (visitNotes) {
-    lines.push("", "Allgemeine Notizen:", visitNotes);
-  }
-
-  return lines.join("\n");
-}
-
-function completeSiteVisitSummaryStats(visit) {
-  const floors = Array.isArray(visit.floors) ? visit.floors : [];
-  const rooms = floors.flatMap((floor) => floorRoomsForDisplay(floor));
-  const cleaningItemCount = rooms.reduce((sum, room) => sum + cleaningItemsForDisplay(room).length, 0);
-  return { floors, rooms, cleaningItemCount };
-}
 
 function completeOfferNotesValue(value, fallback = "nicht angegeben") {
   const text = String(value == null ? "" : value).trim();
@@ -1937,242 +1285,15 @@ function completeOfferNotesMultiline(label, value) {
   return [`  ${label}:`, ...text.split(/\r?\n/).filter(Boolean).map((line) => `    ${line}`)];
 }
 
-function completeSiteVisitOfferNotes(visit) {
-  const { floors, rooms, cleaningItemCount } = completeSiteVisitSummaryStats(visit);
-  const lines = [
-    "Leistungsbeschreibung / Dienstleistung",
-    "",
-    "Begehungsergebnis",
-    "",
-    "Objektdaten",
-    `- Firma / Kunde: ${siteVisitCompanyName(visit)}`,
-    `- Ansprechpartner vor Ort: ${completeOfferNotesValue(visit.onsiteContact)}`,
-    `- E-Mail: ${completeOfferNotesValue(visit.email)}`,
-    `- Telefon: ${completeOfferNotesValue(visit.phone)}`,
-    `- Objektadresse: ${completeOfferNotesValue(visit.address)}`,
-    `- Objektgröße: ${Number(visit.squareMeters) || 0} m²`,
-  ];
 
-  if (visit.createdAt) {
-    lines.push(`- Begehung erfasst am: ${formatDate(visit.createdAt)}`);
-  }
 
-  lines.push(
-    "",
-    "Zusammenfassung",
-    `- Etagen/Bereiche: ${floors.length}`,
-    `- Räume: ${rooms.length}`,
-    `- Reinigungspositionen: ${cleaningItemCount}`,
-  );
 
-  if (floors.length > 0) {
-    lines.push("", "Etagen und Räume");
-    floors.forEach((floor, floorIndex) => {
-      const floorName = floor.name || `Etage ${floorIndex + 1}`;
-      const floorRooms = floorRoomsForDisplay(floor);
-      lines.push("", `${floorIndex + 1}. ${floorName}`);
 
-      if (floorRooms.length === 0) {
-        lines.push("  - Keine Räume hinterlegt.");
-        return;
-      }
 
-      floorRooms.forEach((room, roomIndex) => {
-        const roomTitle = `${formatRoomQuantity(room)}${room.name}`;
-        lines.push(`  ${floorIndex + 1}.${roomIndex + 1} ${roomTitle}`);
-        lines.push(`  Raumart: ${completeOfferNotesValue(room.roomType)}`);
-        roomDetailParts(room).forEach((detail) => lines.push(`  ${detail}`));
 
-        const cleaningItems = cleaningItemsForDisplay(room);
-        if (cleaningItems.length > 0) {
-          lines.push("  Leistungen:");
-          cleaningItems.forEach((item) => {
-            lines.push(`  - ${cleaningItemText(item, room)}`);
-          });
-        } else {
-          lines.push("  Leistungen: Keine Reinigungsposition hinterlegt.");
-        }
 
-        lines.push(...completeOfferNotesMultiline("Extra Vereinbarungen", room.extraAgreements));
-        lines.push(...completeOfferNotesMultiline("Raumnotizen", room.notes));
-      });
-    });
-  }
 
-  const visitNotes = siteVisitNotesForOffer(visit);
-  if (visitNotes) {
-    lines.push("", "Allgemeine Notizen zur Begehung", ...visitNotes.split(/\r?\n/).filter(Boolean).map((line) => `- ${line}`));
-  }
 
-  return lines.join("\n");
-}
-
-function findCustomerForSiteVisit(visit) {
-  const email = String(visit.email || "").trim().toLowerCase();
-  const phone = String(visit.phone || "").trim();
-  const name = siteVisitCompanyName(visit).toLowerCase();
-
-  return (
-    state.data.customers.find((customer) => String(customer.email || "").trim().toLowerCase() === email) ||
-    state.data.customers.find((customer) => phone && String(customer.phone || "").trim() === phone) ||
-    state.data.customers.find((customer) => String(customer.name || "").trim().toLowerCase() === name) ||
-    null
-  );
-}
-
-function parseSiteVisitContact(contactValue) {
-  const contact = String(contactValue || "").trim();
-  const salutation = contact.toLowerCase().startsWith("frau") ? "Frau" : "Herr";
-  const withoutSalutation = contact.replace(/^(herr|frau)\s+/i, "").trim();
-  const parts = withoutSalutation.split(/\s+/).filter(Boolean);
-
-  return {
-    salutation,
-    contactLastName: parts.length ? parts[parts.length - 1] : withoutSalutation || contact || "Ansprechpartner",
-  };
-}
-
-function parseSiteVisitAddress(addressValue) {
-  const address = String(addressValue || "").trim();
-  const [streetLine = "", cityLine = ""] = address.split(",").map((part) => part.trim());
-  const streetMatch = streetLine.match(/^(.+?)\s+(\d+\s*[a-zA-Z]?(?:[-/]\w+)?)$/);
-  const cityMatch = cityLine.match(/^(\d{4,5})\s+(.+)$/);
-
-  return {
-    address: streetMatch ? streetMatch[1].trim() : streetLine,
-    houseNumber: streetMatch ? streetMatch[2].trim() : "",
-    zip: cityMatch ? cityMatch[1].trim() : "",
-    city: cityMatch ? cityMatch[2].trim() : "",
-  };
-}
-
-function prefillCustomerFromSiteVisit(visit) {
-  const contact = parseSiteVisitContact(visit.onsiteContact);
-  const address = parseSiteVisitAddress(visit.address);
-
-  resetCustomerForm();
-  document.querySelector("#customer-name").value = siteVisitCompanyName(visit);
-  document.querySelector("#customer-email").value = visit.email || "";
-  document.querySelector("#customer-phone").value = visit.phone || "";
-  document.querySelector("#customer-salutation").value = contact.salutation;
-  document.querySelector("#customer-contact-lastname").value = contact.contactLastName;
-  document.querySelector("#customer-address").value = address.address || visit.address || "";
-  document.querySelector("#customer-house-number").value = address.houseNumber;
-  document.querySelector("#customer-zip").value = address.zip;
-  document.querySelector("#customer-city").value = address.city;
-  document.querySelector("#customer-form-heading").textContent = "Kunde aus Begehung anlegen";
-}
-
-function customerPayloadFromSiteVisit(visit) {
-  const contact = parseSiteVisitContact(visit.onsiteContact);
-  const address = parseSiteVisitAddress(visit.address);
-
-  return {
-    payload: {
-      name: siteVisitCompanyName(visit),
-      email: String(visit.email || "").trim(),
-      phone: String(visit.phone || "").trim(),
-      salutation: contact.salutation,
-      contactLastName: contact.contactLastName,
-      address: address.address,
-      houseNumber: address.houseNumber,
-      zip: address.zip,
-      city: address.city,
-    },
-    complete: Boolean(address.address && address.houseNumber && address.zip && address.city),
-  };
-}
-
-async function ensureCustomerForSiteVisit(visit) {
-  const existingCustomer = findCustomerForSiteVisit(visit);
-  if (existingCustomer) {
-    const companyName = siteVisitCompanyName(visit);
-    if (companyName && existingCustomer.name !== companyName) {
-      const updatedCustomer = {
-        ...existingCustomer,
-        name: companyName,
-      };
-      await apiPut(`api/customers.php?id=${encodeURIComponent(existingCustomer.id)}`, updatedCustomer);
-      await loadAll();
-      return { customer: getCustomer(existingCustomer.id) || updatedCustomer, created: false, updated: true };
-    }
-
-    return { customer: existingCustomer, created: false, updated: false };
-  }
-
-  const { payload, complete } = customerPayloadFromSiteVisit(visit);
-  if (!complete) {
-    prefillCustomerFromSiteVisit(visit);
-    switchView("customer-new");
-    document.querySelector("#customer-house-number").focus();
-    showToast("Bitte Kundendaten kurz ergänzen. Danach kann der Kostenvoranschlag übernommen werden.");
-    return { customer: null, created: false };
-  }
-
-  const customer = await apiPost("api/customers.php", payload);
-  await loadAll();
-  return { customer, created: true, updated: false };
-}
-
-async function startOfferFromSiteVisit(id) {
-  const prepared = await prepareOfferFromSiteVisit(id);
-  if (prepared) {
-    switchView("offers-new");
-    els.offerManualPrice.focus();
-  }
-}
-
-async function prepareOfferFromSiteVisit(id) {
-  const visit = getSiteVisit(id);
-  if (!visit) {
-    return false;
-  }
-
-  if (!getOpenSiteVisits().some((openVisit) => openVisit.id === id)) {
-    state.pendingOfferSiteVisitId = null;
-    renderOfferSiteVisitOptions();
-    showToast("Diese Begehung wurde bereits abgearbeitet.");
-    return false;
-  }
-
-  try {
-    const { customer, created, updated } = await ensureCustomerForSiteVisit(visit);
-    if (!customer) {
-      return false;
-    }
-
-    state.pendingOfferSiteVisitId = visit.id;
-    renderOfferSiteVisitOptions();
-    els.offerCustomer.value = customer.id;
-    els.offerSquareMeters.value = visit.squareMeters || "";
-    els.offerManualPrice.value = "";
-    els.offerNotes.value = completeSiteVisitOfferNotes(visit);
-    updateOfferPreview();
-    showToast(
-      created
-        ? "Kunde wurde aus der Begehung angelegt und in den Kostenvoranschlag übernommen."
-        : updated
-          ? "Firmenname wurde aus der Begehung aktualisiert und in den Kostenvoranschlag übernommen."
-        : "Begehung wurde in den Kostenvoranschlag übernommen.",
-    );
-    return true;
-  } catch (error) {
-    showToast(error.message);
-    return false;
-  }
-}
-
-async function handleOfferSiteVisitChange() {
-  const visitId = els.offerSiteVisit.value;
-  if (!visitId) {
-    state.pendingOfferSiteVisitId = null;
-    clearOfferSiteVisitFields();
-    renderOfferSiteVisitOptions();
-    return;
-  }
-
-  await prepareOfferFromSiteVisit(visitId);
-}
 
 function renderOffers() {
   const offers = [...visibleSavedOffers()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -2377,22 +1498,12 @@ function renderContractRow(contract) {
   const selected = contract.id === state.selectedContractId ? " selected" : "";
   const badgeClass = contractBadgeClass(contract.status);
   const signedAt = contract.signedAt ? formatDate(contract.signedAt) : "Noch offen";
-  const siteVisitButton = contract.offer.siteVisitId
-    ? `
-        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=site_visit&format=pdf" target="_blank" rel="noopener">
-          <i data-lucide="clipboard-list" aria-hidden="true"></i>
-          Begehung
-        </a>
-      `
-    : "";
-  const cleaningChecklistButton = contract.offer.siteVisitId
-    ? `
+  const cleaningChecklistButton = `
         <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=checklist&format=pdf&download=1" target="_blank" rel="noopener">
           <i data-lucide="clipboard-check" aria-hidden="true"></i>
           Mitarbeiter-Checkliste
         </a>
-      `
-    : "";
+      `;
   const authorizationButton = contract.hasAuthorizationDocument
     ? `
         <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=authorization&format=pdf" target="_blank" rel="noopener">
@@ -2425,7 +1536,6 @@ function renderContractRow(contract) {
           </a>
           ${cleaningChecklistButton}
           ${authorizationButton}
-          ${siteVisitButton}
           <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
             <i data-lucide="trash-2" aria-hidden="true"></i>
             Löschen
@@ -2469,16 +1579,6 @@ function fillCustomerForm(customer) {
   document.querySelector("#customer-name").focus();
 }
 
-function openCustomerCreateForQuiz() {
-  state.pendingQuizCustomerReturn = true;
-  resetCustomerForm();
-  switchView("customer-new");
-  document.querySelector("#customer-name").focus();
-  showToast("Kunde anlegen. Danach geht es automatisch im Quiz weiter.");
-}
-
-window.ctOpenCustomerCreateForQuiz = openCustomerCreateForQuiz;
-
 async function handleCustomerSubmit(event) {
   event.preventDefault();
 
@@ -2507,112 +1607,39 @@ async function handleCustomerSubmit(event) {
 
     resetCustomerForm();
     await loadAll();
-    if (state.pendingQuizCustomerReturn && savedCustomer) {
-      state.pendingQuizCustomerReturn = false;
-      switchView("site-visit-quiz");
-      if (typeof window.svqStartFromCustomer === "function") {
-        window.svqStartFromCustomer(getCustomer(savedCustomer.id) || savedCustomer);
-      }
-      return;
-    }
     switchView("customer-list");
   } catch (error) {
     showToast(error.message);
   }
 }
 
-async function handleSiteVisitSubmit(event) {
-  event.preventDefault();
-
-  if (!els.siteVisitForm || !els.siteVisitFloors) {
-    showToast("Begehungen werden nur noch über das Quiz erstellt.");
-    switchView("site-visit-quiz");
-    return;
-  }
-
-  if (!state.editingSiteVisitId) {
-    showToast("Bitte zuerst eine gespeicherte Begehung zum Bearbeiten auswaehlen.");
-    return;
-  }
-
-  const unnamedRoom = [...els.siteVisitFloors.querySelectorAll(".room-section")]
-    .find((roomSection) => !roomSection.querySelector('[name="roomName"]')?.value.trim());
-  if (unnamedRoom) {
-    setRoomSectionCollapsed(unnamedRoom, false);
-    showToast("Bitte pro Raum einen Raumnamen eintragen.");
-    unnamedRoom.querySelector('[name="roomName"]').focus();
-    return;
-  }
-
-  const floors = collectSiteVisitFloors();
-  if (floors.length === 0) {
-    showToast("Bitte zuerst eine Etage hinzufügen.");
-    return;
-  }
-  if (floors.some((floor) => !Array.isArray(floor.rooms) || floor.rooms.length === 0)) {
-    showToast("Bitte pro Etage mindestens einen Raum hinzufügen.");
-    return;
-  }
-  if (floors.some((floor) => floor.rooms.some((room) => !Array.isArray(room.cleaningItems) || room.cleaningItems.length === 0))) {
-    showToast("Bitte pro Raum mindestens einen Reinigungspunkt auswählen.");
-    return;
-  }
-
-  if (floors.some((floor) => floor.rooms.some((room) => room.cleaningItems.some((item) => item.frequency === "Individuell" && !item.customFrequency)))) {
-    showToast("Bitte bei individuellem Rhythmus eine Angabe eintragen.");
-    return;
-  }
-
-  const squareMeters = Number(document.querySelector("#site-visit-square-meters").value);
-  if (squareMeters <= 0) {
-    showToast("Bitte die Objektgröße in Quadratmetern angeben.");
-    return;
-  }
-
-  const companyName = document.querySelector("#site-visit-customer-name").value.trim();
-  const payload = {
-    companyName,
-    customerName: companyName,
-    email: document.querySelector("#site-visit-email").value.trim(),
-    phone: document.querySelector("#site-visit-phone").value.trim(),
-    address: document.querySelector("#site-visit-address").value.trim(),
-    onsiteContact: document.querySelector("#site-visit-onsite-contact").value.trim(),
-    squareMeters,
-    floors,
-    notes: document.querySelector("#site-visit-notes").value.trim(),
-  };
-
-  try {
-    await apiPut(`api/site-visits.php?id=${encodeURIComponent(state.editingSiteVisitId)}`, payload);
-    closeSiteVisitEditor();
-    await loadAll();
-    switchView("site-visit-saved");
-    showToast("Begehung wurde aktualisiert.");
-  } catch (error) {
-    showToast(error.message);
-  }
-}
 
 async function handleOfferSubmit(event) {
   event.preventDefault();
 
-  if (!state.pendingOfferSiteVisitId) {
-    showToast("Bitte zuerst eine offene Begehung auswählen.");
-    els.offerSiteVisit.focus();
-    return;
-  }
-
-  if (!getOpenSiteVisits().some((visit) => visit.id === state.pendingOfferSiteVisitId)) {
-    state.pendingOfferSiteVisitId = null;
-    renderOfferSiteVisitOptions();
-    showToast("Diese Begehung wurde bereits abgearbeitet.");
-    return;
-  }
-
   const customerId = els.offerCustomer.value;
   if (!customerId) {
-    showToast("Bitte zuerst eine Begehung auswählen, damit der Kunde übernommen wird.");
-    els.offerSiteVisit.focus();
+    showToast("Bitte zuerst einen Kunden auswählen.");
+    els.offerCustomer.focus();
+    return;
+  }
+
+  const squareMeters = Number(els.offerSquareMeters.value);
+  if (!Number.isFinite(squareMeters) || squareMeters <= 0) {
+    showToast("Bitte die Quadratmeter eintragen.");
+    els.offerSquareMeters.focus();
+    return;
+  }
+
+  if (!els.offerInterval.value) {
+    showToast("Bitte ein Intervall auswählen.");
+    els.offerInterval.focus();
+    return;
+  }
+
+  if (!els.offerService.value) {
+    showToast("Bitte eine Leistung auswählen.");
+    els.offerService.focus();
     return;
   }
 
@@ -2630,8 +1657,7 @@ async function handleOfferSubmit(event) {
 
   const payload = {
     customerId,
-    siteVisitId: state.pendingOfferSiteVisitId,
-    squareMeters: Number(els.offerSquareMeters.value),
+    squareMeters,
     interval: els.offerInterval.value,
     service: els.offerService.value,
     startDate: els.offerStartDate.value,
@@ -2644,7 +1670,6 @@ async function handleOfferSubmit(event) {
   try {
     await apiPost("api/offers.php", payload);
     els.offerForm.reset();
-    state.pendingOfferSiteVisitId = null;
     els.offerStartDate.value = todayAsInputValue();
     updateOfferPreview();
     switchView("offers-saved");
@@ -2815,28 +1840,6 @@ async function deleteCustomer(id) {
   }
 }
 
-async function deleteSiteVisit(id) {
-  const visit = getSiteVisit(id);
-  if (!visit) {
-    return;
-  }
-
-  const confirmed = window.confirm(`Begehung für "${siteVisitCompanyName(visit)}" löschen?`);
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    await apiDelete(`api/site-visits.php?id=${encodeURIComponent(id)}`);
-    if (state.editingSiteVisitId === id) {
-      closeSiteVisitEditor();
-    }
-    await loadAll();
-    showToast("Begehung wurde gelöscht.");
-  } catch (error) {
-    showToast(error.message);
-  }
-}
 
 async function deleteOffer(id) {
   const confirmed = window.confirm("Kostenvoranschlag löschen? Ein bereits gestarteter Vertrag wird ebenfalls entfernt.");
@@ -3954,100 +2957,13 @@ function handleUserListAction(event) {
   }
 }
 
-function handleSiteVisitFloorAction(event) {
-  const button = event.target.closest('[data-action="remove-site-visit-floor"]');
-  const addRoomButton = event.target.closest('[data-action="add-site-visit-room"]');
-  const removeRoomButton = event.target.closest('[data-action="remove-site-visit-room"]');
-  const toggleRoomButton = event.target.closest('[data-action="toggle-site-visit-room"]');
-  const saveRoomButton = event.target.closest('[data-action="save-site-visit-room"]');
 
-  if (addRoomButton) {
-    event.preventDefault();
-    const floorSection = addRoomButton.closest(".floor-section");
-    addSiteVisitRoomFromToolbar(floorSection);
-    return;
-  }
 
-  if (toggleRoomButton) {
-    event.preventDefault();
-    const roomSection = toggleRoomButton.closest(".room-section");
-    setRoomSectionCollapsed(roomSection, !roomSection.classList.contains("is-collapsed"));
-    return;
-  }
-
-  if (saveRoomButton) {
-    event.preventDefault();
-    saveSiteVisitRoom(saveRoomButton.closest(".room-section"));
-    return;
-  }
-
-  if (removeRoomButton) {
-    event.preventDefault();
-    const floorSection = removeRoomButton.closest(".floor-section");
-    removeRoomButton.closest(".room-section").remove();
-    renumberSiteVisitRooms(floorSection);
-    ensureFloorRoomEmptyState(floorSection);
-    refreshIcons();
-    return;
-  }
-
-  if (button) {
-    event.preventDefault();
-    button.closest(".floor-section").remove();
-    renumberSiteVisitFloors();
-    ensureSiteVisitFloorEmptyState();
-    refreshIcons();
-  }
-}
-
-function handleSiteVisitFloorInput(event) {
-  if (event.target.matches('[name="floorName"]')) {
-    renumberSiteVisitFloors();
-  }
-  if (event.target.matches('[name="roomName"], [name="roomType"]')) {
-    const floorSection = event.target.closest(".floor-section");
-    if (floorSection) {
-      renumberSiteVisitRooms(floorSection);
-    }
-    const roomSection = event.target.closest(".room-section");
-    if (roomSection) {
-      syncCleaningTaskSections(roomSection);
-    }
-  }
-  if (event.target.matches('[name="cleaningItem"], [name="cleaningFrequency"]')) {
-    const roomSection = event.target.closest(".room-section");
-    if (roomSection) {
-      syncCleaningTaskSections(roomSection);
-    }
-  }
-}
-
-function handleSiteVisitFloorKeydown(event) {
-  if (event.key !== "Enter" || !event.target.matches('[name="newRoomName"]')) {
-    return;
-  }
-
-  event.preventDefault();
-  const floorSection = event.target.closest(".floor-section");
-  if (floorSection) {
-    addSiteVisitRoomFromToolbar(floorSection);
-  }
-}
 
 function handleDashboardAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) {
     return;
-  }
-
-  if (button.dataset.action === "add-site-visit-floor") {
-    event.preventDefault();
-    addSiteVisitFloor();
-  }
-
-  if (button.dataset.action === "cancel-site-visit-edit") {
-    event.preventDefault();
-    closeSiteVisitEditor();
   }
 
   if (button.dataset.action === "counter-decrement") {
@@ -4072,7 +2988,6 @@ function handleRecordAction(event) {
   if (action === "edit-customer") {
     const customer = getCustomer(id);
     if (customer) {
-      state.pendingQuizCustomerReturn = false;
       fillCustomerForm(customer);
       switchView("customer-new");
       document.querySelector("#customer-new-view").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4081,18 +2996,6 @@ function handleRecordAction(event) {
 
   if (action === "delete-customer") {
     deleteCustomer(id);
-  }
-
-  if (action === "delete-site-visit") {
-    deleteSiteVisit(id);
-  }
-
-  if (action === "edit-site-visit") {
-    openSiteVisitEditor(id);
-  }
-
-  if (action === "offer-from-site-visit") {
-    startOfferFromSiteVisit(id);
   }
 
   if (action === "send-offer") {
@@ -4154,23 +3057,12 @@ function bindEvents() {
 
   els.navLinks.forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.view !== "customer-new") {
-        state.pendingQuizCustomerReturn = false;
-      }
-      if (button.dataset.view === "offers-new") {
-        state.pendingOfferSiteVisitId = null;
-        clearOfferSiteVisitFields();
-      }
       switchView(button.dataset.view);
     });
   });
 
   els.customersGroupToggle.addEventListener("click", () => {
     toggleNavGroup("customers");
-  });
-
-  els.siteVisitsGroupToggle.addEventListener("click", () => {
-    toggleNavGroup("site-visits");
   });
 
   els.offersGroupToggle.addEventListener("click", () => {
@@ -4189,22 +3081,15 @@ function bindEvents() {
   els.mobileBackdrop.addEventListener("click", closeMobileNav);
   document.querySelectorAll("[data-overview-target]").forEach((button) => {
     button.addEventListener("click", () => {
-      const target = button.dataset.overviewTarget;
-      if (target === "offers-new") {
-        state.pendingOfferSiteVisitId = null;
-        clearOfferSiteVisitFields();
-      }
-      switchView(target);
+      switchView(button.dataset.overviewTarget);
     });
   });
   els.newCustomerButton.addEventListener("click", () => {
-    state.pendingQuizCustomerReturn = false;
     resetCustomerForm();
     switchView("customer-new");
     document.querySelector("#customer-name").focus();
   });
   els.cancelCustomerEdit.addEventListener("click", () => {
-    state.pendingQuizCustomerReturn = false;
     resetCustomerForm();
   });
 
@@ -4212,26 +3097,13 @@ function bindEvents() {
   els.customerSearch.addEventListener("input", renderCustomers);
 
   document.addEventListener("click", handleDashboardAction);
-  if (els.siteVisitForm) {
-    els.siteVisitForm.addEventListener("submit", handleSiteVisitSubmit);
-  }
-  if (els.siteVisitFloors) {
-    els.siteVisitFloors.addEventListener("click", handleSiteVisitFloorAction);
-    els.siteVisitFloors.addEventListener("input", handleSiteVisitFloorInput);
-    els.siteVisitFloors.addEventListener("keydown", handleSiteVisitFloorKeydown);
-  }
-  if (els.cancelSiteVisitEdit) {
-    els.cancelSiteVisitEdit.addEventListener("click", closeSiteVisitEditor);
-  }
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
-  els.offerSiteVisit.addEventListener("change", handleOfferSiteVisitChange);
   els.offerSquareMeters.addEventListener("input", updateOfferPreview);
   els.offerInterval.addEventListener("change", updateOfferPreview);
   els.offerService.addEventListener("change", updateOfferPreview);
 
   els.customerList.addEventListener("click", handleRecordAction);
-  els.siteVisitList.addEventListener("click", handleRecordAction);
   els.offerList.addEventListener("click", handleRecordAction);
   els.contractList.addEventListener("click", handleRecordAction);
   els.contractSearch.addEventListener("input", () => {
