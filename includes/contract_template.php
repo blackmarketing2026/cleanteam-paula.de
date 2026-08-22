@@ -348,8 +348,7 @@ function default_contract_template_html(): string
 
 <h2>§ 4 Vergütung</h2>
 <p>
-  Die monatliche Pauschalvergütung beträgt <strong>{{preis_netto}} netto</strong> zuzüglich der jeweils geltenden Umsatzsteuer
-  (aktuell {{ust_satz}}&nbsp;%). Der Bruttobetrag beträgt zum Zeitpunkt der Vertragserstellung <strong>{{preis_brutto}}</strong>.
+  {{ust_block}}
   Leistungen außerhalb von § 3 sind separat zu beauftragen und werden zusätzlich berechnet. Rechnungen sind binnen
   {{zahlungsfrist_tage}} Arbeitstagen zu zahlen; nach {{verzug_tage}} Tagen fallen automatisch Verzugszinsen an.
 </p>
@@ -454,8 +453,9 @@ function save_contract_template_contractor_signature_data(PDO $pdo, ?string $sig
 function contract_template_placeholder_map(array $offer, array $customer, ?array $contract, bool $forPdf = false): array
 {
     $netPrice = (float) $offer['price'];
-    $vatAmount = round($netPrice * VAT_RATE / 100, 2);
-    $grossPrice = round($netPrice + $vatAmount, 2);
+    $vatApplicable = !isset($offer['vat_applicable']) || (int) $offer['vat_applicable'] === 1;
+    $vatAmount = $vatApplicable ? round($netPrice * VAT_RATE / 100, 2) : 0.0;
+    $grossPrice = $vatApplicable ? round($netPrice + $vatAmount, 2) : $netPrice;
     $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
     $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
     $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
@@ -505,6 +505,10 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $values['zusatzhinweis_block'] = $offerNotes !== ''
         ? '<p>' . ($forPdf ? '' : '<strong>Zusatzhinweis:</strong> ') . h($offerNotes) . '</p>'
         : '';
+    $values['ust_block'] = $vatApplicable
+        ? 'Die monatliche Pauschalvergütung beträgt <strong>' . contract_format_money($netPrice) . ' netto</strong> zuzüglich der jeweils geltenden Umsatzsteuer'
+            . ' (aktuell ' . rtrim(rtrim(number_format(VAT_RATE, 1, ',', '.'), '0'), ',') . '&nbsp;%). Der Bruttobetrag beträgt zum Zeitpunkt der Vertragserstellung <strong>' . contract_format_money($grossPrice) . '</strong>.'
+        : 'Die monatliche Pauschalvergütung beträgt <strong>' . contract_format_money($netPrice) . '</strong>. Es wird keine Umsatzsteuer berechnet.';
 
     return $values;
 }

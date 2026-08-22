@@ -295,6 +295,13 @@
                 Beginn der Dienstleistung *
                 <input id="offer-start-date" type="date" required />
               </label>
+              <label>
+                Umsatzsteuer berechnen? *
+                <select id="offer-vat" required>
+                  <option value="yes" selected>Ja</option>
+                  <option value="no">Nein</option>
+                </select>
+              </label>
               <label class="span-2">
                 Leistungsbeschreibung *
                 <textarea id="offer-service-text" class="offer-service-editor" rows="18" required placeholder="Alle vereinbarten Leistungen als Fließtext eintragen"></textarea>
@@ -1108,6 +1115,13 @@
           <input id="contract-correction-start-date" type="date" required />
         </label>
         <label class="modal-field">
+          Umsatzsteuer berechnen? *
+          <select id="contract-correction-vat" required>
+            <option value="yes">Ja</option>
+            <option value="no">Nein</option>
+          </select>
+        </label>
+        <label class="modal-field">
           Leistungsbeschreibung *
           <textarea id="contract-correction-service-text" class="offer-service-editor" rows="10" required></textarea>
         </label>
@@ -1122,6 +1136,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=startdate-contractyear-remove-mustervertrag-20260823-1"></script>
+    <script src="app.js?v=vat-applicable-20260823-1"></script>
   </body>
 </html>

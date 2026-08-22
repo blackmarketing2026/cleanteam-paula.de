@@ -65,6 +65,7 @@ const els = {
   offerIntervalCustom: document.querySelector("#offer-interval-custom"),
   offerPrice: document.querySelector("#offer-price"),
   offerStartDate: document.querySelector("#offer-start-date"),
+  offerVat: document.querySelector("#offer-vat"),
   offerServiceText: document.querySelector("#offer-service-text"),
   offerReviewForm: document.querySelector("#offer-review-form"),
   offerReviewSummary: document.querySelector("#offer-review-summary"),
@@ -175,6 +176,7 @@ const els = {
   contractCorrectionIntervalCustom: document.querySelector("#contract-correction-interval-custom"),
   contractCorrectionPrice: document.querySelector("#contract-correction-price"),
   contractCorrectionStartDate: document.querySelector("#contract-correction-start-date"),
+  contractCorrectionVat: document.querySelector("#contract-correction-vat"),
   contractCorrectionServiceText: document.querySelector("#contract-correction-service-text"),
   contractCorrectionCancel: document.querySelector("#contract-correction-cancel"),
   logoPreview: document.querySelector("#logo-preview"),
@@ -1528,7 +1530,7 @@ async function handleOfferSubmit(event) {
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
         <span>${escapeHtml(phone)} · ${escapeHtml(email)}</span>
         <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)} · ${squareMeters} m² · ${escapeHtml(intervalDisplay)}</span>
-        <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)}</span>
+        <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."}</span>
       </div>
     `;
     els.offerIntakePanel.hidden = true;
@@ -1554,6 +1556,7 @@ async function handleOfferReviewSubmit(event) {
     interval: els.offerInterval.value,
     intervalCustom: els.offerIntervalCustom.value.trim(),
     price: Number(els.offerPrice.value),
+    vatApplicable: els.offerVat.value === "yes",
     startDate: els.offerStartDate.value,
     serviceText: els.offerServiceTextCorrected.value.trim(),
   };
@@ -1718,6 +1721,7 @@ function openContractCorrectionModal(id) {
     els.contractCorrectionIntervalCustomField.hidden = false;
   }
   els.contractCorrectionPrice.value = contract.offer.price;
+  els.contractCorrectionVat.value = contract.offer.vatApplicable === false ? "no" : "yes";
   els.contractCorrectionStartDate.value = contract.offer.startDate || "";
   els.contractCorrectionServiceText.value = contract.offer.notes || "";
   els.contractCorrectionModal.hidden = false;
@@ -1755,6 +1759,7 @@ async function handleContractCorrectionSubmit(event) {
     interval,
     intervalCustom,
     price: Number(els.contractCorrectionPrice.value),
+    vatApplicable: els.contractCorrectionVat.value === "yes",
     startDate: els.contractCorrectionStartDate.value,
     serviceText: els.contractCorrectionServiceText.value.trim(),
   };

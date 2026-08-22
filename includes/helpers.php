@@ -74,6 +74,14 @@ function ensure_offers_interval_label_length(PDO $pdo): void
     }
 }
 
+function ensure_offers_vat_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'vat_applicable'");
+    if (!$stmt->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD COLUMN vat_applicable TINYINT(1) NOT NULL DEFAULT 1 AFTER price');
+    }
+}
+
 function format_service_text(string $text): string
 {
     $text = str_replace(["\r\n", "\r"], "\n", $text);

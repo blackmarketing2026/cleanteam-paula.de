@@ -72,6 +72,7 @@ function offer_row_to_json(array $row): array
         'priceAdjustment' => (float) ($row['price_adjustment'] ?? 0),
         'priceAdjustmentNote' => $row['price_adjustment_note'] ?? null,
         'price' => $price,
+        'vatApplicable' => !isset($row['vat_applicable']) || (int) $row['vat_applicable'] === 1,
         'token' => $row['token'],
         'publicUrl' => base_url() . '/offer.php?token=' . $row['token'],
         'createdAt' => to_iso($row['created_at']),
@@ -92,6 +93,7 @@ const OFFER_SELECT = 'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone 
 
 ensure_offers_pricing_columns($pdo);
 ensure_offers_interval_label_length($pdo);
+ensure_offers_vat_column($pdo);
 ensure_offers_agb_snapshot_columns($pdo);
 
 if ($method === 'GET') {
@@ -110,6 +112,7 @@ if ($method === 'POST') {
     $city = trim((string) ($body['city'] ?? ''));
     $squareMeters = (int) ($body['squareMeters'] ?? 0);
     $price = round((float) ($body['price'] ?? 0), 2);
+    $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
     $startDate = trim((string) ($body['startDate'] ?? ''));
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
@@ -163,8 +166,8 @@ if ($method === 'POST') {
     $token = generate_token();
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, token, created_at, expires_at)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, 0, NULL, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
+        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at)
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
     );
     $stmt->execute([
         'id' => $id,
@@ -176,6 +179,7 @@ if ($method === 'POST') {
         'notes' => format_service_text($serviceText),
         'base_price' => $price,
         'price' => $price,
+        'vat_applicable' => $vatApplicable ? 1 : 0,
         'token' => $token,
     ]);
 
