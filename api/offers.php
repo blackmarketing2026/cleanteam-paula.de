@@ -83,49 +83,53 @@ if ($method === 'GET') {
 
 if ($method === 'POST') {
     $body = read_json_body();
-    $customerId = trim((string) ($body['customerId'] ?? ''));
-    $squareMeters = (float) ($body['squareMeters'] ?? 0);
-    $interval = trim((string) ($body['interval'] ?? ''));
-    $service = trim((string) ($body['service'] ?? ''));
-    $manualPrice = round((float) ($body['manualPrice'] ?? 0), 2);
-    $priceAdjustmentNote = trim((string) ($body['priceAdjustmentNote'] ?? ''));
+    $customerName = trim((string) ($body['customerName'] ?? ''));
+    $contactPerson = trim((string) ($body['contactPerson'] ?? ''));
+    $phone = trim((string) ($body['phone'] ?? ''));
+    $email = trim((string) ($body['email'] ?? ''));
+    $price = round((float) ($body['price'] ?? 0), 2);
+    $serviceText = trim((string) ($body['serviceText'] ?? ''));
 
-    if ($customerId === '' || $squareMeters <= 0 || $interval === '' || $service === '') {
-        json_error('Kunde, Quadratmeter, Intervall, Leistung und Preis sind erforderlich.', 422);
+    if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === '' || $serviceText === '') {
+        json_error('Name, Ansprechpartner, Telefonnummer, E-Mail und Leistungsbeschreibung sind erforderlich.', 422);
     }
 
-    if ($manualPrice <= 0) {
-        json_error('Bitte den manuellen Preis eintragen.', 422);
+    if ($price <= 0) {
+        json_error('Bitte den monatlichen Preis eintragen.', 422);
     }
 
-    $customerStmt = $pdo->prepare('SELECT id FROM customers WHERE id = :id');
-    $customerStmt->execute(['id' => $customerId]);
-    if (!$customerStmt->fetch()) {
-        json_error('Kunde wurde nicht gefunden.', 404);
-    }
+    $customerId = generate_id('customer');
+    $customerStmt = $pdo->prepare(
+        'INSERT INTO customers (id, name, email, phone, salutation, contact_last_name, address, house_number, zip, city, created_at)
+         VALUES (:id, :name, :email, :phone, :salutation, :contact_last_name, :address, :house_number, :zip, :city, UTC_TIMESTAMP())'
+    );
+    $customerStmt->execute([
+        'id' => $customerId,
+        'name' => $customerName,
+        'email' => $email,
+        'phone' => $phone,
+        'salutation' => '',
+        'contact_last_name' => $contactPerson,
+        'address' => '',
+        'house_number' => '',
+        'zip' => '',
+        'city' => '',
+    ]);
 
-    $basePrice = calculate_offer_price($squareMeters, $interval, $service);
-    $price = $manualPrice;
-    $priceAdjustment = round($price - $basePrice, 2);
     $id = generate_id('offer');
     $token = generate_token();
-    $startDate = trim((string) ($body['startDate'] ?? ''));
 
     $stmt = $pdo->prepare(
         'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, token, created_at, expires_at)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, :price_adjustment, :price_adjustment_note, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
+         VALUES (:id, :customer_id, 0, :interval_label, :service, NULL, :notes, :base_price, 0, NULL, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
     );
     $stmt->execute([
         'id' => $id,
         'customer_id' => $customerId,
-        'square_meters' => (int) $squareMeters,
-        'interval_label' => $interval,
-        'service' => $service,
-        'start_date' => $startDate !== '' ? $startDate : null,
-        'notes' => trim((string) ($body['notes'] ?? '')),
-        'base_price' => $basePrice,
-        'price_adjustment' => $priceAdjustment,
-        'price_adjustment_note' => $priceAdjustmentNote !== '' ? $priceAdjustmentNote : null,
+        'interval_label' => 'Monatlich',
+        'service' => 'Individuelle Leistung',
+        'notes' => format_service_text($serviceText),
+        'base_price' => $price,
         'price' => $price,
         'token' => $token,
     ]);

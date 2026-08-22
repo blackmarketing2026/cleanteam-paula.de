@@ -12,10 +12,14 @@ function render_offer_document(array $offer, array $customer): string
     $signatoryName = h(contract_signatory_display($customer));
     $customerEmail = h((string) $customer['email']);
     $customerPhone = h((string) $customer['phone']);
-    $customerAddress = h($customer['address'] . ' ' . $customer['house_number']);
-    $customerZipCity = h($customer['zip'] . ' ' . $customer['city']);
+    $customerAddress = h(trim($customer['address'] . ' ' . $customer['house_number']));
+    $customerZipCity = h(trim($customer['zip'] . ' ' . $customer['city']));
+    $addressRow = $customerAddress !== '' || $customerZipCity !== ''
+        ? '<dt>Objekt / Anschrift</dt><dd>' . trim($customerAddress . ', ' . $customerZipCity, ', ') . '</dd>'
+        : '';
 
     $squareMeters = (int) $offer['square_meters'];
+    $areaRow = $squareMeters > 0 ? "<dt>Fläche</dt><dd>{$squareMeters} m²</dd>" : '';
     $startDate = $offer['start_date'] !== null ? contract_format_date($offer['start_date']) : 'Nach Absprache';
     $validUntil = contract_format_date($offer['expires_at']);
     $price = (float) $offer['price'];
@@ -70,12 +74,12 @@ function render_offer_document(array $offer, array $customer): string
   <dt>Ansprechpartner</dt><dd>{$signatoryName}</dd>
   <dt>E-Mail</dt><dd>{$customerEmail}</dd>
   <dt>Telefon</dt><dd>{$customerPhone}</dd>
-  <dt>Objekt / Anschrift</dt><dd>{$customerAddress}, {$customerZipCity}</dd>
+  {$addressRow}
 </dl>
 
 <h2>Vertragsdaten</h2>
 <dl>
-  <dt>Fläche</dt><dd>{$squareMeters} m²</dd>
+  {$areaRow}
   <dt>Startdatum</dt><dd>{$startDate}</dd>
   <dt>Monatlicher Preis</dt><dd>{$priceFormatted} netto monatlich</dd>
   <dt>Gültig bis</dt><dd>{$validUntil}</dd>

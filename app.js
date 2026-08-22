@@ -1,19 +1,3 @@
-const intervalFactors = {
-  Einmalig: 1,
-  Wöchentlich: 4.33,
-  "14-tägig": 2.16,
-  Monatlich: 1,
-  Quartalsweise: 0.33,
-};
-
-const serviceRates = {
-  Unterhaltsreinigung: 1.95,
-  Büroreinigung: 2.1,
-  Treppenhausreinigung: 2.45,
-  Grundreinigung: 3.8,
-  Glasreinigung: 3.2,
-};
-
 const CONTRACT_STATUS_LABELS = {
   entwurf: "Läuft beim Kunden",
   daten_abgelehnt: "Rückfrage: Daten prüfen",
@@ -70,15 +54,19 @@ const els = {
   customerList: document.querySelector("#customer-list"),
   customerId: document.querySelector("#customer-id"),
   cancelCustomerEdit: document.querySelector("#cancel-customer-edit"),
+  offerIntakePanel: document.querySelector("#offer-intake-panel"),
+  offerReviewPanel: document.querySelector("#offer-review-panel"),
   offerForm: document.querySelector("#offer-form"),
-  offerCustomer: document.querySelector("#offer-customer"),
-  offerSquareMeters: document.querySelector("#offer-square-meters"),
-  offerInterval: document.querySelector("#offer-interval"),
-  offerService: document.querySelector("#offer-service"),
-  offerStartDate: document.querySelector("#offer-start-date"),
-  offerManualPrice: document.querySelector("#offer-manual-price"),
-  offerNotes: document.querySelector("#offer-notes"),
-  offerEstimatedPricePreview: document.querySelector("#offer-estimated-price-preview"),
+  offerCustomerName: document.querySelector("#offer-customer-name"),
+  offerContactPerson: document.querySelector("#offer-contact-person"),
+  offerPhone: document.querySelector("#offer-phone"),
+  offerEmail: document.querySelector("#offer-email"),
+  offerPrice: document.querySelector("#offer-price"),
+  offerServiceText: document.querySelector("#offer-service-text"),
+  offerReviewForm: document.querySelector("#offer-review-form"),
+  offerReviewSummary: document.querySelector("#offer-review-summary"),
+  offerServiceTextCorrected: document.querySelector("#offer-service-text-corrected"),
+  offerReviewBack: document.querySelector("#offer-review-back"),
   offerList: document.querySelector("#offer-list"),
   offerSendModal: document.querySelector("#offer-send-modal"),
   offerSendForm: document.querySelector("#offer-send-form"),
@@ -203,7 +191,7 @@ const titles = {
   overview: "Übersicht",
   "customer-new": "Kunden anlegen",
   "customer-list": "Kundenliste",
-  "offers-new": "Neuer Vertrag",
+  "offers-new": "Neuer Vertrag erstellen",
   "offers-saved": "Vertragsentwürfe",
   contracts: "Verträge",
   mailbox: "Postfach",
@@ -343,20 +331,14 @@ function getLatestContractForCustomer(customerId) {
   return matches[0] || null;
 }
 
-function calculateOfferPrice(squareMeters, interval, service) {
-  const sqm = Number(squareMeters) || 0;
-  const factor = intervalFactors[interval] || 1;
-  const rate = serviceRates[service] || serviceRates.Unterhaltsreinigung;
-  const setup = interval === "Einmalig" ? 65 : 35;
-  return Math.max(0, sqm * rate * factor + setup);
-}
-
 function customerAddress(customer) {
-  return `${customer.address} ${customer.houseNumber}, ${customer.zip} ${customer.city}`;
+  const street = [customer.address, customer.houseNumber].filter(Boolean).join(" ");
+  const place = [customer.zip, customer.city].filter(Boolean).join(" ");
+  return [street, place].filter(Boolean).join(", ");
 }
 
 function contactName(customer) {
-  return `${customer.salutation} ${customer.contactLastName}`;
+  return [customer.salutation, customer.contactLastName].filter(Boolean).join(" ");
 }
 
 function isValidEmail(value) {
@@ -569,6 +551,10 @@ function switchView(view) {
     loadMailbox();
   }
 
+  if (view === "offers-new") {
+    resetOfferIntake();
+  }
+
   loadAll();
 }
 
@@ -601,11 +587,9 @@ async function loadAll() {
 
 function renderAll() {
   renderMetrics();
-  renderCustomerOptions();
   renderCustomers();
   renderOffers();
   renderContracts();
-  updateOfferPreview();
   refreshIcons();
 }
 
@@ -631,9 +615,9 @@ function renderMetrics() {
             <article class="compact-item">
               <div>
                 <strong>${escapeHtml(offer.customer.name)}</strong>
-                <span>${offer.squareMeters} m² · Erstellt am ${formatDate(offer.createdAt)}</span>
+                <span>Erstellt am ${formatDate(offer.createdAt)}</span>
               </div>
-              <span class="badge">${formatCurrency(offer.price)}</span>
+              ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}</span>` : ""}
             </article>
           `;
         })
@@ -659,24 +643,6 @@ function renderMetrics() {
     </article>
   `;
 }
-
-function renderCustomerOptions() {
-  const previousValue = els.offerCustomer.value;
-  const options = state.data.customers
-    .map((customer) => `<option value="${escapeHtml(customer.id)}">${escapeHtml(customer.name)}</option>`)
-    .join("");
-
-  els.offerCustomer.innerHTML = state.data.customers.length
-    ? `<option value="">Bitte wählen</option>` + options
-    : `<option value="">Bitte zuerst Kunden anlegen</option>`;
-  els.offerCustomer.disabled = state.data.customers.length === 0;
-
-  if (previousValue && getCustomer(previousValue)) {
-    els.offerCustomer.value = previousValue;
-  }
-}
-
-
 
 
 function renderCustomers() {
@@ -1336,13 +1302,13 @@ function renderOfferCard(offer) {
         <div>
           <div class="record-title">Firma: ${escapeHtml(offer.customer.name)}</div>
           <div class="record-meta">
-            <span>${offer.squareMeters} m²</span>
-            <span>Erstellt am ${formatDate(offer.createdAt)} · Start ${formatDate(offer.startDate)}</span>
+            ${offer.squareMeters > 0 ? `<span>${offer.squareMeters} m²</span>` : ""}
+            <span>Erstellt am ${formatDate(offer.createdAt)}${offer.startDate ? ` · Start ${formatDate(offer.startDate)}` : ""}</span>
             <span>${escapeHtml(sentLabel)}</span>
           </div>
         </div>
         <div class="record-side">
-          <span class="badge">${formatCurrency(offer.price)}</span>
+          ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}</span>` : ""}
           <span class="badge ${validity.className}">${escapeHtml(validity.label)}</span>
         </div>
       </div>
@@ -1517,7 +1483,7 @@ function renderContractRow(contract) {
     <tr class="${selected}">
       <td>
         <strong>${escapeHtml(contract.number)}</strong>
-        <span>${contract.offer.squareMeters} m²</span>
+        ${contract.offer.squareMeters > 0 ? `<span>${contract.offer.squareMeters} m²</span>` : ""}
       </td>
       <td>${escapeHtml(contract.customer.name)}</td>
       <td>${escapeHtml(contactName(contract.customer))}</td>
@@ -1544,16 +1510,6 @@ function renderContractRow(contract) {
       </td>
     </tr>
   `;
-}
-
-function updateOfferPreview() {
-  const estimatedPrice = calculateOfferPrice(
-    els.offerSquareMeters.value,
-    els.offerInterval.value,
-    els.offerService.value,
-  );
-
-  els.offerEstimatedPricePreview.textContent = formatCurrency(estimatedPrice);
 }
 
 function resetCustomerForm() {
@@ -1614,64 +1570,93 @@ async function handleCustomerSubmit(event) {
 }
 
 
+function resetOfferIntake() {
+  els.offerForm.reset();
+  els.offerReviewForm.reset();
+  els.offerIntakePanel.hidden = false;
+  els.offerReviewPanel.hidden = true;
+}
+
 async function handleOfferSubmit(event) {
   event.preventDefault();
 
-  const customerId = els.offerCustomer.value;
-  if (!customerId) {
-    showToast("Bitte zuerst einen Kunden auswählen.");
-    els.offerCustomer.focus();
+  const customerName = els.offerCustomerName.value.trim();
+  const contactPerson = els.offerContactPerson.value.trim();
+  const phone = els.offerPhone.value.trim();
+  const email = els.offerEmail.value.trim();
+  const price = Number(els.offerPrice.value);
+  const serviceText = els.offerServiceText.value.trim();
+
+  if (!customerName) {
+    showToast("Bitte den Namen des Kunden eintragen.");
+    els.offerCustomerName.focus();
     return;
   }
 
-  const squareMeters = Number(els.offerSquareMeters.value);
-  if (!Number.isFinite(squareMeters) || squareMeters <= 0) {
-    showToast("Bitte die Quadratmeter eintragen.");
-    els.offerSquareMeters.focus();
+  if (!contactPerson) {
+    showToast("Bitte einen Ansprechpartner eintragen.");
+    els.offerContactPerson.focus();
     return;
   }
 
-  if (!els.offerInterval.value) {
-    showToast("Bitte ein Intervall auswählen.");
-    els.offerInterval.focus();
+  if (!phone) {
+    showToast("Bitte eine Telefonnummer eintragen.");
+    els.offerPhone.focus();
     return;
   }
 
-  if (!els.offerService.value) {
-    showToast("Bitte eine Leistung auswählen.");
-    els.offerService.focus();
+  if (!isValidEmail(email)) {
+    showToast("Bitte eine gültige E-Mail-Adresse eintragen.");
+    els.offerEmail.focus();
     return;
   }
 
-  const estimatedPrice = calculateOfferPrice(
-    els.offerSquareMeters.value,
-    els.offerInterval.value,
-    els.offerService.value,
-  );
-  const manualPrice = Number(els.offerManualPrice.value);
-  if (!Number.isFinite(manualPrice) || manualPrice <= 0) {
-    showToast("Bitte den manuellen Preis eintragen.");
-    els.offerManualPrice.focus();
+  if (!Number.isFinite(price) || price <= 0) {
+    showToast("Bitte den monatlichen Preis eintragen.");
+    els.offerPrice.focus();
     return;
   }
+
+  if (!serviceText) {
+    showToast("Bitte die Leistungsbeschreibung eintragen.");
+    els.offerServiceText.focus();
+    return;
+  }
+
+  try {
+    const { text } = await apiPost("api/format-text.php", { text: serviceText });
+    els.offerServiceTextCorrected.value = text;
+    els.offerReviewSummary.innerHTML = `
+      <div class="record-lines">
+        <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
+        <span>${escapeHtml(phone)} · ${escapeHtml(email)}</span>
+        <span>${formatCurrency(price)} netto monatlich</span>
+      </div>
+    `;
+    els.offerIntakePanel.hidden = true;
+    els.offerReviewPanel.hidden = false;
+    els.offerServiceTextCorrected.focus();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleOfferReviewSubmit(event) {
+  event.preventDefault();
 
   const payload = {
-    customerId,
-    squareMeters,
-    interval: els.offerInterval.value,
-    service: els.offerService.value,
-    startDate: els.offerStartDate.value,
-    manualPrice,
-    priceAdjustment: manualPrice - estimatedPrice,
-    priceAdjustmentNote: "",
-    notes: els.offerNotes.value.trim(),
+    customerName: els.offerCustomerName.value.trim(),
+    contactPerson: els.offerContactPerson.value.trim(),
+    phone: els.offerPhone.value.trim(),
+    email: els.offerEmail.value.trim(),
+    price: Number(els.offerPrice.value),
+    serviceText: els.offerServiceTextCorrected.value.trim(),
   };
 
   try {
     await apiPost("api/offers.php", payload);
-    els.offerForm.reset();
-    els.offerStartDate.value = todayAsInputValue();
-    updateOfferPreview();
+    resetOfferIntake();
+    await loadAll();
     switchView("offers-saved");
     showToast("Vertrag wurde erstellt.");
   } catch (error) {
@@ -3099,9 +3084,12 @@ function bindEvents() {
   document.addEventListener("click", handleDashboardAction);
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
-  els.offerSquareMeters.addEventListener("input", updateOfferPreview);
-  els.offerInterval.addEventListener("change", updateOfferPreview);
-  els.offerService.addEventListener("change", updateOfferPreview);
+  els.offerReviewForm.addEventListener("submit", handleOfferReviewSubmit);
+  els.offerReviewBack.addEventListener("click", () => {
+    els.offerIntakePanel.hidden = false;
+    els.offerReviewPanel.hidden = true;
+    els.offerCustomerName.focus();
+  });
 
   els.customerList.addEventListener("click", handleRecordAction);
   els.offerList.addEventListener("click", handleRecordAction);
@@ -3246,9 +3234,6 @@ async function init() {
     bindEvents();
   } catch (error) {
     console.error("Dashboard event binding failed.", error);
-  }
-  if (els.offerStartDate) {
-    els.offerStartDate.value = todayAsInputValue();
   }
   loadBranding();
 

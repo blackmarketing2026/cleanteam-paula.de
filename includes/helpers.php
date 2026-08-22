@@ -40,6 +40,32 @@ function generate_id(string $prefix): string
     return $prefix . '-' . bin2hex(random_bytes(12));
 }
 
+function format_service_text(string $text): string
+{
+    $text = str_replace(["\r\n", "\r"], "\n", $text);
+    $lines = array_map(function (string $line): string {
+        $line = preg_replace('/[ \t]+/', ' ', trim($line));
+        $line = preg_replace('/\s+([.,;:!?])/', '$1', $line);
+
+        // Jeden Satz im Absatz groß beginnen lassen.
+        $line = preg_replace_callback(
+            '/(^|[.!?]\s+)([a-zäöüß])/u',
+            fn (array $m): string => $m[1] . mb_strtoupper($m[2], 'UTF-8'),
+            $line
+        );
+
+        if ($line !== '' && !preg_match('/[.!?:]$/', $line)) {
+            $line .= '.';
+        }
+
+        return $line;
+    }, explode("\n", $text));
+
+    $lines = array_filter($lines, fn (string $line): bool => $line !== '');
+
+    return implode("\n", $lines);
+}
+
 function now_iso(): string
 {
     return gmdate('Y-m-d\TH:i:s.000\Z');

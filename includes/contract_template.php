@@ -471,6 +471,7 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
     $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
     $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
+    $customerFullAddress = trim($customerAddress . ', ' . $customerZipCity, ', ');
     $offerNotes = trim((string) ($offer['notes'] ?? ''));
 
     $authorized = isset($contract['authorized']) && $contract['authorized'] !== null ? (bool) $contract['authorized'] : null;
@@ -482,9 +483,11 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $values = [
         'vertragsnummer' => (string) ($contract['number'] ?? 'Entwurf'),
         'beginn_datum' => $effectiveDate,
-        'leistungsort' => $customerAddress . ', ' . $customerZipCity,
+        'leistungsort' => $customerFullAddress,
         'intervall' => (string) $offer['interval_label'],
-        'leistung' => (string) $offer['service'] . ' (' . (int) $offer['square_meters'] . ' m² Reinigungsfläche)',
+        'leistung' => (int) $offer['square_meters'] > 0
+            ? (string) $offer['service'] . ' (' . (int) $offer['square_meters'] . ' m² Reinigungsfläche)'
+            : (string) $offer['service'],
         'preis_netto' => contract_format_money($netPrice),
         'preis_brutto' => contract_format_money($grossPrice),
         'ust_satz' => rtrim(rtrim(number_format(VAT_RATE, 1, ',', '.'), '0'), ','),
@@ -591,8 +594,10 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 
     $customerName = h(contract_customer_display_name($customer));
     $signatoryName = h(contract_signatory_display($customer));
-    $customerAddress = h($customer['address'] . ' ' . $customer['house_number']);
-    $customerZipCity = h($customer['zip'] . ' ' . $customer['city']);
+    $customerAddress = h(trim($customer['address'] . ' ' . $customer['house_number']));
+    $customerZipCity = h(trim($customer['zip'] . ' ' . $customer['city']));
+    $customerAddressLine = $customerAddress !== '' ? "{$customerAddress}<br>" : '';
+    $customerZipCityLine = $customerZipCity !== '' ? "{$customerZipCity}<br>" : '';
 
     $statusLabel = $contract === null
         ? 'Entwurf (noch nicht gestartet)'
@@ -642,8 +647,8 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     <small>Auftraggeber</small>
     <p>
       <strong>{$customerName}</strong><br>
-      {$customerAddress}<br>
-      {$customerZipCity}<br>
+      {$customerAddressLine}
+      {$customerZipCityLine}
       Vertragsunterzeichnung durch: {$signatoryName} ({$authorityText})
     </p>
   </div>

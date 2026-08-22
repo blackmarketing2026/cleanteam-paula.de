@@ -904,7 +904,10 @@ function render_cleaning_checklist_pdf(array $offer, array $customer, array $con
     $pdf->keyValue('Kunde', $customerName);
     $pdf->keyValue('Adresse', trim($customerAddress . ', ' . $customerZipCity, ' ,'));
     $pdf->keyValue('Ansprechpartner', contract_signatory_display($customer));
-    $pdf->keyValue('Fläche', (int) ($offer['square_meters'] ?? 0) . ' m²');
+    $squareMeters = (int) ($offer['square_meters'] ?? 0);
+    if ($squareMeters > 0) {
+        $pdf->keyValue('Fläche', $squareMeters . ' m²');
+    }
     $pdf->paragraph('Arbeitscheckliste für die Reinigung vor Ort. Je Position abhaken: linkes Kästchen = erledigt, rechtes Kästchen = kontrolliert.');
 
     $fallbackItems = cleaning_checklist_items_from_offer_notes(trim((string) ($offer['notes'] ?? '')));
@@ -949,7 +952,7 @@ function render_authorization_pdf(array $offer, array $customer, array $contract
     $pdf->keyValue('Vertragsnummer', $contractNumber);
     $pdf->keyValue('Auftragnehmer', CONTRACTOR['legal_name']);
     $pdf->keyValue('Auftraggeber', $customerName);
-    $pdf->keyValue('Auftraggeber-Adresse', $customerAddress . ', ' . $customerZipCity);
+    $pdf->keyValue('Auftraggeber-Adresse', trim($customerAddress . ', ' . $customerZipCity, ' ,'));
     $pdf->keyValue('Leistung', (string) $offer['service']);
 
     $pdf->heading('Vollmachtgeber');
@@ -1019,7 +1022,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $pdf->keyValue('Service Point', $contractorServicePoint);
     $pdf->spacer(5.0);
     $pdf->keyValue('Auftraggeber', $customerName);
-    $pdf->keyValue('Adresse', $customerAddress . ', ' . $customerZipCity);
+    $pdf->keyValue('Adresse', trim($customerAddress . ', ' . $customerZipCity, ' ,'));
     $pdf->keyValue('Unterzeichner', $signatoryName . ' (' . $authorityText . ')');
 
     $templateHtml = get_contract_template_html(db());
