@@ -176,7 +176,9 @@ function next_contract_number(PDO $pdo): string
 
     $pdo->beginTransaction();
     try {
-        $sequence = (int) $pdo->query('SELECT next_number FROM contract_number_settings WHERE id = 1 FOR UPDATE')->fetchColumn();
+        $row = $pdo->query('SELECT year, next_number FROM contract_number_settings WHERE id = 1 FOR UPDATE')->fetch();
+        $year = (int) $row['year'];
+        $sequence = (int) $row['next_number'];
         $pdo->prepare('UPDATE contract_number_settings SET next_number = next_number + 1 WHERE id = 1')->execute();
         $pdo->commit();
     } catch (Throwable $exception) {
@@ -184,7 +186,7 @@ function next_contract_number(PDO $pdo): string
         throw $exception;
     }
 
-    return format_contract_number($sequence);
+    return format_contract_number($year, $sequence);
 }
 
 function require_active_contract(?array $contract): array

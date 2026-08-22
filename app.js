@@ -64,6 +64,7 @@ const els = {
   offerIntervalCustomField: document.querySelector("#offer-interval-custom-field"),
   offerIntervalCustom: document.querySelector("#offer-interval-custom"),
   offerPrice: document.querySelector("#offer-price"),
+  offerStartDate: document.querySelector("#offer-start-date"),
   offerServiceText: document.querySelector("#offer-service-text"),
   offerReviewForm: document.querySelector("#offer-review-form"),
   offerReviewSummary: document.querySelector("#offer-review-summary"),
@@ -173,18 +174,14 @@ const els = {
   contractCorrectionIntervalCustomField: document.querySelector("#contract-correction-interval-custom-field"),
   contractCorrectionIntervalCustom: document.querySelector("#contract-correction-interval-custom"),
   contractCorrectionPrice: document.querySelector("#contract-correction-price"),
+  contractCorrectionStartDate: document.querySelector("#contract-correction-start-date"),
   contractCorrectionServiceText: document.querySelector("#contract-correction-service-text"),
   contractCorrectionCancel: document.querySelector("#contract-correction-cancel"),
   logoPreview: document.querySelector("#logo-preview"),
   logoFileInput: document.querySelector("#logo-file-input"),
   logoRemove: document.querySelector("#logo-remove"),
-  templatePlaceholderGroups: document.querySelector("#template-placeholder-groups"),
-  templateEditor: document.querySelector("#contract-template-editor"),
-  templateReset: document.querySelector("#contract-template-reset"),
-  templatePreviewButton: document.querySelector("#contract-template-preview-button"),
-  templateSave: document.querySelector("#contract-template-save"),
-  templatePreviewFrame: document.querySelector("#contract-template-preview-frame"),
   contractNumberForm: document.querySelector("#contract-number-form"),
+  contractNumberYear: document.querySelector("#contract-number-year"),
   contractNumberNext: document.querySelector("#contract-number-next"),
   contractNumberPreview: document.querySelector("#contract-number-preview"),
   contractorSignaturePad: document.querySelector("#contractor-signature-pad"),
@@ -221,7 +218,6 @@ const titles = {
   "settings-notify": "Vertragsbenachrichtigungen-Einstellungen",
   "settings-logo": "Logo-Einstellungen",
   "settings-signature": "Signatur",
-  "settings-template": "Mustervertrag",
   "settings-contract-number": "Vertragsnummer",
   "settings-users": "User & Rollen",
 };
@@ -535,10 +531,6 @@ function switchView(view) {
 
   if (view === "settings-signature") {
     loadContractorSignature();
-  }
-
-  if (view === "settings-template") {
-    loadContractTemplate();
   }
 
   if (view === "settings-contract-number") {
@@ -1445,6 +1437,7 @@ async function handleOfferSubmit(event) {
   const interval = els.offerInterval.value;
   const intervalCustom = els.offerIntervalCustom.value.trim();
   const price = Number(els.offerPrice.value);
+  const startDate = els.offerStartDate.value;
   const serviceText = els.offerServiceText.value.trim();
 
   if (!customerName) {
@@ -1513,6 +1506,12 @@ async function handleOfferSubmit(event) {
     return;
   }
 
+  if (!startDate) {
+    showToast("Bitte den Beginn der Dienstleistung eintragen.");
+    els.offerStartDate.focus();
+    return;
+  }
+
   if (!serviceText) {
     showToast("Bitte die Leistungsbeschreibung eintragen.");
     els.offerServiceText.focus();
@@ -1529,7 +1528,7 @@ async function handleOfferSubmit(event) {
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
         <span>${escapeHtml(phone)} · ${escapeHtml(email)}</span>
         <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)} · ${squareMeters} m² · ${escapeHtml(intervalDisplay)}</span>
-        <span>${formatCurrency(price)} netto monatlich</span>
+        <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)}</span>
       </div>
     `;
     els.offerIntakePanel.hidden = true;
@@ -1555,6 +1554,7 @@ async function handleOfferReviewSubmit(event) {
     interval: els.offerInterval.value,
     intervalCustom: els.offerIntervalCustom.value.trim(),
     price: Number(els.offerPrice.value),
+    startDate: els.offerStartDate.value,
     serviceText: els.offerServiceTextCorrected.value.trim(),
   };
 
@@ -1718,6 +1718,7 @@ function openContractCorrectionModal(id) {
     els.contractCorrectionIntervalCustomField.hidden = false;
   }
   els.contractCorrectionPrice.value = contract.offer.price;
+  els.contractCorrectionStartDate.value = contract.offer.startDate || "";
   els.contractCorrectionServiceText.value = contract.offer.notes || "";
   els.contractCorrectionModal.hidden = false;
   els.contractCorrectionCustomerName.focus();
@@ -1754,8 +1755,15 @@ async function handleContractCorrectionSubmit(event) {
     interval,
     intervalCustom,
     price: Number(els.contractCorrectionPrice.value),
+    startDate: els.contractCorrectionStartDate.value,
     serviceText: els.contractCorrectionServiceText.value.trim(),
   };
+
+  if (!payload.startDate) {
+    showToast("Bitte den Beginn der Dienstleistung eintragen.");
+    els.contractCorrectionStartDate.focus();
+    return;
+  }
 
   try {
     await apiPatch(`api/contracts.php?id=${encodeURIComponent(id)}`, payload);
@@ -2678,95 +2686,10 @@ async function loadContractorSignature() {
   }
 }
 
-function renderTemplatePlaceholderChips(groups) {
-  if (!els.templatePlaceholderGroups) {
-    return;
-  }
-
-  els.templatePlaceholderGroups.innerHTML = Object.entries(groups || {})
-    .map(([groupLabel, tokens]) => {
-      const chips = Object.entries(tokens)
-        .map(
-          ([token, description]) =>
-            `<button type="button" class="template-placeholder-chip" data-token="${escapeHtml(token)}" title="${escapeHtml(description)}">{{${escapeHtml(token)}}}</button>`
-        )
-        .join("");
-      return `
-        <div class="template-placeholder-group">
-          <span class="template-placeholder-group-label">${escapeHtml(groupLabel)}</span>
-          ${chips}
-        </div>
-      `;
-    })
-    .join("");
-}
-
-function insertTemplatePlaceholder(token) {
-  const textarea = els.templateEditor;
-  if (!textarea) {
-    return;
-  }
-
-  const start = textarea.selectionStart ?? textarea.value.length;
-  const end = textarea.selectionEnd ?? textarea.value.length;
-  const insertion = `{{${token}}}`;
-  textarea.value = textarea.value.slice(0, start) + insertion + textarea.value.slice(end);
-  const cursor = start + insertion.length;
-  textarea.focus();
-  textarea.setSelectionRange(cursor, cursor);
-}
-
-async function loadContractTemplate() {
-  if (!els.templateEditor) {
-    return;
-  }
-
-  try {
-    const result = await apiGet("api/contract-template.php");
-    els.templateEditor.value = result.templateHtml || "";
-    renderTemplatePlaceholderChips(result.placeholders || {});
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-async function handleContractTemplateSave() {
-  try {
-    await apiPost("api/contract-template.php", { templateHtml: els.templateEditor.value });
-    showToast("Mustervertrag wurde gespeichert.");
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-async function handleContractTemplateReset() {
-  if (!window.confirm("Vertragstext wirklich auf den Standardtext zurücksetzen? Ungespeicherte Änderungen gehen dabei verloren.")) {
-    return;
-  }
-
-  try {
-    const result = await apiGet("api/contract-template.php?action=default");
-    els.templateEditor.value = result.templateHtml || "";
-    showToast("Standardtext geladen. Zum Übernehmen bitte speichern.");
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-async function handleContractTemplatePreview() {
-  try {
-    const result = await apiPost("api/contract-template.php?action=preview", { templateHtml: els.templateEditor.value });
-    if (els.templatePreviewFrame) {
-      els.templatePreviewFrame.srcdoc = result.html || "";
-    }
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
 async function loadContractNumberSettings() {
   try {
     const result = await apiGet("api/contract-number.php");
+    els.contractNumberYear.value = result.year;
     els.contractNumberNext.value = result.nextNumber;
     els.contractNumberPreview.textContent = result.nextNumberPreview;
   } catch (error) {
@@ -2777,7 +2700,13 @@ async function loadContractNumberSettings() {
 async function handleContractNumberSubmit(event) {
   event.preventDefault();
 
+  const year = Number(els.contractNumberYear.value);
   const nextNumber = Number(els.contractNumberNext.value);
+  if (!Number.isFinite(year) || year < 2000 || year > 2100) {
+    showToast("Bitte ein gültiges Jahr eintragen.");
+    els.contractNumberYear.focus();
+    return;
+  }
   if (!Number.isFinite(nextNumber) || nextNumber <= 0) {
     showToast("Bitte eine gültige Startnummer eintragen.");
     els.contractNumberNext.focus();
@@ -2785,7 +2714,7 @@ async function handleContractNumberSubmit(event) {
   }
 
   try {
-    const result = await apiPost("api/contract-number.php", { nextNumber });
+    const result = await apiPost("api/contract-number.php", { year, nextNumber });
     els.contractNumberPreview.textContent = result.nextNumberPreview;
     showToast("Vertragsnummer wurde gespeichert.");
   } catch (error) {
@@ -3153,23 +3082,16 @@ function bindEvents() {
 
   els.logoFileInput.addEventListener("change", handleLogoUpload);
   els.logoRemove.addEventListener("click", handleLogoRemove);
-  els.templatePlaceholderGroups.addEventListener("click", (event) => {
-    const chip = event.target.closest(".template-placeholder-chip");
-    if (chip) {
-      insertTemplatePlaceholder(chip.dataset.token);
-    }
-  });
-  els.templateSave.addEventListener("click", handleContractTemplateSave);
-  els.templateReset.addEventListener("click", handleContractTemplateReset);
-  els.templatePreviewButton.addEventListener("click", handleContractTemplatePreview);
-
   els.contractNumberForm.addEventListener("submit", handleContractNumberSubmit);
-  els.contractNumberNext.addEventListener("input", () => {
+  const updateContractNumberPreview = () => {
+    const year = Number(els.contractNumberYear.value);
     const value = Number(els.contractNumberNext.value);
-    els.contractNumberPreview.textContent = Number.isFinite(value) && value > 0
-      ? `CT-${new Date().getFullYear()}-${String(value).padStart(3, "0")}`
+    els.contractNumberPreview.textContent = Number.isFinite(year) && year > 0 && Number.isFinite(value) && value > 0
+      ? `CT-${year}-${String(value).padStart(3, "0")}`
       : "–";
-  });
+  };
+  els.contractNumberYear.addEventListener("input", updateContractNumberPreview);
+  els.contractNumberNext.addEventListener("input", updateContractNumberPreview);
   els.contractorSignatureClear.addEventListener("click", () => {
     clearContractorSignaturePad("Zeichenfläche ist leer. Neue Unterschrift zeichnen und speichern.");
   });

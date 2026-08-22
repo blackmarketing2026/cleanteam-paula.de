@@ -45,17 +45,24 @@ function ensure_contract_number_settings_table(PDO $pdo): void
     $pdo->exec(
         'CREATE TABLE IF NOT EXISTS contract_number_settings (
             id TINYINT UNSIGNED NOT NULL,
+            year SMALLINT UNSIGNED NOT NULL DEFAULT ' . (int) gmdate('Y') . ',
             next_number INT UNSIGNED NOT NULL DEFAULT 1,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
     );
-    $pdo->exec('INSERT IGNORE INTO contract_number_settings (id, next_number) VALUES (1, 1)');
+
+    $stmt = $pdo->query("SHOW COLUMNS FROM contract_number_settings LIKE 'year'");
+    if (!$stmt->fetch()) {
+        $pdo->exec('ALTER TABLE contract_number_settings ADD COLUMN year SMALLINT UNSIGNED NOT NULL DEFAULT ' . (int) gmdate('Y') . ' AFTER id');
+    }
+
+    $pdo->exec('INSERT IGNORE INTO contract_number_settings (id, year, next_number) VALUES (1, ' . (int) gmdate('Y') . ', 1)');
 }
 
-function format_contract_number(int $sequence): string
+function format_contract_number(int $year, int $sequence): string
 {
-    return sprintf('CT-%s-%03d', gmdate('Y'), $sequence);
+    return sprintf('CT-%d-%03d', $year, $sequence);
 }
 
 function ensure_offers_interval_label_length(PDO $pdo): void

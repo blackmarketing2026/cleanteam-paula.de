@@ -161,6 +161,7 @@ if ($method === 'PATCH') {
         $interval = trim((string) ($body['interval'] ?? ''));
         $intervalCustom = trim((string) ($body['intervalCustom'] ?? ''));
         $price = round((float) ($body['price'] ?? 0), 2);
+        $startDate = trim((string) ($body['startDate'] ?? ''));
         $serviceText = trim((string) ($body['serviceText'] ?? ''));
 
         $allowedIntervals = ['Wöchentlich', 'Täglich', 'Monatlich', 'Individuell'];
@@ -182,6 +183,9 @@ if ($method === 'PATCH') {
         if ($price <= 0) {
             json_error('Bitte den monatlichen Preis eintragen.', 422);
         }
+        if ($startDate === '' || strtotime($startDate) === false) {
+            json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
+        }
 
         $pdo->prepare(
             'UPDATE customers SET name = :name, contact_last_name = :contact, phone = :phone, email = :email,
@@ -198,10 +202,11 @@ if ($method === 'PATCH') {
         ]);
 
         $pdo->prepare(
-            'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, price = :price, base_price = :price, notes = :notes WHERE id = :id'
+            'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date, price = :price, base_price = :price, notes = :notes WHERE id = :id'
         )->execute([
                 'square_meters' => $squareMeters,
                 'interval_label' => $intervalLabel,
+                'start_date' => $startDate,
                 'price' => $price,
                 'notes' => format_service_text($serviceText),
                 'id' => $row['offer_id'],

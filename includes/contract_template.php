@@ -149,13 +149,6 @@ function contract_logo_html(): string
     return '';
 }
 
-// Das Leistungsverzeichnis (Standardkatalog) gehoert nicht mehr in den Mustervertrag - der
-// Platzhalter wird aus bereits gespeicherten Vorlagen entfernt, statt ihn weiter zu befuellen.
-function normalize_contract_template_html(string $html): string
-{
-    return str_replace(['{{begehung_leistungsverzeichnis}}', '{{leistungsverzeichnis}}'], '', $html);
-}
-
 function render_obligations_html(): string
 {
     $html = '<ol class="obligations">';
@@ -352,27 +345,11 @@ function default_contract_template_html(): string
 HTML;
 }
 
+// Der Vertragstext ist nicht mehr ueber die Einstellungen anpassbar - es gibt nur noch den
+// fest im Code hinterlegten Standardtext, damit er nicht unbemerkt vom aktuellen Stand abweicht.
 function get_contract_template_html(PDO $pdo): string
 {
-    ensure_contract_template_settings_table($pdo);
-    $stmt = $pdo->query('SELECT template_html FROM contract_template_settings WHERE id = 1');
-    $row = $stmt->fetch();
-
-    return $row && trim((string) $row['template_html']) !== ''
-        ? normalize_contract_template_html((string) $row['template_html'])
-        : default_contract_template_html();
-}
-
-function save_contract_template_html(PDO $pdo, string $html): void
-{
-    ensure_contract_template_settings_table($pdo);
-    $html = normalize_contract_template_html($html);
-    $stmt = $pdo->prepare(
-        'INSERT INTO contract_template_settings (id, template_html, updated_at)
-         VALUES (1, :html, UTC_TIMESTAMP())
-         ON DUPLICATE KEY UPDATE template_html = :html2, updated_at = UTC_TIMESTAMP()'
-    );
-    $stmt->execute(['html' => $html, 'html2' => $html]);
+    return default_contract_template_html();
 }
 
 function get_contract_template_contractor_signature_data(PDO $pdo): ?string
@@ -410,47 +387,6 @@ function save_contract_template_contractor_signature_data(PDO $pdo, ?string $sig
         'signature' => $signatureDataUrl,
         'signature2' => $signatureDataUrl,
     ]);
-}
-
-// Fuer die Platzhalter-Palette in den Einstellungen: Gruppe, Token, Beschreibung.
-function contract_template_placeholder_definitions(): array
-{
-    return [
-        'Firma / Kunde' => [
-            'kunde_name' => 'Name des Auftraggebers',
-            'kunde_adresse' => 'Straße und Hausnummer des Kunden',
-            'kunde_ort' => 'PLZ und Ort des Kunden',
-            'unterzeichner' => 'Name des Vertragsunterzeichners',
-            'vertretung' => 'Vertretungshinweis',
-            'logo' => 'Firmenlogo (nur in der HTML-Ansicht sichtbar)',
-        ],
-        'Leistung' => [
-            'leistungsort' => 'Adresse des zu reinigenden Objekts (komplett)',
-            'leistungsort_strasse' => 'Objektadresse: Straße und Hausnummer',
-            'leistungsort_plz' => 'Objektadresse: Postleitzahl',
-            'leistungsort_ort' => 'Objektadresse: Ort',
-            'intervall' => 'Reinigungsintervall',
-            'leistung' => 'Leistungsbeschreibung inkl. Quadratmeter',
-            'zusatzhinweis_block' => 'Zusatzhinweis aus dem Vertragsentwurf (falls vorhanden)',
-            'beginn_datum' => 'Vertragsbeginn',
-        ],
-        'Preis' => [
-            'preis_netto' => 'Monatspreis netto',
-            'preis_brutto' => 'Monatspreis brutto',
-            'ust_satz' => 'Umsatzsteuersatz in Prozent',
-            'zahlungsfrist_tage' => 'Zahlungsfrist in Arbeitstagen',
-            'verzug_tage' => 'Tage bis Verzugszinsen',
-            'lohn_min' => 'Untere Lohnsteigerung in Prozent',
-            'lohn_max' => 'Obere Lohnsteigerung in Prozent',
-            'ankuendigung_monate' => 'Ankündigungsfrist für Preisanpassungen in Monaten',
-        ],
-        'Rechtliches' => [
-            'vertragsnummer' => 'Vertragsnummer',
-            'gerichtsstand' => 'Gerichtsstand',
-            'agb_version' => 'AGB-Version',
-            'agb_url' => 'AGB-Link',
-        ],
-    ];
 }
 
 function contract_template_placeholder_map(array $offer, array $customer, ?array $contract, bool $forPdf = false): array
@@ -527,14 +463,14 @@ function contract_document_style_css(): string
 {
     return <<<CSS
   body { font-family: Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif; font-size: 14px; max-width: 720px; margin: 32px auto; padding: 0 32px; color: #1a1a1a; line-height: 1.4; }
-  h1 { font-size: 15px; font-weight: 700; text-align: center; margin: 20px 0; }
+  h1 { font-size: 15px; font-weight: 700; text-align: center; margin: 36px 0; }
   h2 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
   h4 { font-size: 14px; font-weight: 700; margin: 16px 0 4px; }
   .doc-logo { max-height: 64px; max-width: 260px; margin-bottom: 16px; }
   .doc-meta { font-size: 11px; color: #777; margin-bottom: 8px; }
-  .parties-intro { text-align: center; margin: 16px 0; }
-  .party-text { margin: 12px 0 4px; }
-  .party-designation { text-align: right; font-size: 13px; font-style: italic; margin: 0 0 16px; }
+  .parties-intro { text-align: center; margin: 32px 0; }
+  .party-text { margin: 28px 0 4px; }
+  .party-designation { text-align: right; font-size: 13px; font-style: italic; margin: 0 0 32px; }
   ul, ol { padding-left: 20px; }
   ul li { margin-bottom: 4px; }
   ol.obligations li { margin-bottom: 14px; }

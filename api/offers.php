@@ -110,6 +110,7 @@ if ($method === 'POST') {
     $city = trim((string) ($body['city'] ?? ''));
     $squareMeters = (int) ($body['squareMeters'] ?? 0);
     $price = round((float) ($body['price'] ?? 0), 2);
+    $startDate = trim((string) ($body['startDate'] ?? ''));
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
     $intervalCustom = trim((string) ($body['intervalCustom'] ?? ''));
@@ -136,6 +137,10 @@ if ($method === 'POST') {
         json_error('Bitte den monatlichen Preis eintragen.', 422);
     }
 
+    if ($startDate === '' || strtotime($startDate) === false) {
+        json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
+    }
+
     $customerId = generate_id('customer');
     $customerStmt = $pdo->prepare(
         'INSERT INTO customers (id, name, email, phone, salutation, contact_last_name, address, house_number, zip, city, created_at)
@@ -159,7 +164,7 @@ if ($method === 'POST') {
 
     $stmt = $pdo->prepare(
         'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, token, created_at, expires_at)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, NULL, :notes, :base_price, 0, NULL, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, 0, NULL, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
     );
     $stmt->execute([
         'id' => $id,
@@ -167,6 +172,7 @@ if ($method === 'POST') {
         'square_meters' => $squareMeters,
         'interval_label' => $intervalLabel,
         'service' => 'Individuelle Leistung',
+        'start_date' => $startDate,
         'notes' => format_service_text($serviceText),
         'base_price' => $price,
         'price' => $price,

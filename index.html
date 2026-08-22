@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=contract-release-flow-20260822-1" />
+    <link rel="stylesheet" href="styles.css?v=remove-mustervertrag-20260823-1" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -106,10 +106,6 @@
             <button class="nav-link" type="button" data-view="settings-signature">
               <i data-lucide="signature" aria-hidden="true"></i>
               <span>Signatur</span>
-            </button>
-            <button class="nav-link" type="button" data-view="settings-template">
-              <i data-lucide="file-edit" aria-hidden="true"></i>
-              <span>Mustervertrag</span>
             </button>
             <button class="nav-link" type="button" data-view="settings-contract-number">
               <i data-lucide="hash" aria-hidden="true"></i>
@@ -294,6 +290,10 @@
               <label>
                 Preis (monatlich, netto) *
                 <input id="offer-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" />
+              </label>
+              <label>
+                Beginn der Dienstleistung *
+                <input id="offer-start-date" type="date" required />
               </label>
               <label class="span-2">
                 Leistungsbeschreibung *
@@ -896,56 +896,6 @@
           </section>
         </section>
 
-        <section id="settings-template-view" class="view" aria-label="Mustervertrag">
-          <div class="section-heading">
-            <div>
-              <p class="muted">Vertragstext mit Platzhaltern – die Basis, aus der alle Verträge erstellt werden.</p>
-            </div>
-          </div>
-
-          <section class="panel" aria-labelledby="template-editor-heading">
-            <div class="panel-header">
-              <div>
-                <h4 id="template-editor-heading">Vertragstext (HTML)</h4>
-                <p class="muted">
-                  Erlaubte Tags: <code>h2</code> (§-Überschrift), <code>h3</code>/<code>h4</code> (Unterüberschrift),
-                  <code>p</code>, <code>br</code>, <code>strong</code>, <code>ul</code>/<code>li</code>, <code>ol</code>/<code>li</code>.
-                  Auf einen Platzhalter klicken, um ihn an der Cursor-Position einzufügen.
-                </p>
-              </div>
-            </div>
-
-            <div id="template-placeholder-groups" class="template-placeholder-groups"></div>
-
-            <textarea id="contract-template-editor" class="template-editor" rows="22" spellcheck="false"></textarea>
-
-            <div class="form-actions">
-              <button id="contract-template-reset" class="ghost-button" type="button">
-                <i data-lucide="rotate-ccw" aria-hidden="true"></i>
-                Auf Standard zurücksetzen
-              </button>
-              <button id="contract-template-preview-button" class="secondary-button" type="button">
-                <i data-lucide="eye" aria-hidden="true"></i>
-                Vorschau aktualisieren
-              </button>
-              <button id="contract-template-save" class="primary-button" type="button">
-                <i data-lucide="save" aria-hidden="true"></i>
-                Speichern
-              </button>
-            </div>
-          </section>
-
-          <section class="panel" aria-labelledby="template-preview-heading">
-            <div class="panel-header">
-              <div>
-                <h4 id="template-preview-heading">Vorschau</h4>
-                <p class="muted">Mit Beispieldaten gerendert, so wie es später im Vertrag erscheint.</p>
-              </div>
-            </div>
-            <iframe id="contract-template-preview-frame" class="template-preview-frame" title="Vertragsvorschau"></iframe>
-          </section>
-        </section>
-
         <section id="settings-contract-number-view" class="view" aria-label="Vertragsnummer">
           <div class="section-heading">
             <div>
@@ -961,6 +911,10 @@
               </div>
             </div>
             <form id="contract-number-form" class="form-grid">
+              <label>
+                Vertragsjahr *
+                <input id="contract-number-year" type="number" min="2000" max="2100" step="1" required placeholder="z. B. 2026" />
+              </label>
               <label>
                 Laufende Nummer *
                 <input id="contract-number-next" type="number" min="1" step="1" required placeholder="z. B. 1" />
@@ -1150,6 +1104,10 @@
           <input id="contract-correction-price" type="number" min="0" step="0.01" required />
         </label>
         <label class="modal-field">
+          Beginn der Dienstleistung *
+          <input id="contract-correction-start-date" type="date" required />
+        </label>
+        <label class="modal-field">
           Leistungsbeschreibung *
           <textarea id="contract-correction-service-text" class="offer-service-editor" rows="10" required></textarea>
         </label>
@@ -1164,6 +1122,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=interval-agb-snapshot-contractnum-20260822-1"></script>
+    <script src="app.js?v=startdate-contractyear-remove-mustervertrag-20260823-1"></script>
   </body>
 </html>
