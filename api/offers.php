@@ -87,11 +87,20 @@ if ($method === 'POST') {
     $contactPerson = trim((string) ($body['contactPerson'] ?? ''));
     $phone = trim((string) ($body['phone'] ?? ''));
     $email = trim((string) ($body['email'] ?? ''));
+    $address = trim((string) ($body['address'] ?? ''));
+    $zip = trim((string) ($body['zip'] ?? ''));
+    $city = trim((string) ($body['city'] ?? ''));
+    $squareMeters = (int) ($body['squareMeters'] ?? 0);
     $price = round((float) ($body['price'] ?? 0), 2);
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
 
-    if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === '' || $serviceText === '') {
-        json_error('Name, Ansprechpartner, Telefonnummer, E-Mail und Leistungsbeschreibung sind erforderlich.', 422);
+    if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === ''
+        || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
+        json_error('Name, Ansprechpartner, Telefonnummer, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
+    }
+
+    if ($squareMeters <= 0) {
+        json_error('Bitte die Quadratmeter eintragen.', 422);
     }
 
     if ($price <= 0) {
@@ -110,10 +119,10 @@ if ($method === 'POST') {
         'phone' => $phone,
         'salutation' => '',
         'contact_last_name' => $contactPerson,
-        'address' => '',
+        'address' => $address,
         'house_number' => '',
-        'zip' => '',
-        'city' => '',
+        'zip' => $zip,
+        'city' => $city,
     ]);
 
     $id = generate_id('offer');
@@ -121,11 +130,12 @@ if ($method === 'POST') {
 
     $stmt = $pdo->prepare(
         'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, token, created_at, expires_at)
-         VALUES (:id, :customer_id, 0, :interval_label, :service, NULL, :notes, :base_price, 0, NULL, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, NULL, :notes, :base_price, 0, NULL, :price, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
     );
     $stmt->execute([
         'id' => $id,
         'customer_id' => $customerId,
+        'square_meters' => $squareMeters,
         'interval_label' => 'Monatlich',
         'service' => 'Individuelle Leistung',
         'notes' => format_service_text($serviceText),

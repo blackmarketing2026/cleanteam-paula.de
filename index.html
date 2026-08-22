@@ -257,6 +257,22 @@
                 E-Mail-Adresse *
                 <input id="offer-email" type="email" required placeholder="kunde@beispiel.de" />
               </label>
+              <label class="span-2">
+                Straße und Hausnummer (Objektadresse) *
+                <input id="offer-address" type="text" required placeholder="Musterstraße 12" />
+              </label>
+              <label>
+                Postleitzahl *
+                <input id="offer-zip" type="text" inputmode="numeric" required placeholder="42719" />
+              </label>
+              <label>
+                Ort *
+                <input id="offer-city" type="text" required placeholder="Solingen" />
+              </label>
+              <label>
+                Quadratmeter *
+                <input id="offer-square-meters" type="number" min="1" step="1" required placeholder="z. B. 250" />
+              </label>
               <label>
                 Preis (monatlich, netto) *
                 <input id="offer-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" />
@@ -1050,6 +1066,22 @@
           <input id="contract-correction-email" type="email" required />
         </label>
         <label class="modal-field">
+          Straße und Hausnummer (Objektadresse) *
+          <input id="contract-correction-address" type="text" required />
+        </label>
+        <label class="modal-field">
+          Postleitzahl *
+          <input id="contract-correction-zip" type="text" inputmode="numeric" required />
+        </label>
+        <label class="modal-field">
+          Ort *
+          <input id="contract-correction-city" type="text" required />
+        </label>
+        <label class="modal-field">
+          Quadratmeter *
+          <input id="contract-correction-square-meters" type="number" min="1" step="1" required />
+        </label>
+        <label class="modal-field">
           Preis (monatlich, netto) *
           <input id="contract-correction-price" type="number" min="0" step="0.01" required />
         </label>
@@ -1068,6 +1100,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=contract-release-flow-20260822-1"></script>
+    <script src="app.js?v=offer-address-squaremeters-20260822-1"></script>
   </body>
 </html>

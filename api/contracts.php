@@ -142,28 +142,41 @@ if ($method === 'PATCH') {
         $contactPerson = trim((string) ($body['contactPerson'] ?? ''));
         $phone = trim((string) ($body['phone'] ?? ''));
         $email = trim((string) ($body['email'] ?? ''));
+        $address = trim((string) ($body['address'] ?? ''));
+        $zip = trim((string) ($body['zip'] ?? ''));
+        $city = trim((string) ($body['city'] ?? ''));
+        $squareMeters = (int) ($body['squareMeters'] ?? 0);
         $price = round((float) ($body['price'] ?? 0), 2);
         $serviceText = trim((string) ($body['serviceText'] ?? ''));
 
-        if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === '' || $serviceText === '') {
-            json_error('Name, Ansprechpartner, Telefonnummer, E-Mail und Leistungsbeschreibung sind erforderlich.', 422);
+        if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === ''
+            || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
+            json_error('Name, Ansprechpartner, Telefonnummer, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
+        }
+        if ($squareMeters <= 0) {
+            json_error('Bitte die Quadratmeter eintragen.', 422);
         }
         if ($price <= 0) {
             json_error('Bitte den monatlichen Preis eintragen.', 422);
         }
 
         $pdo->prepare(
-            'UPDATE customers SET name = :name, contact_last_name = :contact, phone = :phone, email = :email WHERE id = :id'
+            'UPDATE customers SET name = :name, contact_last_name = :contact, phone = :phone, email = :email,
+                address = :address, zip = :zip, city = :city WHERE id = :id'
         )->execute([
             'name' => $customerName,
             'contact' => $contactPerson,
             'phone' => $phone,
             'email' => $email,
+            'address' => $address,
+            'zip' => $zip,
+            'city' => $city,
             'id' => $row['customer_id'],
         ]);
 
-        $pdo->prepare('UPDATE offers SET price = :price, base_price = :price, notes = :notes WHERE id = :id')
+        $pdo->prepare('UPDATE offers SET square_meters = :square_meters, price = :price, base_price = :price, notes = :notes WHERE id = :id')
             ->execute([
+                'square_meters' => $squareMeters,
                 'price' => $price,
                 'notes' => format_service_text($serviceText),
                 'id' => $row['offer_id'],

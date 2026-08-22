@@ -56,6 +56,10 @@ const els = {
   offerContactPerson: document.querySelector("#offer-contact-person"),
   offerPhone: document.querySelector("#offer-phone"),
   offerEmail: document.querySelector("#offer-email"),
+  offerAddress: document.querySelector("#offer-address"),
+  offerZip: document.querySelector("#offer-zip"),
+  offerCity: document.querySelector("#offer-city"),
+  offerSquareMeters: document.querySelector("#offer-square-meters"),
   offerPrice: document.querySelector("#offer-price"),
   offerServiceText: document.querySelector("#offer-service-text"),
   offerReviewForm: document.querySelector("#offer-review-form"),
@@ -158,6 +162,10 @@ const els = {
   contractCorrectionContactPerson: document.querySelector("#contract-correction-contact-person"),
   contractCorrectionPhone: document.querySelector("#contract-correction-phone"),
   contractCorrectionEmail: document.querySelector("#contract-correction-email"),
+  contractCorrectionAddress: document.querySelector("#contract-correction-address"),
+  contractCorrectionZip: document.querySelector("#contract-correction-zip"),
+  contractCorrectionCity: document.querySelector("#contract-correction-city"),
+  contractCorrectionSquareMeters: document.querySelector("#contract-correction-square-meters"),
   contractCorrectionPrice: document.querySelector("#contract-correction-price"),
   contractCorrectionServiceText: document.querySelector("#contract-correction-service-text"),
   contractCorrectionCancel: document.querySelector("#contract-correction-cancel"),
@@ -1415,6 +1423,10 @@ async function handleOfferSubmit(event) {
   const contactPerson = els.offerContactPerson.value.trim();
   const phone = els.offerPhone.value.trim();
   const email = els.offerEmail.value.trim();
+  const address = els.offerAddress.value.trim();
+  const zip = els.offerZip.value.trim();
+  const city = els.offerCity.value.trim();
+  const squareMeters = Number(els.offerSquareMeters.value);
   const price = Number(els.offerPrice.value);
   const serviceText = els.offerServiceText.value.trim();
 
@@ -1442,6 +1454,30 @@ async function handleOfferSubmit(event) {
     return;
   }
 
+  if (!address) {
+    showToast("Bitte die Objektadresse (Straße und Hausnummer) eintragen.");
+    els.offerAddress.focus();
+    return;
+  }
+
+  if (!zip) {
+    showToast("Bitte die Postleitzahl eintragen.");
+    els.offerZip.focus();
+    return;
+  }
+
+  if (!city) {
+    showToast("Bitte den Ort eintragen.");
+    els.offerCity.focus();
+    return;
+  }
+
+  if (!Number.isFinite(squareMeters) || squareMeters <= 0) {
+    showToast("Bitte die Quadratmeter eintragen.");
+    els.offerSquareMeters.focus();
+    return;
+  }
+
   if (!Number.isFinite(price) || price <= 0) {
     showToast("Bitte den monatlichen Preis eintragen.");
     els.offerPrice.focus();
@@ -1461,6 +1497,7 @@ async function handleOfferSubmit(event) {
       <div class="record-lines">
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
         <span>${escapeHtml(phone)} · ${escapeHtml(email)}</span>
+        <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)} · ${squareMeters} m²</span>
         <span>${formatCurrency(price)} netto monatlich</span>
       </div>
     `;
@@ -1480,6 +1517,10 @@ async function handleOfferReviewSubmit(event) {
     contactPerson: els.offerContactPerson.value.trim(),
     phone: els.offerPhone.value.trim(),
     email: els.offerEmail.value.trim(),
+    address: els.offerAddress.value.trim(),
+    zip: els.offerZip.value.trim(),
+    city: els.offerCity.value.trim(),
+    squareMeters: Number(els.offerSquareMeters.value),
     price: Number(els.offerPrice.value),
     serviceText: els.offerServiceTextCorrected.value.trim(),
   };
@@ -1629,6 +1670,10 @@ function openContractCorrectionModal(id) {
   els.contractCorrectionContactPerson.value = contract.customer.contactLastName;
   els.contractCorrectionPhone.value = contract.customer.phone;
   els.contractCorrectionEmail.value = contract.customer.email;
+  els.contractCorrectionAddress.value = contract.customer.address;
+  els.contractCorrectionZip.value = contract.customer.zip;
+  els.contractCorrectionCity.value = contract.customer.city;
+  els.contractCorrectionSquareMeters.value = contract.offer.squareMeters;
   els.contractCorrectionPrice.value = contract.offer.price;
   els.contractCorrectionServiceText.value = contract.offer.notes || "";
   els.contractCorrectionModal.hidden = false;
@@ -1650,6 +1695,10 @@ async function handleContractCorrectionSubmit(event) {
     contactPerson: els.contractCorrectionContactPerson.value.trim(),
     phone: els.contractCorrectionPhone.value.trim(),
     email: els.contractCorrectionEmail.value.trim(),
+    address: els.contractCorrectionAddress.value.trim(),
+    zip: els.contractCorrectionZip.value.trim(),
+    city: els.contractCorrectionCity.value.trim(),
+    squareMeters: Number(els.contractCorrectionSquareMeters.value),
     price: Number(els.contractCorrectionPrice.value),
     serviceText: els.contractCorrectionServiceText.value.trim(),
   };

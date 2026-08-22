@@ -966,10 +966,13 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $pdf->keyValue('Geschäftsführung', $managingDirectors);
     $pdf->keyValue('Sitz', CONTRACTOR['street'] . ', ' . $contractorZipCity);
     $pdf->keyValue('Service Point', $contractorServicePoint);
+    $pdf->keyValue('Bezeichnung', 'im Folgenden Auftragnehmer genannt');
     $pdf->spacer(5.0);
     $pdf->keyValue('Auftraggeber', $customerName);
     $pdf->keyValue('Adresse', trim($customerAddress . ', ' . $customerZipCity, ' ,'));
     $pdf->keyValue('Unterzeichner', $signatoryName . ' (' . $authorityText . ')');
+    $pdf->keyValue('Bezeichnung', 'im Folgenden Auftraggeber genannt');
+    $pdf->paragraph('Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:');
 
     $templateHtml = get_contract_template_html(db());
     $pdfPlaceholders = contract_template_placeholder_map($offer, $customer, $contract, true);

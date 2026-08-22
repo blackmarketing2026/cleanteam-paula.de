@@ -302,7 +302,7 @@ function default_contract_template_html(): string
     $obligationsHtml = render_obligations_html();
 
     return <<<HTML
-<h2>§ 1 Beginn, Rechtswahl und Vertragssprache</h2>
+<h2>§ 1 Beginn, Rechtswahl, Vertragssprache</h2>
 <p>
   1. Der Vertrag zur Gebäudereinigung tritt am <strong>{{beginn_datum}}</strong> in Kraft.<br>
   2. Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss
@@ -311,8 +311,13 @@ function default_contract_template_html(): string
 
 <h2>§ 2 Vertragsgegenstand und Objekt</h2>
 <p>
-  Vertragsgegenstand sind die in § 3 genannten Reinigungsarbeiten für das nachfolgend näher bezeichnete Objekt:<br>
-  Leistungsort: {{leistungsort}}
+  Vertragsgegenstand sind die in § 3 genannten Reinigungsarbeiten für das nachfolgend näher bezeichnete Objekt:
+</p>
+<p>
+  <strong>Leistungsort:</strong><br>
+  Ort: {{leistungsort_ort}}<br>
+  Postleitzahl: {{leistungsort_plz}}<br>
+  Straße: {{leistungsort_strasse}}
 </p>
 
 <h2>§ 3 Art und Umfang der Reinigung</h2>
@@ -456,7 +461,10 @@ function contract_template_placeholder_definitions(): array
             'logo' => 'Firmenlogo (nur in der HTML-Ansicht sichtbar)',
         ],
         'Leistung' => [
-            'leistungsort' => 'Adresse des zu reinigenden Objekts',
+            'leistungsort' => 'Adresse des zu reinigenden Objekts (komplett)',
+            'leistungsort_strasse' => 'Objektadresse: Straße und Hausnummer',
+            'leistungsort_plz' => 'Objektadresse: Postleitzahl',
+            'leistungsort_ort' => 'Objektadresse: Ort',
             'intervall' => 'Reinigungsintervall',
             'leistung' => 'Leistungsbeschreibung inkl. Quadratmeter',
             'zusatzhinweis_block' => 'Zusatzhinweis aus dem Vertragsentwurf (falls vorhanden)',
@@ -503,6 +511,9 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
         'vertragsnummer' => (string) ($contract['number'] ?? 'Entwurf'),
         'beginn_datum' => $effectiveDate,
         'leistungsort' => $customerFullAddress,
+        'leistungsort_strasse' => $customerAddress,
+        'leistungsort_plz' => (string) $customer['zip'],
+        'leistungsort_ort' => (string) $customer['city'],
         'intervall' => (string) $offer['interval_label'],
         'leistung' => (int) $offer['square_meters'] > 0
             ? (string) $offer['service'] . ' (' . (int) $offer['square_meters'] . ' m² Reinigungsfläche)'
@@ -560,9 +571,11 @@ function contract_document_style_css(): string
   .doc-logo { max-height: 64px; max-width: 260px; margin-bottom: 16px; }
   .meta-bar { font-size: 13px; color: #555; margin-bottom: 24px; }
   .doc-label { display: inline-block; margin: 8px 0 0; padding: 3px 8px; border: 1px solid #bbb; border-radius: 4px; color: #444; font-size: 12px; font-family: Arial, sans-serif; }
+  .parties-intro { text-align: center; color: #555; margin: 20px 0; }
   .parties { display: flex; gap: 40px; margin: 24px 0; }
   .party { flex: 1; }
   .party small { color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
+  .party-designation { text-align: right; font-size: 12px; color: #666; font-style: italic; }
   ul, ol { padding-left: 20px; }
   ul li, ol.obligations li { margin-bottom: 4px; }
   .sign-block { display: flex; gap: 40px; margin-top: 40px; }
@@ -654,6 +667,8 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
   Erstellt: {$createdAt}
 </div>
 
+<p class="parties-intro">zwischen</p>
+
 <div class="parties">
   <div class="party">
     <small>Auftragnehmer</small>
@@ -664,6 +679,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
       {$contractorStreet}, {$contractorZipCity}<br>
       Service Point: {$contractorServicePoint}
     </p>
+    <p class="party-designation">- im Folgenden Auftragnehmer genannt -</p>
   </div>
   <div class="party">
     <small>Auftraggeber</small>
@@ -673,8 +689,11 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
       {$customerZipCityLine}
       Vertragsunterzeichnung durch: {$signatoryName} ({$authorityText})
     </p>
+    <p class="party-designation">- im Folgenden Auftraggeber genannt -</p>
   </div>
 </div>
+
+<p>Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:</p>
 
 {$templateBody}
 
