@@ -564,22 +564,20 @@ function render_contract_template_body(string $templateHtml, array $placeholders
 function contract_document_style_css(): string
 {
     return <<<CSS
-  body { font-family: Georgia, "Times New Roman", serif; max-width: 780px; margin: 40px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.55; }
-  h1 { font-size: 24px; margin-bottom: 4px; }
-  h2 { font-size: 16px; margin-top: 32px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-  h4 { font-size: 14px; margin: 18px 0 4px; }
+  body { font-family: Calibri, Candara, Segoe, "Segoe UI", Optima, Arial, sans-serif; font-size: 14px; max-width: 720px; margin: 32px auto; padding: 0 32px; color: #1a1a1a; line-height: 1.4; }
+  h1 { font-size: 15px; font-weight: 700; text-align: center; margin: 20px 0; }
+  h2 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 16px 0 4px; }
   .doc-logo { max-height: 64px; max-width: 260px; margin-bottom: 16px; }
-  .meta-bar { font-size: 13px; color: #555; margin-bottom: 24px; }
-  .doc-label { display: inline-block; margin: 8px 0 0; padding: 3px 8px; border: 1px solid #bbb; border-radius: 4px; color: #444; font-size: 12px; font-family: Arial, sans-serif; }
-  .parties-intro { text-align: center; color: #555; margin: 20px 0; }
-  .parties { display: flex; gap: 40px; margin: 24px 0; }
-  .party { flex: 1; }
-  .party small { color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
-  .party-designation { text-align: right; font-size: 12px; color: #666; font-style: italic; }
+  .doc-meta { font-size: 11px; color: #777; margin-bottom: 8px; }
+  .parties-intro { text-align: center; margin: 16px 0; }
+  .party-text { margin: 12px 0 4px; }
+  .party-designation { text-align: right; font-size: 13px; font-style: italic; margin: 0 0 16px; }
   ul, ol { padding-left: 20px; }
-  ul li, ol.obligations li { margin-bottom: 4px; }
+  ul li { margin-bottom: 4px; }
+  ol.obligations li { margin-bottom: 14px; }
   .sign-block { display: flex; gap: 40px; margin-top: 40px; }
-  .sign-col { flex: 1; border-top: 1px solid #333; padding-top: 8px; }
+  .sign-col { flex: 1; }
   .sign-placeholder { color: #999; font-style: italic; }
   .signature-protocol { page-break-before: always; margin-top: 48px; padding-top: 20px; border-top: 2px solid #333; }
   .signature-protocol p { max-width: 680px; }
@@ -619,20 +617,20 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
         ? '<img src="' . h($contractorSignatureDataUrl) . '" alt="Unterschrift Thomas Mündlein" style="max-height:70px;">'
         : '<span class="sign-placeholder">CleanTeam-Unterschrift noch nicht hinterlegt</span>';
 
-    $managingDirectorsHtml = implode('<br>', array_map('h', CONTRACTOR['managing_directors']));
+    $managingDirectorsInline = h(implode(', ', CONTRACTOR['managing_directors']));
     $contractorLegalName = h(CONTRACTOR['legal_name']);
     $contractorTrade = h(CONTRACTOR['trade_description']);
-    $contractorStreet = h(CONTRACTOR['street']);
-    $contractorZipCity = h(CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city'] . ', ' . CONTRACTOR['country']);
+    $contractorStreetZipCity = h(CONTRACTOR['street'] . ' ' . CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city']);
     $contractorServicePoint = h(CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city']);
     $contractorServicePointCity = h(CONTRACTOR['service_point_city']);
 
     $customerName = h(contract_customer_display_name($customer));
     $signatoryName = h(contract_signatory_display($customer));
     $customerAddress = h(trim($customer['address'] . ' ' . $customer['house_number']));
-    $customerZipCity = h(trim($customer['zip'] . ' ' . $customer['city']));
-    $customerAddressLine = $customerAddress !== '' ? "{$customerAddress}<br>" : '';
-    $customerZipCityLine = $customerZipCity !== '' ? "{$customerZipCity}<br>" : '';
+    $customerZip = trim((string) $customer['zip']);
+    $customerZipCity = h(($customerZip !== '' ? 'D-' . $customerZip : '') . ' ' . $customer['city']);
+    $customerFullAddressInline = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . $customerZipCity, ', ');
+    $authorityInline = $authorized === false && $representationNote ? ' (' . $authorityText . ')' : '';
 
     $statusLabel = $contract === null
         ? 'Entwurf (noch nicht gestartet)'
@@ -659,39 +657,22 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 <body>
 
 {$logoHtml}
+<div class="doc-meta">{$documentLabel} &nbsp;·&nbsp; Vertragsnummer {$contractNumber} &nbsp;·&nbsp; Status: {$statusLabel} &nbsp;·&nbsp; Erstellt: {$createdAt}</div>
+
 <h1>Gebäudereinigungsvertrag</h1>
-<div class="doc-label">{$documentLabel}</div>
-<div class="meta-bar">
-  Vertragsnummer: <strong>{$contractNumber}</strong> &nbsp;·&nbsp;
-  Status: <strong>{$statusLabel}</strong> &nbsp;·&nbsp;
-  Erstellt: {$createdAt}
-</div>
 
 <p class="parties-intro">zwischen</p>
 
-<div class="parties">
-  <div class="party">
-    <small>Auftragnehmer</small>
-    <p>
-      <strong>{$contractorLegalName}</strong><br>
-      {$contractorTrade}<br>
-      Geschäftsführung: {$managingDirectorsHtml}<br>
-      {$contractorStreet}, {$contractorZipCity}<br>
-      Service Point: {$contractorServicePoint}
-    </p>
-    <p class="party-designation">- im Folgenden Auftragnehmer genannt -</p>
-  </div>
-  <div class="party">
-    <small>Auftraggeber</small>
-    <p>
-      <strong>{$customerName}</strong><br>
-      {$customerAddressLine}
-      {$customerZipCityLine}
-      Vertragsunterzeichnung durch: {$signatoryName} ({$authorityText})
-    </p>
-    <p class="party-designation">- im Folgenden Auftraggeber genannt -</p>
-  </div>
-</div>
+<p class="party-text">
+  der <strong>{$contractorLegalName}</strong> {$contractorTrade}, Geschäftsführer: {$managingDirectorsInline}<br>
+  {$contractorStreetZipCity}/Service Point: {$contractorServicePoint}
+</p>
+<p class="party-designation">- im Folgenden Auftragnehmer genannt -</p>
+
+<p class="party-text">
+  Die <strong>{$customerName}</strong>, {$customerFullAddressInline}, Vertragsunterzeichnung durch: {$signatoryName}{$authorityInline}
+</p>
+<p class="party-designation">- im Folgenden Auftraggeber genannt -</p>
 
 <p>Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:</p>
 

@@ -38,9 +38,34 @@ final class SimplePdfDocument
 
     public function title(string $text): void
     {
-        $this->ensureSpace(34.0);
-        $this->line($text, self::MARGIN_LEFT, $this->y, 18.0, 'F2');
-        $this->y -= 25.0;
+        $fontSize = 13.0;
+        $this->ensureSpace(28.0);
+        $this->line($text, $this->centeredX($text, $fontSize), $this->y, $fontSize, 'F2');
+        $this->y -= 22.0;
+    }
+
+    private function centeredX(string $text, float $fontSize): float
+    {
+        $availableWidth = self::PAGE_WIDTH - self::MARGIN_LEFT - self::MARGIN_RIGHT;
+        $estimatedWidth = $this->textLength($text) * $fontSize * 0.48;
+
+        return self::MARGIN_LEFT + max(0.0, ($availableWidth - $estimatedWidth) / 2);
+    }
+
+    public function centeredText(string $text, float $fontSize = 10.5): void
+    {
+        $this->ensureSpace($fontSize + 8.0);
+        $this->line($text, $this->centeredX($text, $fontSize), $this->y, $fontSize, 'F1');
+        $this->y -= $fontSize + 6.0;
+    }
+
+    public function rightAlignedText(string $text, float $fontSize = 9.5): void
+    {
+        $estimatedWidth = $this->textLength($text) * $fontSize * 0.48;
+        $x = max(self::MARGIN_LEFT, self::PAGE_WIDTH - self::MARGIN_RIGHT - $estimatedWidth);
+        $this->ensureSpace($fontSize + 10.0);
+        $this->line($text, $x, $this->y, $fontSize, 'F1');
+        $this->y -= $fontSize + 10.0;
     }
 
     public function label(string $text): void
@@ -59,11 +84,10 @@ final class SimplePdfDocument
 
     public function heading(string $text): void
     {
-        $this->ensureSpace(28.0);
+        $this->ensureSpace(24.0);
         $this->y -= 8.0;
         $this->line($text, self::MARGIN_LEFT, $this->y, 13.0, 'F2');
-        $this->drawLine(self::MARGIN_LEFT, $this->y - 5.0, self::PAGE_WIDTH - self::MARGIN_RIGHT, $this->y - 5.0);
-        $this->y -= 18.0;
+        $this->y -= 16.0;
     }
 
     public function subheading(string $text): void
@@ -951,27 +975,25 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
     $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
     $managingDirectors = implode(', ', CONTRACTOR['managing_directors']);
-    $contractorZipCity = CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city'] . ', ' . CONTRACTOR['country'];
+    $contractorZipCity = CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city'];
     $contractorServicePoint = CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'];
     $contractorSignatureName = contract_contractor_signature_name();
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
+    $pdf->meta($documentLabel . ' | Vertragsnummer: ' . $contractNumber . ' | Status: ' . $statusLabel . ' | Erstellt: ' . $createdAt);
     $pdf->title('Gebäudereinigungsvertrag');
-    $pdf->label($documentLabel);
-    $pdf->meta('Vertragsnummer: ' . $contractNumber . ' | Status: ' . $statusLabel . ' | Erstellt: ' . $createdAt);
+    $pdf->centeredText('zwischen');
 
-    $pdf->heading('Vertragsparteien');
-    $pdf->keyValue('Auftragnehmer', CONTRACTOR['legal_name']);
-    $pdf->keyValue('Beschreibung', CONTRACTOR['trade_description']);
-    $pdf->keyValue('Geschäftsführung', $managingDirectors);
-    $pdf->keyValue('Sitz', CONTRACTOR['street'] . ', ' . $contractorZipCity);
-    $pdf->keyValue('Service Point', $contractorServicePoint);
-    $pdf->keyValue('Bezeichnung', 'im Folgenden Auftragnehmer genannt');
-    $pdf->spacer(5.0);
-    $pdf->keyValue('Auftraggeber', $customerName);
-    $pdf->keyValue('Adresse', trim($customerAddress . ', ' . $customerZipCity, ' ,'));
-    $pdf->keyValue('Unterzeichner', $signatoryName . ' (' . $authorityText . ')');
-    $pdf->keyValue('Bezeichnung', 'im Folgenden Auftraggeber genannt');
+    $customerFullAddress = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . 'D-' . $customerZipCity, ', ');
+    $authorityInline = $authorized === false && $representationNote ? ' (' . $authorityText . ')' : '';
+
+    $pdf->paragraph('der ' . CONTRACTOR['legal_name'] . ' ' . CONTRACTOR['trade_description'] . ', Geschäftsführer: ' . $managingDirectors);
+    $pdf->paragraph(CONTRACTOR['street'] . ' ' . $contractorZipCity . '/Service Point: ' . $contractorServicePoint);
+    $pdf->rightAlignedText('- im Folgenden Auftragnehmer genannt -');
+    $pdf->paragraph(
+        'Die ' . $customerName . ', ' . $customerFullAddress . ', Vertragsunterzeichnung durch: ' . $signatoryName . $authorityInline
+    );
+    $pdf->rightAlignedText('- im Folgenden Auftraggeber genannt -');
     $pdf->paragraph('Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:');
 
     $templateHtml = get_contract_template_html(db());

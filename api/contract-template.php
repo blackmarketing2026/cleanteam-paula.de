@@ -81,7 +81,7 @@ function contract_template_sample_context(string $templateHtml): array
 </style>
 </head>
 <body>
-<div class="doc-label">Vorschau mit Beispieldaten</div>
+<div class="doc-meta">Vorschau mit Beispieldaten</div>
 {$body}
 </body>
 </html>
