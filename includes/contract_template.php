@@ -153,14 +153,19 @@ function h(?string $value): string
 function contract_logo_html(): string
 {
     $row = db()->query('SELECT logo_filename FROM branding_settings WHERE id = 1')->fetch();
-    $filename = $row['logo_filename'] ?? null;
-    if ($filename === null || $filename === '') {
-        return '';
+    $filename = trim((string) ($row['logo_filename'] ?? ''));
+
+    if ($filename !== '' && is_file(__DIR__ . '/../uploads/' . $filename)) {
+        $url = h(base_url() . '/uploads/' . rawurlencode($filename));
+        return '<img src="' . $url . '" alt="Logo" class="doc-logo">';
     }
 
-    $url = h(base_url() . '/uploads/' . rawurlencode($filename));
+    if (is_file(branding_default_logo_disk_path())) {
+        $url = h(base_url() . '/' . branding_default_logo_relative_path());
+        return '<img src="' . $url . '" alt="Logo" class="doc-logo">';
+    }
 
-    return '<img src="' . $url . '" alt="Logo" class="doc-logo">';
+    return '';
 }
 
 function render_service_catalog_html(): string

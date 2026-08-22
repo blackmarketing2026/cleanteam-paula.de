@@ -96,7 +96,7 @@ if (!$customer) {
 
 $documentAudience = $isPublicTokenAccess
     ? 'customer'
-    : (in_array($document, ['customer', 'cleanteam', 'authorization', 'checklist'], true) ? $document : 'cleanteam');
+    : (in_array($document, ['customer', 'cleanteam', 'authorization'], true) ? $document : 'cleanteam');
 
 if ($format === 'pdf') {
     if ($contract === null) {
@@ -106,7 +106,6 @@ if ($format === 'pdf') {
     }
 
     $forceRefresh = $documentAudience === 'cleanteam'
-        || $documentAudience === 'checklist'
         || ($contract['status'] ?? '') !== 'signiert';
     try {
         $pdf = save_contract_pdf($pdo, $contract['id'], $documentAudience, $forceRefresh);

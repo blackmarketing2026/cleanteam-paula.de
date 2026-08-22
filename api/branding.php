@@ -25,11 +25,13 @@ function load_branding_settings(PDO $pdo): array
 
 function branding_logo_url(?string $filename): ?string
 {
-    if ($filename === null || $filename === '') {
-        return null;
+    if ($filename !== null && $filename !== '' && is_file(UPLOADS_DIR . '/' . $filename)) {
+        return base_url() . '/uploads/' . rawurlencode($filename);
     }
 
-    return base_url() . '/uploads/' . rawurlencode($filename);
+    return is_file(branding_default_logo_disk_path())
+        ? base_url() . '/' . branding_default_logo_relative_path()
+        : null;
 }
 
 // GET ist bewusst oeffentlich (kein require_login), damit die Vertragsseiten fuer

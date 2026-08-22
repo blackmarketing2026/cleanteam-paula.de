@@ -122,6 +122,9 @@ function email_brand_logo_filename(PDO $pdo): ?string
     }
 
     $filename = trim((string) ($row['logo_filename'] ?? ''));
+    if ($filename !== '' && !is_file(__DIR__ . '/../uploads/' . basename($filename))) {
+        return null;
+    }
     return $filename !== '' ? $filename : null;
 }
 

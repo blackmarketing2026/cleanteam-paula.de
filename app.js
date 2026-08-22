@@ -37,8 +37,6 @@ const els = {
   loginError: document.querySelector("#login-error"),
   logoutButton: document.querySelector("#logout-button"),
   navLinks: document.querySelectorAll(".nav-link[data-view]"),
-  customersGroupToggle: document.querySelector("#customers-group-toggle"),
-  customersSubgroup: document.querySelector("#customers-subgroup"),
   offersGroupToggle: document.querySelector("#contracts-group-toggle"),
   offersSubgroup: document.querySelector("#contracts-subgroup"),
   settingsGroupToggle: document.querySelector("#settings-group-toggle"),
@@ -48,12 +46,6 @@ const els = {
   sidebar: document.querySelector(".sidebar"),
   bottomMenuButton: document.querySelector("#bottom-menu-button"),
   mobileBackdrop: document.querySelector("#mobile-backdrop"),
-  newCustomerButton: document.querySelector("#new-customer-button"),
-  customerForm: document.querySelector("#customer-form"),
-  customerSearch: document.querySelector("#customer-search"),
-  customerList: document.querySelector("#customer-list"),
-  customerId: document.querySelector("#customer-id"),
-  cancelCustomerEdit: document.querySelector("#cancel-customer-edit"),
   offerIntakePanel: document.querySelector("#offer-intake-panel"),
   offerReviewPanel: document.querySelector("#offer-review-panel"),
   offerForm: document.querySelector("#offer-form"),
@@ -189,8 +181,6 @@ const els = {
 
 const titles = {
   overview: "Übersicht",
-  "customer-new": "Kunden anlegen",
-  "customer-list": "Kundenliste",
   "offers-new": "Neuer Vertrag erstellen",
   "offers-saved": "Vertragsentwürfe",
   contracts: "Verträge",
@@ -284,13 +274,6 @@ function todayAsInputValue() {
   return offsetDate.toISOString().slice(0, 10);
 }
 
-function getCustomer(id) {
-  return state.data.customers.find((customer) => customer.id === id);
-}
-
-window.ctCustomerList = () => [...state.data.customers];
-
-
 function getOffer(id) {
   return state.data.offers.find((offer) => offer.id === id);
 }
@@ -321,14 +304,6 @@ function visibleSavedOffers() {
 
 function getContract(id) {
   return state.data.contracts.find((contract) => contract.id === id);
-}
-
-function getLatestContractForCustomer(customerId) {
-  const matches = state.data.contracts
-    .filter((contract) => contract.customer.id === customerId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  return matches[0] || null;
 }
 
 function customerAddress(customer) {
@@ -445,21 +420,12 @@ function setSettingsGroupExpanded(expanded) {
   els.settingsGroupToggle.setAttribute("aria-expanded", String(expanded));
 }
 
-function setCustomersGroupExpanded(expanded) {
-  els.customersSubgroup.hidden = !expanded;
-  els.customersGroupToggle.setAttribute("aria-expanded", String(expanded));
-}
-
-
 function setOffersGroupExpanded(expanded) {
   els.offersSubgroup.hidden = !expanded;
   els.offersGroupToggle.setAttribute("aria-expanded", String(expanded));
 }
 
 function collapseNavGroups(except = null) {
-  if (except !== "customers") {
-    setCustomersGroupExpanded(false);
-  }
   if (except !== "offers") {
     setOffersGroupExpanded(false);
   }
@@ -470,7 +436,6 @@ function collapseNavGroups(except = null) {
 
 function toggleNavGroup(group) {
   const groups = {
-    customers: [els.customersSubgroup, setCustomersGroupExpanded],
     offers: [els.offersSubgroup, setOffersGroupExpanded],
     settings: [els.settingsSubgroup, setSettingsGroupExpanded],
   };
@@ -508,9 +473,6 @@ function switchView(view) {
 
   const isSettingsView = view.startsWith("settings-");
   els.settingsGroupToggle.classList.toggle("active", isSettingsView);
-
-  const isCustomerView = view.startsWith("customer-");
-  els.customersGroupToggle.classList.toggle("active", isCustomerView);
 
   const isOfferView = view.startsWith("offers-") || view === "contracts";
   els.offersGroupToggle.classList.toggle("active", isOfferView);
@@ -587,7 +549,6 @@ async function loadAll() {
 
 function renderAll() {
   renderMetrics();
-  renderCustomers();
   renderOffers();
   renderContracts();
   refreshIcons();
@@ -644,98 +605,6 @@ function renderMetrics() {
   `;
 }
 
-
-function renderCustomers() {
-  const query = els.customerSearch.value.trim().toLowerCase();
-  const customers = state.data.customers
-    .filter((customer) => {
-      const haystack = [
-        customer.name,
-        customer.email,
-        customer.phone,
-        customer.salutation,
-        customer.contactLastName,
-        customer.address,
-        customer.houseNumber,
-        customer.zip,
-        customer.city,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(query);
-    })
-    .sort((a, b) => a.name.localeCompare(b.name, "de"));
-
-  const customersWithContract = customers.filter((customer) => getLatestContractForCustomer(customer.id));
-  const newCustomers = customers.filter((customer) => !getLatestContractForCustomer(customer.id));
-
-  els.customerList.innerHTML = customers.length
-    ? `
-        ${renderCustomerSection("Kunden, die neu erstellt worden sind", newCustomers, "Keine neuen Kunden gefunden.")}
-        ${renderCustomerSection("Kunden, die einen Vertrag haben", customersWithContract, "Keine Kunden mit Vertrag gefunden.")}
-      `
-    : `<div class="empty-state">Keine Kunden gefunden.</div>`;
-}
-
-function renderCustomerSection(title, customers, emptyText) {
-  return `
-    <section class="customer-list-section" aria-label="${escapeHtml(title)}">
-      <div class="customer-list-section-header">
-        <h5>${escapeHtml(title)}</h5>
-        <span class="badge">${customers.length}</span>
-      </div>
-      <div class="record-list">
-        ${customers.length ? customers.map(renderCustomerCard).join("") : `<div class="empty-state">${escapeHtml(emptyText)}</div>`}
-      </div>
-    </section>
-  `;
-}
-
-function renderCustomerCard(customer) {
-  const contract = getLatestContractForCustomer(customer.id);
-  const contractBadge = contract ? `<span class="badge success">Vertrag vorhanden</span>` : "";
-  const contractButton = contract
-    ? `
-      <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
-        <i data-lucide="file-text" aria-hidden="true"></i>
-        Vertrag anzeigen
-      </a>
-    `
-    : "";
-
-  return `
-    <article class="record-item">
-      <div class="record-main">
-        <div>
-          <div class="record-title">${escapeHtml(customer.name)}</div>
-          <div class="record-meta">
-            <span>${escapeHtml(contactName(customer))}</span>
-            <span>${escapeHtml(customer.email)} · ${escapeHtml(customer.phone)}</span>
-          </div>
-        </div>
-        <div class="record-side">
-          <span class="badge">${escapeHtml(customer.city)}</span>
-          ${contractBadge}
-        </div>
-      </div>
-      <div class="record-lines">
-        <span>${escapeHtml(customerAddress(customer))}</span>
-      </div>
-      <div class="record-actions">
-        <button class="secondary-button" type="button" data-action="edit-customer" data-id="${escapeHtml(customer.id)}">
-          <i data-lucide="pencil" aria-hidden="true"></i>
-          Bearbeiten
-        </button>
-        ${contractButton}
-        <button class="ghost-button" type="button" data-action="delete-customer" data-id="${escapeHtml(customer.id)}">
-          <i data-lucide="trash-2" aria-hidden="true"></i>
-          Löschen
-        </button>
-      </div>
-    </article>
-  `;
-}
 
 function optionSelected(value, currentValue) {
   return value === currentValue ? " selected" : "";
@@ -1464,12 +1333,6 @@ function renderContractRow(contract) {
   const selected = contract.id === state.selectedContractId ? " selected" : "";
   const badgeClass = contractBadgeClass(contract.status);
   const signedAt = contract.signedAt ? formatDate(contract.signedAt) : "Noch offen";
-  const cleaningChecklistButton = `
-        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=checklist&format=pdf&download=1" target="_blank" rel="noopener">
-          <i data-lucide="clipboard-check" aria-hidden="true"></i>
-          Mitarbeiter-Checkliste
-        </a>
-      `;
   const authorizationButton = contract.hasAuthorizationDocument
     ? `
         <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=authorization&format=pdf" target="_blank" rel="noopener">
@@ -1500,7 +1363,6 @@ function renderContractRow(contract) {
             <i data-lucide="file-text" aria-hidden="true"></i>
             Kunde
           </a>
-          ${cleaningChecklistButton}
           ${authorizationButton}
           <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
             <i data-lucide="trash-2" aria-hidden="true"></i>
@@ -1511,64 +1373,6 @@ function renderContractRow(contract) {
     </tr>
   `;
 }
-
-function resetCustomerForm() {
-  els.customerForm.reset();
-  els.customerId.value = "";
-  document.querySelector("#customer-form-heading").textContent = "Kunde anlegen";
-  els.cancelCustomerEdit.hidden = true;
-}
-
-function fillCustomerForm(customer) {
-  els.customerId.value = customer.id;
-  document.querySelector("#customer-name").value = customer.name;
-  document.querySelector("#customer-email").value = customer.email;
-  document.querySelector("#customer-phone").value = customer.phone;
-  document.querySelector("#customer-salutation").value = customer.salutation;
-  document.querySelector("#customer-contact-lastname").value = customer.contactLastName;
-  document.querySelector("#customer-address").value = customer.address;
-  document.querySelector("#customer-house-number").value = customer.houseNumber;
-  document.querySelector("#customer-zip").value = customer.zip;
-  document.querySelector("#customer-city").value = customer.city;
-  document.querySelector("#customer-form-heading").textContent = "Kunde bearbeiten";
-  els.cancelCustomerEdit.hidden = false;
-  document.querySelector("#customer-name").focus();
-}
-
-async function handleCustomerSubmit(event) {
-  event.preventDefault();
-
-  const id = els.customerId.value;
-  const payload = {
-    name: document.querySelector("#customer-name").value.trim(),
-    email: document.querySelector("#customer-email").value.trim(),
-    phone: document.querySelector("#customer-phone").value.trim(),
-    salutation: document.querySelector("#customer-salutation").value,
-    contactLastName: document.querySelector("#customer-contact-lastname").value.trim(),
-    address: document.querySelector("#customer-address").value.trim(),
-    houseNumber: document.querySelector("#customer-house-number").value.trim(),
-    zip: document.querySelector("#customer-zip").value.trim(),
-    city: document.querySelector("#customer-city").value.trim(),
-  };
-
-  try {
-    let savedCustomer;
-    if (id) {
-      savedCustomer = await apiPut(`api/customers.php?id=${encodeURIComponent(id)}`, payload);
-      showToast("Kunde wurde aktualisiert.");
-    } else {
-      savedCustomer = await apiPost("api/customers.php", payload);
-      showToast("Kunde wurde angelegt.");
-    }
-
-    resetCustomerForm();
-    await loadAll();
-    switchView("customer-list");
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
 
 function resetOfferIntake() {
   els.offerForm.reset();
@@ -1803,26 +1607,6 @@ function openOfferContractLink(id) {
   }
 
   window.open(offer.publicUrl, "_blank", "noopener");
-}
-
-async function deleteCustomer(id) {
-  const customer = getCustomer(id);
-  if (!customer) {
-    return;
-  }
-
-  const confirmed = window.confirm(`Kunden "${customer.name}" löschen?`);
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    await apiDelete(`api/customers.php?id=${encodeURIComponent(id)}`);
-    await loadAll();
-    showToast("Kunde wurde gelöscht.");
-  } catch (error) {
-    showToast(error.message);
-  }
 }
 
 
@@ -2970,19 +2754,6 @@ function handleRecordAction(event) {
 
   const { action, id } = button.dataset;
 
-  if (action === "edit-customer") {
-    const customer = getCustomer(id);
-    if (customer) {
-      fillCustomerForm(customer);
-      switchView("customer-new");
-      document.querySelector("#customer-new-view").scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }
-
-  if (action === "delete-customer") {
-    deleteCustomer(id);
-  }
-
   if (action === "send-offer") {
     openOfferSendModal(id);
   }
@@ -3046,10 +2817,6 @@ function bindEvents() {
     });
   });
 
-  els.customersGroupToggle.addEventListener("click", () => {
-    toggleNavGroup("customers");
-  });
-
   els.offersGroupToggle.addEventListener("click", () => {
     toggleNavGroup("offers");
   });
@@ -3069,18 +2836,6 @@ function bindEvents() {
       switchView(button.dataset.overviewTarget);
     });
   });
-  els.newCustomerButton.addEventListener("click", () => {
-    resetCustomerForm();
-    switchView("customer-new");
-    document.querySelector("#customer-name").focus();
-  });
-  els.cancelCustomerEdit.addEventListener("click", () => {
-    resetCustomerForm();
-  });
-
-  els.customerForm.addEventListener("submit", handleCustomerSubmit);
-  els.customerSearch.addEventListener("input", renderCustomers);
-
   document.addEventListener("click", handleDashboardAction);
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
@@ -3091,7 +2846,6 @@ function bindEvents() {
     els.offerCustomerName.focus();
   });
 
-  els.customerList.addEventListener("click", handleRecordAction);
   els.offerList.addEventListener("click", handleRecordAction);
   els.contractList.addEventListener("click", handleRecordAction);
   els.contractSearch.addEventListener("input", () => {

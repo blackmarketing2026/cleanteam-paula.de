@@ -124,40 +124,6 @@ final class SimplePdfDocument
         }
     }
 
-    public function checklistItem(string $text): void
-    {
-        $fontSize = 9.2;
-        $lineHeight = 12.5;
-        $boxSize = 8.0;
-        $employeeBoxX = self::PAGE_WIDTH - self::MARGIN_RIGHT - 76.0;
-        $customerBoxX = self::PAGE_WIDTH - self::MARGIN_RIGHT - 30.0;
-        $textWidth = $employeeBoxX - self::MARGIN_LEFT - 12.0;
-        $lines = $this->wrap($this->normalizeWhitespace($text), $fontSize, $textWidth);
-        if ($lines === []) {
-            return;
-        }
-
-        $height = max(count($lines) * $lineHeight, 16.0);
-        $this->ensureSpace($height + 4.0);
-        $startY = $this->y;
-        foreach ($lines as $index => $line) {
-            $this->line($line, self::MARGIN_LEFT, $startY - ($index * $lineHeight), $fontSize, 'F1');
-        }
-
-        $boxY = $startY - 8.0;
-        $this->drawBox($employeeBoxX, $boxY, $boxSize);
-        $this->drawBox($customerBoxX, $boxY, $boxSize);
-        $this->y -= $height + 4.0;
-    }
-
-    public function checklistColumns(string $left = 'Mitarbeiter', string $right = 'Endkunde'): void
-    {
-        $this->ensureSpace(18.0);
-        $this->line($left, self::PAGE_WIDTH - self::MARGIN_RIGHT - 92.0, $this->y, 8.0, 'F2');
-        $this->line($right, self::PAGE_WIDTH - self::MARGIN_RIGHT - 44.0, $this->y, 8.0, 'F2');
-        $this->y -= 12.0;
-    }
-
     public function protocolKeyValue(string $key, string $value): void
     {
         $fontSize = 9.5;
@@ -364,14 +330,6 @@ final class SimplePdfDocument
     private function drawLine(float $x1, float $y1, float $x2, float $y2): void
     {
         $this->write(sprintf("%.2F %.2F m %.2F %.2F l S\n", $x1, $y1, $x2, $y2));
-    }
-
-    private function drawBox(float $x, float $y, float $size): void
-    {
-        $this->drawLine($x, $y, $x + $size, $y);
-        $this->drawLine($x + $size, $y, $x + $size, $y - $size);
-        $this->drawLine($x + $size, $y - $size, $x, $y - $size);
-        $this->drawLine($x, $y - $size, $x, $y);
     }
 
     private function write(string $content): void
@@ -781,9 +739,6 @@ function contract_pdf_filename(array $contract, string $audience): string
     if ($audience === 'authorization') {
         return 'Vollmacht-' . trim($safeNumber, '-') . '.pdf';
     }
-    if ($audience === 'checklist') {
-        return 'Mitarbeiter-Checkliste-' . trim($safeNumber, '-') . '.pdf';
-    }
     if ($audience === 'customer') {
         return 'Vertrag-CleanTeam-Group.pdf';
     }
@@ -793,7 +748,7 @@ function contract_pdf_filename(array $contract, string $audience): string
 
 function normalize_contract_pdf_audience(string $audience): string
 {
-    return in_array($audience, ['cleanteam', 'customer', 'authorization', 'checklist'], true) ? $audience : 'customer';
+    return in_array($audience, ['cleanteam', 'customer', 'authorization'], true) ? $audience : 'customer';
 }
 
 function contract_authorization_grantor_name(array $contract): string
@@ -814,58 +769,6 @@ function contract_has_authorization_details(array $contract): bool
         && contract_authorization_company_address($contract) !== '';
 }
 
-function cleaning_checklist_items_from_offer_notes(string $notes): array
-{
-    $items = [];
-    $currentRoom = '';
-    $skipPrefixes = [
-        'Leistungsbeschreibung / Dienstleistung',
-        'Firma:',
-        'Ansprechpartner vor Ort:',
-        'Adresse:',
-        'Objektgröße:',
-        'Etagen und Räume:',
-        'Allgemeine Notizen:',
-    ];
-
-    foreach (preg_split('/\R/u', $notes) ?: [] as $line) {
-        $line = trim($line);
-        if ($line === '') {
-            continue;
-        }
-
-        $shouldSkip = false;
-        foreach ($skipPrefixes as $prefix) {
-            if ($line === $prefix || strpos($line, $prefix) === 0) {
-                $shouldSkip = true;
-                break;
-            }
-        }
-        if ($shouldSkip) {
-            continue;
-        }
-
-        if (preg_match('/^\d+\.\s+(.+)$/u', $line, $matches) === 1) {
-            $currentRoom = trim($matches[1]);
-            continue;
-        }
-
-        if (strpos($line, '- ') === 0) {
-            $currentRoom = trim(substr($line, 2));
-            continue;
-        }
-
-        $line = preg_replace('/^[•*-]\s*/u', '', $line) ?? $line;
-        if ($line === '') {
-            continue;
-        }
-
-        $items[] = $currentRoom !== '' ? $currentRoom . ': ' . $line : $line;
-    }
-
-    return array_values(array_unique($items));
-}
-
 function contract_pdf_brand_logo_path(PDO $pdo): ?string
 {
     try {
@@ -881,51 +784,6 @@ function contract_pdf_brand_logo_path(PDO $pdo): ?string
 
     $path = __DIR__ . '/../uploads/' . basename($filename);
     return is_file($path) ? $path : null;
-}
-
-function render_cleaning_checklist_pdf(array $offer, array $customer, array $contract): string
-{
-    $pdf = new SimplePdfDocument();
-    $contractNumber = (string) ($contract['number'] ?? 'Entwurf');
-    $customerName = contract_customer_display_name($customer);
-    $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
-    $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
-    $startDate = !empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'Nach Absprache';
-    $createdAt = contract_format_date($contract['created_at'] ?? null);
-
-    $logoPath = contract_pdf_brand_logo_path(db());
-    if ($logoPath !== null) {
-        $pdf->imageFile($logoPath, 118.0, 46.0);
-    }
-    $pdf->title('Mitarbeiter-Reinigungscheckliste');
-    $pdf->label('Zum Vertrag ' . $contractNumber);
-    $pdf->meta('Vertrag: ' . $contractNumber . ' | Erstellt: ' . $createdAt . ' | Start: ' . $startDate);
-    $pdf->heading('Objekt');
-    $pdf->keyValue('Kunde', $customerName);
-    $pdf->keyValue('Adresse', trim($customerAddress . ', ' . $customerZipCity, ' ,'));
-    $pdf->keyValue('Ansprechpartner', contract_signatory_display($customer));
-    $squareMeters = (int) ($offer['square_meters'] ?? 0);
-    if ($squareMeters > 0) {
-        $pdf->keyValue('Fläche', $squareMeters . ' m²');
-    }
-    $pdf->paragraph('Arbeitscheckliste für die Reinigung vor Ort. Je Position abhaken: linkes Kästchen = erledigt, rechtes Kästchen = kontrolliert.');
-
-    $fallbackItems = cleaning_checklist_items_from_offer_notes(trim((string) ($offer['notes'] ?? '')));
-    $pdf->heading('Leistungsbeschreibung');
-    if ($fallbackItems === []) {
-        $pdf->paragraph('Keine Checklistenpositionen im Vertrag hinterlegt.');
-    } else {
-        $pdf->checklistColumns('Erledigt', 'Kontrolle');
-        foreach ($fallbackItems as $item) {
-            $pdf->checklistItem($item);
-        }
-    }
-
-    $pdf->heading('Abschluss');
-    $pdf->keyValue('Mitarbeiter', 'Name: ________________________________  Datum: ________________');
-    $pdf->keyValue('Endkunde', 'Name: ________________________________  Datum: ________________');
-
-    return $pdf->output();
 }
 
 function render_authorization_pdf(array $offer, array $customer, array $contract): string
@@ -1106,8 +964,6 @@ function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool 
 
     if ($audience === 'authorization') {
         $content = render_authorization_pdf($context['offer'], $context['customer'], $context['contract']);
-    } elseif ($audience === 'checklist') {
-        $content = render_cleaning_checklist_pdf($context['offer'], $context['customer'], $context['contract']);
     } else {
         $content = render_contract_pdf($context['offer'], $context['customer'], $context['contract'], ['audience' => $audience]);
     }
@@ -1149,9 +1005,6 @@ function save_contract_pdfs(PDO $pdo, string $contractId, bool $force = true): v
     save_contract_pdf($pdo, $contractId, 'customer', $force);
 
     $context = contract_pdf_context($pdo, $contractId);
-    if ($context !== null) {
-        save_contract_pdf($pdo, $contractId, 'checklist', $force);
-    }
     if ($context !== null && contract_has_authorization_details($context['contract'])) {
         save_contract_pdf($pdo, $contractId, 'authorization', $force);
     }

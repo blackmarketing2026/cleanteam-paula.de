@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=email-signature-usage-20260719-1" />
+    <link rel="stylesheet" href="styles.css?v=remove-customers-checklist-logo-20260822-1" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -54,21 +54,6 @@
             <i data-lucide="layout-dashboard" aria-hidden="true"></i>
             Übersicht
           </button>
-          <button id="customers-group-toggle" class="nav-link nav-group-toggle" type="button" aria-expanded="false">
-            <i data-lucide="users-round" aria-hidden="true"></i>
-            <span>Kunden</span>
-            <i data-lucide="chevron-down" class="nav-group-chevron" aria-hidden="true"></i>
-          </button>
-          <div id="customers-subgroup" class="nav-subgroup" hidden>
-            <button class="nav-link" type="button" data-view="customer-new">
-              <i data-lucide="user-plus" aria-hidden="true"></i>
-              <span>Kunden anlegen</span>
-            </button>
-            <button class="nav-link" type="button" data-view="customer-list">
-              <i data-lucide="list" aria-hidden="true"></i>
-              <span>Kundenliste</span>
-            </button>
-          </div>
           <button id="contracts-group-toggle" class="nav-link nav-group-toggle" type="button" aria-expanded="false">
             <i data-lucide="file-text" aria-hidden="true"></i>
             <span>Verträge</span>
@@ -239,101 +224,6 @@
               <div id="contract-status" class="status-stack"></div>
             </section>
           </div>
-        </section>
-
-        <section id="customer-new-view" class="view" aria-label="Kunden anlegen">
-          <div class="section-heading">
-            <div>
-              <p class="muted">Stammdaten, Ansprechpartner und Adresse pflegen.</p>
-            </div>
-          </div>
-
-          <section class="panel customer-form-panel" aria-labelledby="customer-form-heading">
-            <div class="panel-header">
-              <div>
-                <h4 id="customer-form-heading">Kunde anlegen</h4>
-                <p class="muted">Pflichtfelder sind markiert.</p>
-              </div>
-            </div>
-            <form id="customer-form" class="form-grid">
-              <input id="customer-id" type="hidden" />
-              <label class="span-2">
-                Firmen- oder Kundenname *
-                <input id="customer-name" type="text" required placeholder="z. B. Beispiel GmbH" />
-              </label>
-              <label>
-                E-Mail-Adresse *
-                <input id="customer-email" type="email" required placeholder="kontakt@firma.de" />
-              </label>
-              <label>
-                Telefonnummer *
-                <input id="customer-phone" type="tel" required placeholder="+49 711 123456" />
-              </label>
-              <label>
-                Ansprechpartner *
-                <select id="customer-salutation" required>
-                  <option value="Herr">Herr</option>
-                  <option value="Frau">Frau</option>
-                </select>
-              </label>
-              <label>
-                Nachname *
-                <input id="customer-contact-lastname" type="text" required placeholder="Schneider" />
-              </label>
-              <label class="span-2">
-                Adresse *
-                <input id="customer-address" type="text" required placeholder="Musterstraße" />
-              </label>
-              <label>
-                Hausnummer *
-                <input id="customer-house-number" type="text" required placeholder="12a" />
-              </label>
-              <label>
-                Postleitzahl *
-                <input id="customer-zip" type="text" inputmode="numeric" required placeholder="70173" />
-              </label>
-              <label class="span-2">
-                Stadt *
-                <input id="customer-city" type="text" required placeholder="Stuttgart" />
-              </label>
-              <div class="form-actions span-2">
-                <button id="cancel-customer-edit" class="ghost-button" type="button" hidden>
-                  <i data-lucide="x" aria-hidden="true"></i>
-                  Abbrechen
-                </button>
-                <button class="primary-button" type="submit">
-                  <i data-lucide="save" aria-hidden="true"></i>
-                  Kunde speichern
-                </button>
-              </div>
-            </form>
-          </section>
-        </section>
-
-        <section id="customer-list-view" class="view" aria-label="Kundenliste">
-          <div class="section-heading">
-            <div>
-              <p class="muted">Kunden nach Vertragsstatus durchsuchen und verwalten.</p>
-            </div>
-            <button id="new-customer-button" class="primary-button" type="button">
-              <i data-lucide="user-plus" aria-hidden="true"></i>
-              Neuer Kunde
-            </button>
-          </div>
-
-          <section class="panel" aria-labelledby="customer-list-heading">
-            <div class="panel-header wrap-header">
-              <div>
-                <h4 id="customer-list-heading">Kunden</h4>
-                <p class="muted">Neue Kunden und Kunden mit Vertrag getrennt anzeigen.</p>
-              </div>
-              <label class="search-field">
-                <i data-lucide="search" aria-hidden="true"></i>
-                <input id="customer-search" type="search" placeholder="Kunden suchen" />
-              </label>
-            </div>
-            <div id="customer-list" class="record-list customer-list-groups"></div>
-          </section>
         </section>
 
         <section id="offers-new-view" class="view" aria-label="Neuer Vertrag erstellen">
@@ -1080,10 +970,6 @@
           <i data-lucide="layout-dashboard" aria-hidden="true"></i>
           <span>Übersicht</span>
         </button>
-        <button class="nav-link bottom-nav-link" type="button" data-view="customer-new">
-          <i data-lucide="users-round" aria-hidden="true"></i>
-          <span>Kunden</span>
-        </button>
         <button class="nav-link bottom-nav-link" type="button" data-view="offers-new">
           <i data-lucide="file-text" aria-hidden="true"></i>
           <span>Neuer Vertrag erstellen</span>
@@ -1143,6 +1029,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=simplified-contract-form-20260822-1"></script>
+    <script src="app.js?v=remove-customers-checklist-logo-20260822-1"></script>
   </body>
 </html>

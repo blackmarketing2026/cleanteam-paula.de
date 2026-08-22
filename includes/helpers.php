@@ -97,6 +97,16 @@ function base_url(): string
     return rtrim(config()['base_url'] ?? '', '/');
 }
 
+function branding_default_logo_relative_path(): string
+{
+    return 'assets/cleanteam-logo.webp';
+}
+
+function branding_default_logo_disk_path(): string
+{
+    return __DIR__ . '/../' . branding_default_logo_relative_path();
+}
+
 function request_origin(): ?string
 {
     $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
