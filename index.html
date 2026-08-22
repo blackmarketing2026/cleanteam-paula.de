@@ -111,6 +111,10 @@
               <i data-lucide="file-edit" aria-hidden="true"></i>
               <span>Mustervertrag</span>
             </button>
+            <button class="nav-link" type="button" data-view="settings-contract-number">
+              <i data-lucide="hash" aria-hidden="true"></i>
+              <span>Vertragsnummer</span>
+            </button>
             <button class="nav-link" type="button" data-view="settings-users">
               <i data-lucide="shield-check" aria-hidden="true"></i>
               <span>User & Rollen</span>
@@ -272,6 +276,20 @@
               <label>
                 Quadratmeter *
                 <input id="offer-square-meters" type="number" min="1" step="1" required placeholder="z. B. 250" />
+              </label>
+              <label>
+                Reinigungsintervall *
+                <select id="offer-interval" required>
+                  <option value="">Bitte wählen</option>
+                  <option value="Wöchentlich">Wöchentlich</option>
+                  <option value="Täglich">Täglich</option>
+                  <option value="Monatlich">Monatlich</option>
+                  <option value="Individuell">Individuell</option>
+                </select>
+              </label>
+              <label id="offer-interval-custom-field" class="span-2" hidden>
+                Individuelles Intervall *
+                <input id="offer-interval-custom" type="text" placeholder="z. B. 2x wöchentlich" />
               </label>
               <label>
                 Preis (monatlich, netto) *
@@ -928,6 +946,38 @@
           </section>
         </section>
 
+        <section id="settings-contract-number-view" class="view" aria-label="Vertragsnummer">
+          <div class="section-heading">
+            <div>
+              <p class="muted">Legt fest, mit welcher Nummer der nächste neu erstellte Vertrag beginnt.</p>
+            </div>
+          </div>
+
+          <section class="panel form-panel" aria-labelledby="contract-number-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="contract-number-heading">Nächste Vertragsnummer</h4>
+                <p class="muted">Format ist immer CT-Jahr-Nummer, z. B. CT-2026-001. Nur die laufende Nummer ist hier einstellbar.</p>
+              </div>
+            </div>
+            <form id="contract-number-form" class="form-grid">
+              <label>
+                Laufende Nummer *
+                <input id="contract-number-next" type="number" min="1" step="1" required placeholder="z. B. 1" />
+              </label>
+              <div class="span-2">
+                <span class="muted">Vorschau: <strong id="contract-number-preview">–</strong></span>
+              </div>
+              <div class="form-actions span-2">
+                <button class="primary-button" type="submit">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Speichern
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+
         <section id="settings-users-view" class="view" aria-label="User & Rollen">
           <div class="section-heading">
             <div>
@@ -1082,6 +1132,20 @@
           <input id="contract-correction-square-meters" type="number" min="1" step="1" required />
         </label>
         <label class="modal-field">
+          Reinigungsintervall *
+          <select id="contract-correction-interval" required>
+            <option value="">Bitte wählen</option>
+            <option value="Wöchentlich">Wöchentlich</option>
+            <option value="Täglich">Täglich</option>
+            <option value="Monatlich">Monatlich</option>
+            <option value="Individuell">Individuell</option>
+          </select>
+        </label>
+        <label id="contract-correction-interval-custom-field" class="modal-field" hidden>
+          Individuelles Intervall *
+          <input id="contract-correction-interval-custom" type="text" />
+        </label>
+        <label class="modal-field">
           Preis (monatlich, netto) *
           <input id="contract-correction-price" type="number" min="0" step="0.01" required />
         </label>
@@ -1100,6 +1164,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=offer-address-squaremeters-20260822-1"></script>
+    <script src="app.js?v=interval-agb-snapshot-contractnum-20260822-1"></script>
   </body>
 </html>

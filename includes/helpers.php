@@ -40,6 +40,33 @@ function generate_id(string $prefix): string
     return $prefix . '-' . bin2hex(random_bytes(12));
 }
 
+function ensure_contract_number_settings_table(PDO $pdo): void
+{
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS contract_number_settings (
+            id TINYINT UNSIGNED NOT NULL,
+            next_number INT UNSIGNED NOT NULL DEFAULT 1,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+    $pdo->exec('INSERT IGNORE INTO contract_number_settings (id, next_number) VALUES (1, 1)');
+}
+
+function format_contract_number(int $sequence): string
+{
+    return sprintf('CT-%s-%03d', gmdate('Y'), $sequence);
+}
+
+function ensure_offers_interval_label_length(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'interval_label'");
+    $column = $stmt->fetch();
+    if ($column && stripos((string) $column['Type'], 'varchar(40)') !== false) {
+        $pdo->exec('ALTER TABLE offers MODIFY COLUMN interval_label VARCHAR(190) NOT NULL');
+    }
+}
+
 function format_service_text(string $text): string
 {
     $text = str_replace(["\r\n", "\r"], "\n", $text);

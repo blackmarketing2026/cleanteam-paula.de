@@ -55,6 +55,16 @@ function ensure_contracts_terms_accepted_at_column(PDO $pdo): void
     $pdo->exec('ALTER TABLE contracts ADD COLUMN terms_accepted_at DATETIME NULL AFTER representation_note');
 }
 
+function ensure_contracts_privacy_accepted_at_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM contracts LIKE 'privacy_accepted_at'");
+    if ($stmt->fetch()) {
+        return;
+    }
+
+    $pdo->exec('ALTER TABLE contracts ADD COLUMN privacy_accepted_at DATETIME NULL AFTER terms_accepted_at');
+}
+
 function ensure_contracts_authorization_columns(PDO $pdo): void
 {
     $columns = [
@@ -162,9 +172,19 @@ function public_state(array $offer, ?array $contract): array
 
 function next_contract_number(PDO $pdo): string
 {
-    $year = gmdate('Y');
-    $count = (int) $pdo->query('SELECT COUNT(*) FROM contracts')->fetchColumn();
-    return sprintf('CT-%s-%03d', $year, $count + 1);
+    ensure_contract_number_settings_table($pdo);
+
+    $pdo->beginTransaction();
+    try {
+        $sequence = (int) $pdo->query('SELECT next_number FROM contract_number_settings WHERE id = 1 FOR UPDATE')->fetchColumn();
+        $pdo->prepare('UPDATE contract_number_settings SET next_number = next_number + 1 WHERE id = 1')->execute();
+        $pdo->commit();
+    } catch (Throwable $exception) {
+        $pdo->rollBack();
+        throw $exception;
+    }
+
+    return format_contract_number($sequence);
 }
 
 function require_active_contract(?array $contract): array
@@ -186,6 +206,7 @@ function require_active_contract(?array $contract): array
 
 $offer = load_offer($pdo, $token);
 ensure_contracts_terms_accepted_at_column($pdo);
+ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
@@ -226,7 +247,7 @@ if ($method === 'POST' && $action === 'confirm-privacy') {
     $confirmed = (bool) ($body['confirmed'] ?? false);
 
     if ($confirmed) {
-        $pdo->prepare("UPDATE contracts SET current_step = 'daten' WHERE id = :id")
+        $pdo->prepare("UPDATE contracts SET current_step = 'daten', privacy_accepted_at = UTC_TIMESTAMP() WHERE id = :id")
             ->execute(['id' => $contract['id']]);
     } else {
         $pdo->prepare("UPDATE contracts SET status = 'datenschutz_abgelehnt' WHERE id = :id")

@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/contract_template.php';
 
 require_login();
 
@@ -15,6 +16,21 @@ function ensure_offers_pricing_columns(PDO $pdo): void
         'base_price' => 'ALTER TABLE offers ADD COLUMN base_price DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER notes',
         'price_adjustment' => 'ALTER TABLE offers ADD COLUMN price_adjustment DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER base_price',
         'price_adjustment_note' => 'ALTER TABLE offers ADD COLUMN price_adjustment_note VARCHAR(255) NULL AFTER price_adjustment',
+    ];
+
+    foreach ($columns as $column => $sql) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
+function ensure_offers_agb_snapshot_columns(PDO $pdo): void
+{
+    $columns = [
+        'agb_snapshot_text' => 'ALTER TABLE offers ADD COLUMN agb_snapshot_text LONGTEXT NULL AFTER notes',
+        'agb_snapshot_captured_at' => 'ALTER TABLE offers ADD COLUMN agb_snapshot_captured_at DATETIME NULL AFTER agb_snapshot_text',
     ];
 
     foreach ($columns as $column => $sql) {
@@ -75,6 +91,8 @@ const OFFER_SELECT = 'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone 
     LEFT JOIN contracts ct ON ct.offer_id = o.id';
 
 ensure_offers_pricing_columns($pdo);
+ensure_offers_interval_label_length($pdo);
+ensure_offers_agb_snapshot_columns($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();
@@ -93,6 +111,17 @@ if ($method === 'POST') {
     $squareMeters = (int) ($body['squareMeters'] ?? 0);
     $price = round((float) ($body['price'] ?? 0), 2);
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
+    $interval = trim((string) ($body['interval'] ?? ''));
+    $intervalCustom = trim((string) ($body['intervalCustom'] ?? ''));
+
+    $allowedIntervals = ['Wöchentlich', 'Täglich', 'Monatlich', 'Individuell'];
+    if (!in_array($interval, $allowedIntervals, true)) {
+        json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
+    }
+    if ($interval === 'Individuell' && $intervalCustom === '') {
+        json_error('Bitte das individuelle Reinigungsintervall beschreiben.', 422);
+    }
+    $intervalLabel = $interval === 'Individuell' ? $intervalCustom : $interval;
 
     if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === ''
         || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
@@ -136,13 +165,19 @@ if ($method === 'POST') {
         'id' => $id,
         'customer_id' => $customerId,
         'square_meters' => $squareMeters,
-        'interval_label' => 'Monatlich',
+        'interval_label' => $intervalLabel,
         'service' => 'Individuelle Leistung',
         'notes' => format_service_text($serviceText),
         'base_price' => $price,
         'price' => $price,
         'token' => $token,
     ]);
+
+    $agbSnapshotText = fetch_agb_text_snapshot();
+    if ($agbSnapshotText !== null) {
+        $pdo->prepare('UPDATE offers SET agb_snapshot_text = :text, agb_snapshot_captured_at = UTC_TIMESTAMP() WHERE id = :id')
+            ->execute(['text' => $agbSnapshotText, 'id' => $id]);
+    }
 
     $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');
     $stmt->execute(['id' => $id]);

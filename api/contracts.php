@@ -19,6 +19,16 @@ function ensure_contracts_terms_accepted_at_column(PDO $pdo): void
     $pdo->exec('ALTER TABLE contracts ADD COLUMN terms_accepted_at DATETIME NULL AFTER representation_note');
 }
 
+function ensure_contracts_privacy_accepted_at_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM contracts LIKE 'privacy_accepted_at'");
+    if ($stmt->fetch()) {
+        return;
+    }
+
+    $pdo->exec('ALTER TABLE contracts ADD COLUMN privacy_accepted_at DATETIME NULL AFTER terms_accepted_at');
+}
+
 function ensure_contracts_authorization_columns(PDO $pdo): void
 {
     $columns = [
@@ -91,7 +101,9 @@ function contract_row_to_json(array $row): array
 }
 
 ensure_contracts_terms_accepted_at_column($pdo);
+ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
+ensure_offers_interval_label_length($pdo);
 
 function contract_documents_table_exists(PDO $pdo): bool
 {
@@ -146,8 +158,19 @@ if ($method === 'PATCH') {
         $zip = trim((string) ($body['zip'] ?? ''));
         $city = trim((string) ($body['city'] ?? ''));
         $squareMeters = (int) ($body['squareMeters'] ?? 0);
+        $interval = trim((string) ($body['interval'] ?? ''));
+        $intervalCustom = trim((string) ($body['intervalCustom'] ?? ''));
         $price = round((float) ($body['price'] ?? 0), 2);
         $serviceText = trim((string) ($body['serviceText'] ?? ''));
+
+        $allowedIntervals = ['Wöchentlich', 'Täglich', 'Monatlich', 'Individuell'];
+        if (!in_array($interval, $allowedIntervals, true)) {
+            json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
+        }
+        if ($interval === 'Individuell' && $intervalCustom === '') {
+            json_error('Bitte das individuelle Reinigungsintervall beschreiben.', 422);
+        }
+        $intervalLabel = $interval === 'Individuell' ? $intervalCustom : $interval;
 
         if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === ''
             || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
@@ -174,9 +197,11 @@ if ($method === 'PATCH') {
             'id' => $row['customer_id'],
         ]);
 
-        $pdo->prepare('UPDATE offers SET square_meters = :square_meters, price = :price, base_price = :price, notes = :notes WHERE id = :id')
-            ->execute([
+        $pdo->prepare(
+            'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, price = :price, base_price = :price, notes = :notes WHERE id = :id'
+        )->execute([
                 'square_meters' => $squareMeters,
+                'interval_label' => $intervalLabel,
                 'price' => $price,
                 'notes' => format_service_text($serviceText),
                 'id' => $row['offer_id'],

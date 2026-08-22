@@ -60,6 +60,9 @@ const els = {
   offerZip: document.querySelector("#offer-zip"),
   offerCity: document.querySelector("#offer-city"),
   offerSquareMeters: document.querySelector("#offer-square-meters"),
+  offerInterval: document.querySelector("#offer-interval"),
+  offerIntervalCustomField: document.querySelector("#offer-interval-custom-field"),
+  offerIntervalCustom: document.querySelector("#offer-interval-custom"),
   offerPrice: document.querySelector("#offer-price"),
   offerServiceText: document.querySelector("#offer-service-text"),
   offerReviewForm: document.querySelector("#offer-review-form"),
@@ -166,6 +169,9 @@ const els = {
   contractCorrectionZip: document.querySelector("#contract-correction-zip"),
   contractCorrectionCity: document.querySelector("#contract-correction-city"),
   contractCorrectionSquareMeters: document.querySelector("#contract-correction-square-meters"),
+  contractCorrectionInterval: document.querySelector("#contract-correction-interval"),
+  contractCorrectionIntervalCustomField: document.querySelector("#contract-correction-interval-custom-field"),
+  contractCorrectionIntervalCustom: document.querySelector("#contract-correction-interval-custom"),
   contractCorrectionPrice: document.querySelector("#contract-correction-price"),
   contractCorrectionServiceText: document.querySelector("#contract-correction-service-text"),
   contractCorrectionCancel: document.querySelector("#contract-correction-cancel"),
@@ -178,6 +184,9 @@ const els = {
   templatePreviewButton: document.querySelector("#contract-template-preview-button"),
   templateSave: document.querySelector("#contract-template-save"),
   templatePreviewFrame: document.querySelector("#contract-template-preview-frame"),
+  contractNumberForm: document.querySelector("#contract-number-form"),
+  contractNumberNext: document.querySelector("#contract-number-next"),
+  contractNumberPreview: document.querySelector("#contract-number-preview"),
   contractorSignaturePad: document.querySelector("#contractor-signature-pad"),
   contractorSignatureStatus: document.querySelector("#contractor-signature-status"),
   contractorSignatureClear: document.querySelector("#contractor-signature-clear"),
@@ -213,6 +222,7 @@ const titles = {
   "settings-logo": "Logo-Einstellungen",
   "settings-signature": "Signatur",
   "settings-template": "Mustervertrag",
+  "settings-contract-number": "Vertragsnummer",
   "settings-users": "User & Rollen",
 };
 
@@ -529,6 +539,10 @@ function switchView(view) {
 
   if (view === "settings-template") {
     loadContractTemplate();
+  }
+
+  if (view === "settings-contract-number") {
+    loadContractNumberSettings();
   }
 
   if (view === "mailbox") {
@@ -1414,6 +1428,7 @@ function resetOfferIntake() {
   els.offerReviewForm.reset();
   els.offerIntakePanel.hidden = false;
   els.offerReviewPanel.hidden = true;
+  els.offerIntervalCustomField.hidden = true;
 }
 
 async function handleOfferSubmit(event) {
@@ -1427,6 +1442,8 @@ async function handleOfferSubmit(event) {
   const zip = els.offerZip.value.trim();
   const city = els.offerCity.value.trim();
   const squareMeters = Number(els.offerSquareMeters.value);
+  const interval = els.offerInterval.value;
+  const intervalCustom = els.offerIntervalCustom.value.trim();
   const price = Number(els.offerPrice.value);
   const serviceText = els.offerServiceText.value.trim();
 
@@ -1478,6 +1495,18 @@ async function handleOfferSubmit(event) {
     return;
   }
 
+  if (!interval) {
+    showToast("Bitte ein Reinigungsintervall auswählen.");
+    els.offerInterval.focus();
+    return;
+  }
+
+  if (interval === "Individuell" && !intervalCustom) {
+    showToast("Bitte das individuelle Reinigungsintervall beschreiben.");
+    els.offerIntervalCustom.focus();
+    return;
+  }
+
   if (!Number.isFinite(price) || price <= 0) {
     showToast("Bitte den monatlichen Preis eintragen.");
     els.offerPrice.focus();
@@ -1490,6 +1519,8 @@ async function handleOfferSubmit(event) {
     return;
   }
 
+  const intervalDisplay = interval === "Individuell" ? intervalCustom : interval;
+
   try {
     const { text } = await apiPost("api/format-text.php", { text: serviceText });
     els.offerServiceTextCorrected.value = text;
@@ -1497,7 +1528,7 @@ async function handleOfferSubmit(event) {
       <div class="record-lines">
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
         <span>${escapeHtml(phone)} · ${escapeHtml(email)}</span>
-        <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)} · ${squareMeters} m²</span>
+        <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)} · ${squareMeters} m² · ${escapeHtml(intervalDisplay)}</span>
         <span>${formatCurrency(price)} netto monatlich</span>
       </div>
     `;
@@ -1521,6 +1552,8 @@ async function handleOfferReviewSubmit(event) {
     zip: els.offerZip.value.trim(),
     city: els.offerCity.value.trim(),
     squareMeters: Number(els.offerSquareMeters.value),
+    interval: els.offerInterval.value,
+    intervalCustom: els.offerIntervalCustom.value.trim(),
     price: Number(els.offerPrice.value),
     serviceText: els.offerServiceTextCorrected.value.trim(),
   };
@@ -1674,6 +1707,16 @@ function openContractCorrectionModal(id) {
   els.contractCorrectionZip.value = contract.customer.zip;
   els.contractCorrectionCity.value = contract.customer.city;
   els.contractCorrectionSquareMeters.value = contract.offer.squareMeters;
+  const fixedIntervals = ["Wöchentlich", "Täglich", "Monatlich"];
+  if (fixedIntervals.includes(contract.offer.interval)) {
+    els.contractCorrectionInterval.value = contract.offer.interval;
+    els.contractCorrectionIntervalCustom.value = "";
+    els.contractCorrectionIntervalCustomField.hidden = true;
+  } else {
+    els.contractCorrectionInterval.value = "Individuell";
+    els.contractCorrectionIntervalCustom.value = contract.offer.interval || "";
+    els.contractCorrectionIntervalCustomField.hidden = false;
+  }
   els.contractCorrectionPrice.value = contract.offer.price;
   els.contractCorrectionServiceText.value = contract.offer.notes || "";
   els.contractCorrectionModal.hidden = false;
@@ -1683,10 +1726,19 @@ function openContractCorrectionModal(id) {
 function closeContractCorrectionModal() {
   els.contractCorrectionModal.hidden = true;
   els.contractCorrectionForm.reset();
+  els.contractCorrectionIntervalCustomField.hidden = true;
 }
 
 async function handleContractCorrectionSubmit(event) {
   event.preventDefault();
+
+  const interval = els.contractCorrectionInterval.value;
+  const intervalCustom = els.contractCorrectionIntervalCustom.value.trim();
+  if (interval === "Individuell" && !intervalCustom) {
+    showToast("Bitte das individuelle Reinigungsintervall beschreiben.");
+    els.contractCorrectionIntervalCustom.focus();
+    return;
+  }
 
   const id = els.contractCorrectionId.value;
   const payload = {
@@ -1699,6 +1751,8 @@ async function handleContractCorrectionSubmit(event) {
     zip: els.contractCorrectionZip.value.trim(),
     city: els.contractCorrectionCity.value.trim(),
     squareMeters: Number(els.contractCorrectionSquareMeters.value),
+    interval,
+    intervalCustom,
     price: Number(els.contractCorrectionPrice.value),
     serviceText: els.contractCorrectionServiceText.value.trim(),
   };
@@ -2710,6 +2764,35 @@ async function handleContractTemplatePreview() {
   }
 }
 
+async function loadContractNumberSettings() {
+  try {
+    const result = await apiGet("api/contract-number.php");
+    els.contractNumberNext.value = result.nextNumber;
+    els.contractNumberPreview.textContent = result.nextNumberPreview;
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleContractNumberSubmit(event) {
+  event.preventDefault();
+
+  const nextNumber = Number(els.contractNumberNext.value);
+  if (!Number.isFinite(nextNumber) || nextNumber <= 0) {
+    showToast("Bitte eine gültige Startnummer eintragen.");
+    els.contractNumberNext.focus();
+    return;
+  }
+
+  try {
+    const result = await apiPost("api/contract-number.php", { nextNumber });
+    els.contractNumberPreview.textContent = result.nextNumberPreview;
+    showToast("Vertragsnummer wurde gespeichert.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function userRoleOptions(selectedRole) {
   const roles = Object.keys(state.userRoles).length
     ? state.userRoles
@@ -2996,6 +3079,12 @@ function bindEvents() {
     els.offerReviewPanel.hidden = true;
     els.offerCustomerName.focus();
   });
+  els.offerInterval.addEventListener("change", () => {
+    els.offerIntervalCustomField.hidden = els.offerInterval.value !== "Individuell";
+  });
+  els.contractCorrectionInterval.addEventListener("change", () => {
+    els.contractCorrectionIntervalCustomField.hidden = els.contractCorrectionInterval.value !== "Individuell";
+  });
 
   els.offerList.addEventListener("click", handleRecordAction);
   els.contractList.addEventListener("click", handleRecordAction);
@@ -3073,6 +3162,14 @@ function bindEvents() {
   els.templateSave.addEventListener("click", handleContractTemplateSave);
   els.templateReset.addEventListener("click", handleContractTemplateReset);
   els.templatePreviewButton.addEventListener("click", handleContractTemplatePreview);
+
+  els.contractNumberForm.addEventListener("submit", handleContractNumberSubmit);
+  els.contractNumberNext.addEventListener("input", () => {
+    const value = Number(els.contractNumberNext.value);
+    els.contractNumberPreview.textContent = Number.isFinite(value) && value > 0
+      ? `CT-${new Date().getFullYear()}-${String(value).padStart(3, "0")}`
+      : "–";
+  });
   els.contractorSignatureClear.addEventListener("click", () => {
     clearContractorSignaturePad("Zeichenfläche ist leer. Neue Unterschrift zeichnen und speichern.");
   });

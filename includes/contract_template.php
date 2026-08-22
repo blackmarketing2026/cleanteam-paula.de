@@ -27,51 +27,32 @@ const PRICE_ADJUSTMENT_NOTICE_MONTHS = 1;
 const WAGE_INCREASE_MIN_PERCENT = 5;
 const WAGE_INCREASE_MAX_PERCENT = 10;
 
-// Standard-Leistungsverzeichnis aus der bestehenden Vertragsvorlage (nicht kundenspezifisch,
-// wird unverändert in jeden generierten Vertrag übernommen).
-const STANDARD_SERVICE_CATALOG = [
-    'Eingangsbereich und Glasflächen' => [
-        'Saugen der Bodenflächen im Eingangsbereich.',
-        'Kontrolle des Eingangsbereichs auf Spinnweben und umgehende Beseitigung.',
-        'Entfernung von Fingerabdrücken und Verschmutzungen an den Glastüren im Eingangsbereich.',
-    ],
-    'Büro- und Allgemeinflächen' => [
-        'Entstaubung aller frei zugänglichen Einrichtungsgegenstände, soweit diese ohne Verrücken von Gegenständen erreichbar sind.',
-        'Entleerung sämtlicher Papierkörbe und Abfallbehälter in den Büroräumen sowie Einsetzen neuer Müllbeutel.',
-        'Entstaubung frei zugänglicher Schreibtischflächen. Befinden sich Arbeitsunterlagen auf den Flächen oder wird der Arbeitsplatz während der Reinigung genutzt, erfolgt dort keine Reinigung.',
-        'Gründliches Saugen sämtlicher Bodenflächen sowie Feuchtreinigung aller Hartbodenflächen ohne Teppichbelag.',
-        'Entstaubung sämtlicher Türen und Türrahmen.',
-        'Reinigung und Entstaubung frei zugänglicher Fensterbänke. Bei belegten Fensterbänken werden nur erreichbare Bereiche gereinigt; vollständig belegte Fensterbänke bleiben unberücksichtigt.',
-        'Entstaubung von Regalen nach vorheriger Abstimmung bzw. auf Anweisung.',
-        'Entstaubung der Stuhlgestelle und Stuhlfüße im 14-tägigen Turnus.',
-    ],
-    'Gästezimmer, Sanitärbereiche und Verbrauchsmaterial' => [
-        'Kontrolle der Gästezimmer nach Bedarf einschließlich Entstaubung, Bodenreinigung und Feuchtwischen der Bodenflächen.',
-        'Hygienische Reinigung sämtlicher Sanitäranlagen gemäß den geltenden Hygienevorschriften.',
-        'Nachfüllen von Handtuchpapier, Toilettenpapier und Seifenspendern, sofern das Verbrauchsmaterial vor Ort bereitgestellt wird.',
-    ],
-    'Küchen, Pausenraum und Kantine' => [
-        'Reinigung der Küchenzeilen ausschließlich von außen, einschließlich Arbeitsflächen und Spüle.',
-        'Reinigung sämtlicher Tische im Pausenraum.',
-        'Reinigung der Teeküche im Pausenraum einschließlich Spüle sowie Entfernung von Kaffee- und sonstigen Gebrauchsspuren an den Außenflächen der Küchenmöbel.',
-        'Saugen und Feuchtwischen des Bodens im Pausenraum.',
-        'Reinigung der Demonstrationsküche in der Kantine nach vorheriger Abstimmung und entsprechend den vom Objektleiter festgelegten Bereichen, einschließlich Küchenflächen sowie Saugen und Feuchtwischen des Bodens.',
-    ],
-    'Aufzug, Treppenhaus und Sonderbereiche' => [
-        'Kontrolle des Aufzugs auf Spinnweben und deren Beseitigung; Reinigung des Aufzugbodens durch Saugen und Feuchtwischen.',
-        'Wöchentliche Reinigung des Treppenhauses einschließlich Flure durch Kehren bzw. Saugen sowie anschließende Feuchtreinigung.',
-        'Laufende Kontrolle sämtlicher Bereiche auf Spinnweben und deren sofortige Beseitigung.',
-        'Wöchentliche gründliche Reinigung des Technik- bzw. Elektroraums in der Produktion, soweit die Bereiche zugänglich sind.',
-    ],
-    'Geschäftsführerbüro' => [
-        'Saugen der Bodenflächen.',
-        'Reinigung des Glastisches und der frei zugänglichen Schreibtischflächen.',
-        'Entfernung von Fingerabdrücken auf Glasflächen.',
-        'Entstaubung der Fensterbänke.',
-        'Beseitigung vorhandener Spinnweben.',
-        'Reinigung der Glastüren einschließlich Entfernung von Fingerabdrücken.',
-    ],
-];
+// Holt den aktuellen Textinhalt der AGB-Seite als Nachweis, was zum Zeitpunkt der Vertragserstellung
+// dort stand (falls die Seite sich spaeter aendert). Wird einmalig bei Vertragserstellung aufgerufen
+// und mit dem Angebot gespeichert - kein Live-Abruf bei jedem Dokumentenaufruf.
+function fetch_agb_text_snapshot(): ?string
+{
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 12,
+            'ignore_errors' => true,
+            'header' => "User-Agent: CleanTeam-Vertragsgenerator\r\n",
+        ],
+    ]);
+
+    $html = @file_get_contents(LEGAL['agb_url'], false, $context);
+    if ($html === false || trim($html) === '') {
+        return null;
+    }
+
+    $html = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $html) ?? $html;
+    $html = preg_replace('#<(br|p|div|li|h[1-6])\b[^>]*>#i', "\n", $html) ?? $html;
+    $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = preg_replace('/[ \t]+/', ' ', $text) ?? $text;
+    $text = trim((string) preg_replace('/\n[ \t]*(\n[ \t]*)+/', "\n\n", $text));
+
+    return $text !== '' ? $text : null;
+}
 
 // Pflichten des Auftraggebers (nicht kundenspezifisch), aus der Vertragsvorlage übernommen und
 // durchgehend nummeriert (im Ausgangsdokument war die Nummerierung fehlerhaft/doppelt).
@@ -168,31 +149,11 @@ function contract_logo_html(): string
     return '';
 }
 
-function render_service_catalog_html(): string
-{
-    $html = '';
-    foreach (STANDARD_SERVICE_CATALOG as $category => $items) {
-        $html .= '<h4>' . h($category) . '</h4><ul>';
-        foreach ($items as $item) {
-            $html .= '<li>' . h($item) . '</li>';
-        }
-        $html .= '</ul>';
-    }
-
-    return $html;
-}
-
+// Das Leistungsverzeichnis (Standardkatalog) gehoert nicht mehr in den Mustervertrag - der
+// Platzhalter wird aus bereits gespeicherten Vorlagen entfernt, statt ihn weiter zu befuellen.
 function normalize_contract_template_html(string $html): string
 {
-    if (strpos($html, '{{begehung_leistungsverzeichnis}}') !== false) {
-        $html = str_replace('{{begehung_leistungsverzeichnis}}', '{{leistungsverzeichnis}}', $html);
-    }
-
-    if (strpos($html, '{{leistungsverzeichnis}}') !== false) {
-        return $html;
-    }
-
-    return str_replace(render_service_catalog_html(), '{{leistungsverzeichnis}}', $html);
+    return str_replace(['{{begehung_leistungsverzeichnis}}', '{{leistungsverzeichnis}}'], '', $html);
 }
 
 function render_obligations_html(): string
@@ -214,6 +175,9 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
     $termsAccepted = $termsAcceptedAt !== null || $isSigned;
     $termsAcceptedDisplay = $termsAccepted ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt';
     $termsAcceptedTime = contract_format_datetime($termsAcceptedAt ?: ($isSigned ? $signedAt : null));
+    $privacyAcceptedAt = $contract['privacy_accepted_at'] ?? null;
+    $privacyAcceptedDisplay = $privacyAcceptedAt !== null ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt';
+    $privacyAcceptedTime = contract_format_datetime($privacyAcceptedAt);
     $signedAtDisplay = contract_format_datetime($signedAt);
     $contractNumber = h($contract['number'] ?? 'Entwurf');
     $customerName = h(contract_customer_display_name($customer));
@@ -230,17 +194,16 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
             . '<dt>Vollmacht-Adresse</dt><dd>' . h($authorizationAddress) . '</dd>';
     }
 
-    $screenshotBlock = '';
-    if ($isSigned && $contract !== null) {
-        $screenshot = ensure_agb_screenshot(db(), (string) $contract['id']);
-        if ($screenshot !== null) {
-            $screenshotDataUrl = 'data:image/png;base64,' . base64_encode($screenshot['content']);
-            $screenshotBlock = '<div class="agb-screenshot">'
-                . '<h3>AGB zum Zeitpunkt der Unterschrift (Screenshot)</h3>'
-                . '<p class="muted">Automatischer Screenshot von ' . $agbUrl . ' zum Zeitpunkt der Vertragsunterschrift, als Nachweis für CleanTeam.</p>'
-                . '<img src="' . h($screenshotDataUrl) . '" alt="Screenshot der AGB-Seite" class="agb-screenshot-image">'
-                . '</div>';
-        }
+    $agbSnapshotBlock = '';
+    $agbSnapshotText = trim((string) ($offer['agb_snapshot_text'] ?? ''));
+    if ($agbSnapshotText !== '') {
+        $agbSnapshotAt = contract_format_datetime($offer['agb_snapshot_captured_at'] ?? null);
+        $agbSnapshotBlock = '<div class="agb-snapshot">'
+            . '<h3>AGB-Inhalt zum Zeitpunkt der Vertragserstellung</h3>'
+            . '<p class="muted">Automatisch von ' . $agbUrl . ' übernommener Textinhalt, abgerufen am ' . h($agbSnapshotAt)
+            . ', als Nachweis für CleanTeam, falls sich die AGB später ändern sollten.</p>'
+            . '<pre class="agb-snapshot-text">' . h($agbSnapshotText) . '</pre>'
+            . '</div>';
     }
 
     return <<<HTML
@@ -257,13 +220,15 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
     <dt>Vertragsentwurf erstellt</dt><dd>{$offerCreatedAt}</dd>
     <dt>Vertrag erstellt</dt><dd>{$contractCreatedAt}</dd>
     <dt>Vertrag elektronisch signiert</dt><dd>{$signedAtDisplay}</dd>
+    <dt>Datenschutz-Zustimmung erteilt</dt><dd>{$privacyAcceptedDisplay}</dd>
+    <dt>Zeitpunkt der Datenschutz-Zustimmung</dt><dd>{$privacyAcceptedTime}</dd>
     <dt>AGB / Vertragsbedingungen zugestimmt</dt><dd>{$termsAcceptedDisplay}</dd>
     <dt>Zeitpunkt der Zustimmung</dt><dd>{$termsAcceptedTime}</dd>
     <dt>AGB-Fassung</dt><dd>{$agbVersion}</dd>
     <dt>AGB-Quelle</dt><dd>{$agbUrl}</dd>
     {$authorizationRows}
   </dl>
-  {$screenshotBlock}
+  {$agbSnapshotBlock}
 </section>
 HTML;
 }
@@ -324,7 +289,6 @@ function default_contract_template_html(): string
 <p>Die Reinigung findet <strong>{{intervall}}</strong> statt.</p>
 <p>Gebuchte Leistung: {{leistung}}</p>
 {{zusatzhinweis_block}}
-{{leistungsverzeichnis}}
 <p>Leistungen, die nicht in diesem Vertrag aufgeführt sind, bedürfen einer gesonderten Beauftragung und werden zusätzlich berechnet.</p>
 
 <h2>§ 4 Vergütung</h2>
@@ -468,7 +432,6 @@ function contract_template_placeholder_definitions(): array
             'intervall' => 'Reinigungsintervall',
             'leistung' => 'Leistungsbeschreibung inkl. Quadratmeter',
             'zusatzhinweis_block' => 'Zusatzhinweis aus dem Vertragsentwurf (falls vorhanden)',
-            'leistungsverzeichnis' => 'Leistungsverzeichnis (Standardkatalog)',
             'beginn_datum' => 'Vertragsbeginn',
         ],
         'Preis' => [
@@ -544,7 +507,6 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $values['zusatzhinweis_block'] = $offerNotes !== ''
         ? '<p>' . ($forPdf ? '' : '<strong>Zusatzhinweis:</strong> ') . h($offerNotes) . '</p>'
         : '';
-    $values['leistungsverzeichnis'] = render_service_catalog_html();
 
     return $values;
 }
@@ -584,9 +546,9 @@ function contract_document_style_css(): string
   .protocol-grid { display: grid; grid-template-columns: 260px 1fr; column-gap: 28px; row-gap: 10px; margin-top: 18px; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.45; align-items: start; }
   .protocol-grid dt { font-weight: 700; color: #333; }
   .protocol-grid dd { margin: 0; overflow-wrap: anywhere; }
-  .agb-screenshot { margin-top: 28px; page-break-inside: avoid; }
-  .agb-screenshot h3 { font-size: 14px; margin: 0 0 4px; }
-  .agb-screenshot-image { max-width: 100%; border: 1px solid #ccc; border-radius: 4px; margin-top: 8px; }
+  .agb-snapshot { margin-top: 28px; page-break-inside: avoid; }
+  .agb-snapshot h3 { font-size: 14px; margin: 0 0 4px; }
+  .agb-snapshot-text { white-space: pre-wrap; font-family: Calibri, Arial, sans-serif; font-size: 11px; line-height: 1.5; border: 1px solid #ccc; border-radius: 4px; padding: 12px; margin-top: 8px; max-height: 900px; overflow: auto; }
   @media print { body { margin: 0; } }
 CSS;
 }
