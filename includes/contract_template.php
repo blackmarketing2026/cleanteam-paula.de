@@ -45,11 +45,73 @@ function fetch_agb_text_snapshot(): ?string
         return null;
     }
 
-    $html = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $html) ?? $html;
-    $html = preg_replace('#<(br|p|div|li|h[1-6])\b[^>]*>#i', "\n", $html) ?? $html;
-    $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $doc = new DOMDocument();
+    libxml_use_internal_errors(true);
+    $doc->loadHTML('<?xml encoding="utf-8"?>' . $html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    libxml_clear_errors();
+
+    $xpath = new DOMXPath($doc);
+
+    // Navigation, Header, Footer und Skripte sind bei den meisten Seiten reine Menue-/Kontakt-
+    // Wiederholungen und keine AGB-Klauseln - vor der Extraktion entfernen.
+    foreach ($xpath->query('//script|//style|//nav|//header|//footer|//form|//svg|//noscript') as $node) {
+        $node->parentNode?->removeChild($node);
+    }
+
+    // Die aktuelle AGB-Seite ist mit dem Divi-Page-Builder gebaut: Menue/Kontakt-CTAs werden dort
+    // direkt im Seiteninhalt dupliziert (nicht in <nav>/<header>), waehrend der eigentliche
+    // Rechtstext in "et_pb_text_inner"-Textmodulen steckt. Kurze Module (Buttons, Links,
+    // Copyright-Zeile) sind eindeutig kein Vertragstext - nur laengere Bloecke uebernehmen.
+    $textModuleHtml = '';
+    $textModules = $xpath->query("//*[contains(concat(' ', normalize-space(@class), ' '), ' et_pb_text_inner ')]");
+    if ($textModules !== false) {
+        foreach ($textModules as $node) {
+            if (mb_strlen(trim($node->textContent)) > 150) {
+                $textModuleHtml .= ($doc->saveHTML($node) ?: '') . "\n";
+            }
+        }
+    }
+
+    if (trim($textModuleHtml) !== '') {
+        $rawHtml = $textModuleHtml;
+    } else {
+        // Fallback fuer den Fall, dass die Seite nicht (mehr) mit Divi gebaut ist: den
+        // erkennbaren Hauptinhaltsbereich nehmen, sonst den ganzen (bereits bereinigten) Body.
+        $contentNode = null;
+        foreach (['//main', "//*[@role='main']", "//article", "//*[contains(@class,'entry-content')]", "//*[@id='content']"] as $query) {
+            $nodes = $xpath->query($query);
+            if ($nodes !== false && $nodes->length > 0) {
+                $contentNode = $nodes->item(0);
+                break;
+            }
+        }
+        $contentNode ??= $doc->getElementsByTagName('body')->item(0);
+        if ($contentNode === null) {
+            return null;
+        }
+        $rawHtml = $doc->saveHTML($contentNode) ?: '';
+    }
+
+    $rawHtml = preg_replace('#<(br|p|div|li|h[1-6])\b[^>]*>#i', "\n", $rawHtml) ?? $rawHtml;
+    $text = html_entity_decode(strip_tags($rawHtml), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    // Icon-Font-Zeichen (Private-Use-Area, z. B. Telefon-/Mail-Symbole) landen sonst als "?" im Text.
+    $text = preg_replace('/[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}\x{100000}-\x{10FFFD}]/u', '', $text) ?? $text;
     $text = preg_replace('/[ \t]+/', ' ', $text) ?? $text;
-    $text = trim((string) preg_replace('/\n[ \t]*(\n[ \t]*)+/', "\n\n", $text));
+
+    // Direkt wiederholte identische Zeilen (z. B. doppelt eingebundenes Mobil-/Desktop-Menue) zusammenfassen.
+    $lines = array_map('trim', explode("\n", $text));
+    $deduped = [];
+    foreach ($lines as $line) {
+        if ($line === '' || (end($deduped) !== false && end($deduped) === $line)) {
+            if ($line === '') {
+                $deduped[] = '';
+            }
+            continue;
+        }
+        $deduped[] = $line;
+    }
+    $text = trim((string) preg_replace('/\n{3,}/', "\n\n", implode("\n", $deduped)));
 
     return $text !== '' ? $text : null;
 }
