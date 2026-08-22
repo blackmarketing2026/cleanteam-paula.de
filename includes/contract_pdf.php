@@ -190,6 +190,37 @@ final class SimplePdfDocument
         return true;
     }
 
+    public function embedPngDataUrl(?string $dataUrl, float $maxWidth = 480.0, float $maxHeight = 640.0): bool
+    {
+        $image = $this->parsePngDataUrl($dataUrl);
+        if ($image === null) {
+            return false;
+        }
+
+        $ratio = min($maxWidth / $image['width'], $maxHeight / $image['height'], 1.0);
+        $width = max(1.0, $image['width'] * $ratio);
+        $height = max(1.0, $image['height'] * $ratio);
+
+        $this->ensureSpace($height + 12.0);
+        $name = 'Im' . (count($this->images) + 1);
+        $this->images[$name] = $image;
+        $this->pages[$this->pageIndex]['images'][$name] = true;
+
+        $x = self::MARGIN_LEFT;
+        $y = $this->y - $height;
+        $this->write(sprintf(
+            "q %.2F 0 0 %.2F %.2F %.2F cm /%s Do Q\n",
+            $width,
+            $height,
+            $x,
+            $y,
+            $name
+        ));
+        $this->y -= $height + 12.0;
+
+        return true;
+    }
+
     public function imageFile(string $path, float $maxWidth = 120.0, float $maxHeight = 48.0): bool
     {
         $image = $this->parseImageFile($path);
@@ -706,6 +737,63 @@ function ensure_contract_documents_table(PDO $pdo): void
     );
 }
 
+function fetch_agb_screenshot_png(): ?string
+{
+    $target = 'https://s.wordpress.com/mshots/v1/' . rawurlencode(LEGAL['agb_url']) . '?w=1000';
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 12,
+            'ignore_errors' => true,
+            'header' => "User-Agent: CleanTeam-Vertragsgenerator\r\n",
+        ],
+    ]);
+
+    $binary = @file_get_contents($target, false, $context);
+    // mshots liefert beim allerersten Aufruf oft nur einen winzigen Platzhalter, waehrend
+    // der eigentliche Screenshot im Hintergrund noch erzeugt wird - dann lieber gar nichts
+    // speichern und beim naechsten Aufruf erneut versuchen, statt den Platzhalter einzufrieren.
+    if ($binary === false || strlen($binary) < 5000) {
+        return null;
+    }
+
+    return $binary;
+}
+
+function ensure_agb_screenshot(PDO $pdo, string $contractId): ?array
+{
+    ensure_contract_documents_table($pdo);
+    $stmt = $pdo->prepare('SELECT * FROM contract_documents WHERE contract_id = :contract_id AND audience = :audience');
+    $stmt->execute(['contract_id' => $contractId, 'audience' => 'agb-screenshot']);
+    $existing = $stmt->fetch();
+    if ($existing) {
+        return $existing;
+    }
+
+    $binary = fetch_agb_screenshot_png();
+    if ($binary === null) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO contract_documents (id, contract_id, audience, filename, mime_type, content, sha256, generated_at)
+         VALUES (:id, :contract_id, :audience, :filename, :mime_type, :content, :sha256, UTC_TIMESTAMP())
+         ON DUPLICATE KEY UPDATE content = VALUES(content), sha256 = VALUES(sha256), generated_at = UTC_TIMESTAMP()'
+    );
+    $stmt->execute([
+        'id' => generate_id('contract-document'),
+        'contract_id' => $contractId,
+        'audience' => 'agb-screenshot',
+        'filename' => 'AGB-Screenshot.png',
+        'mime_type' => 'image/png',
+        'content' => $binary,
+        'sha256' => hash('sha256', $binary),
+    ]);
+
+    $stmt = $pdo->prepare('SELECT * FROM contract_documents WHERE contract_id = :contract_id AND audience = :audience');
+    $stmt->execute(['contract_id' => $contractId, 'audience' => 'agb-screenshot']);
+    return $stmt->fetch() ?: null;
+}
+
 function contract_pdf_context(PDO $pdo, string $contractId): ?array
 {
     $contractStmt = $pdo->prepare('SELECT * FROM contracts WHERE id = :id');
@@ -929,6 +1017,21 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         if ($contract !== null && contract_has_authorization_details($contract)) {
             $pdf->protocolKeyValue('Vollmachtgeber', contract_authorization_grantor_name($contract));
             $pdf->protocolKeyValue('Vollmacht-Adresse', contract_authorization_company_address($contract));
+        }
+
+        if ($isSigned && $contract !== null) {
+            $screenshot = ensure_agb_screenshot(db(), (string) $contract['id']);
+            if ($screenshot !== null) {
+                $pdf->addPage();
+                $pdf->heading('AGB zum Zeitpunkt der Unterschrift (Screenshot)');
+                $pdf->paragraph(
+                    'Automatischer Screenshot von ' . LEGAL['agb_url'] . ' zum Zeitpunkt der Vertragsunterschrift, als Nachweis für CleanTeam.'
+                );
+                $dataUrl = 'data:image/png;base64,' . base64_encode($screenshot['content']);
+                if (!$pdf->embedPngDataUrl($dataUrl)) {
+                    $pdf->paragraph('Der AGB-Screenshot konnte nicht eingebettet werden.');
+                }
+            }
         }
     }
 

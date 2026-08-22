@@ -14,8 +14,8 @@ if ($token === '') {
     json_error('Kein Vertragslink angegeben.', 404);
 }
 
-const STEP_ORDER = ['daten', 'vollmacht', 'leistung', 'bedingungen', 'signatur', 'fertig'];
-const TERMINAL_STATUSES = ['daten_abgelehnt', 'intervall_abgelehnt'];
+const STEP_ORDER = ['datenschutz', 'daten', 'vollmacht', 'leistung', 'bedingungen', 'signatur', 'fertig'];
+const TERMINAL_STATUSES = ['daten_abgelehnt', 'intervall_abgelehnt', 'datenschutz_abgelehnt'];
 
 function load_offer(PDO $pdo, string $token): array
 {
@@ -212,12 +212,28 @@ if ($method === 'POST' && $action === 'start') {
             'customer_id' => $offer['customer_id'],
             'number' => next_contract_number($pdo),
             'status' => 'entwurf',
-            'current_step' => 'daten',
+            'current_step' => 'datenschutz',
         ]);
         $contract = load_contract($pdo, $offer['id']);
     }
 
     json_response(public_state($offer, $contract));
+}
+
+if ($method === 'POST' && $action === 'confirm-privacy') {
+    $contract = require_active_contract(load_contract($pdo, $offer['id']));
+    $body = read_json_body();
+    $confirmed = (bool) ($body['confirmed'] ?? false);
+
+    if ($confirmed) {
+        $pdo->prepare("UPDATE contracts SET current_step = 'daten' WHERE id = :id")
+            ->execute(['id' => $contract['id']]);
+    } else {
+        $pdo->prepare("UPDATE contracts SET status = 'datenschutz_abgelehnt' WHERE id = :id")
+            ->execute(['id' => $contract['id']]);
+    }
+
+    json_response(public_state($offer, load_contract($pdo, $offer['id'])));
 }
 
 if ($method === 'POST' && $action === 'confirm-data') {

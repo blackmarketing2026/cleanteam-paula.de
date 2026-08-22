@@ -108,6 +108,75 @@ if ($method === 'POST') {
     json_error('Verträge werden nur über den Vertragslink erstellt.', 405);
 }
 
+if ($method === 'PATCH') {
+    $id = (string) ($_GET['id'] ?? '');
+    if ($id === '') {
+        json_error('Vertrags-ID fehlt.', 422);
+    }
+
+    $stmt = $pdo->prepare(CONTRACT_SELECT . ' WHERE ct.id = :id');
+    $stmt->execute(['id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        json_error('Vertrag wurde nicht gefunden.', 404);
+    }
+
+    $body = read_json_body();
+    $action = (string) ($body['action'] ?? '');
+
+    if ($action === 'release') {
+        $restartStepByStatus = [
+            'daten_abgelehnt' => 'daten',
+            'intervall_abgelehnt' => 'daten',
+            'datenschutz_abgelehnt' => 'datenschutz',
+        ];
+        $status = (string) $row['status'];
+        if (!isset($restartStepByStatus[$status])) {
+            json_error('Dieser Vertrag hat keine offene Rückfrage.', 422);
+        }
+
+        $pdo->prepare("UPDATE contracts SET status = 'entwurf', current_step = :step WHERE id = :id")
+            ->execute(['step' => $restartStepByStatus[$status], 'id' => $id]);
+    } elseif ($action === 'update-contact') {
+        $customerName = trim((string) ($body['customerName'] ?? ''));
+        $contactPerson = trim((string) ($body['contactPerson'] ?? ''));
+        $phone = trim((string) ($body['phone'] ?? ''));
+        $email = trim((string) ($body['email'] ?? ''));
+        $price = round((float) ($body['price'] ?? 0), 2);
+        $serviceText = trim((string) ($body['serviceText'] ?? ''));
+
+        if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === '' || $serviceText === '') {
+            json_error('Name, Ansprechpartner, Telefonnummer, E-Mail und Leistungsbeschreibung sind erforderlich.', 422);
+        }
+        if ($price <= 0) {
+            json_error('Bitte den monatlichen Preis eintragen.', 422);
+        }
+
+        $pdo->prepare(
+            'UPDATE customers SET name = :name, contact_last_name = :contact, phone = :phone, email = :email WHERE id = :id'
+        )->execute([
+            'name' => $customerName,
+            'contact' => $contactPerson,
+            'phone' => $phone,
+            'email' => $email,
+            'id' => $row['customer_id'],
+        ]);
+
+        $pdo->prepare('UPDATE offers SET price = :price, base_price = :price, notes = :notes WHERE id = :id')
+            ->execute([
+                'price' => $price,
+                'notes' => format_service_text($serviceText),
+                'id' => $row['offer_id'],
+            ]);
+    } else {
+        json_error('Unbekannte Aktion.', 422);
+    }
+
+    $stmt = $pdo->prepare(CONTRACT_SELECT . ' WHERE ct.id = :id');
+    $stmt->execute(['id' => $id]);
+    json_response(contract_row_to_json($stmt->fetch()));
+}
+
 if ($method === 'DELETE') {
     $id = (string) ($_GET['id'] ?? '');
     if ($id === '') {

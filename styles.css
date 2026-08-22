@@ -613,6 +613,16 @@ button svg {
   font-weight: 700;
 }
 
+.metric-card.clickable-metric {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.metric-card.clickable-metric:hover {
+  box-shadow: 0 18px 40px rgba(7, 40, 78, 0.14);
+  transform: translateY(-1px);
+}
+
 .dashboard-grid,
 .split-layout,
 .contract-layout {

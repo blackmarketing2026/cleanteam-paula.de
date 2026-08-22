@@ -17,7 +17,7 @@ const CONTRACTOR = [
 const LEGAL = [
     'jurisdiction_city' => 'Solingen',
     'agb_version' => 'Stand 28.07.2020',
-    'agb_url' => 'https://cleanteam-group.com/agb/',
+    'agb_url' => 'https://cleanteam-solingen.de/agb/',
 ];
 
 const VAT_RATE = 19.0;
@@ -230,6 +230,19 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
             . '<dt>Vollmacht-Adresse</dt><dd>' . h($authorizationAddress) . '</dd>';
     }
 
+    $screenshotBlock = '';
+    if ($isSigned && $contract !== null) {
+        $screenshot = ensure_agb_screenshot(db(), (string) $contract['id']);
+        if ($screenshot !== null) {
+            $screenshotDataUrl = 'data:image/png;base64,' . base64_encode($screenshot['content']);
+            $screenshotBlock = '<div class="agb-screenshot">'
+                . '<h3>AGB zum Zeitpunkt der Unterschrift (Screenshot)</h3>'
+                . '<p class="muted">Automatischer Screenshot von ' . $agbUrl . ' zum Zeitpunkt der Vertragsunterschrift, als Nachweis für CleanTeam.</p>'
+                . '<img src="' . h($screenshotDataUrl) . '" alt="Screenshot der AGB-Seite" class="agb-screenshot-image">'
+                . '</div>';
+        }
+    }
+
     return <<<HTML
 <section class="signature-protocol">
   <h2>Signaturprotokoll / Nachweis für CleanTeam</h2>
@@ -250,6 +263,7 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
     <dt>AGB-Quelle</dt><dd>{$agbUrl}</dd>
     {$authorizationRows}
   </dl>
+  {$screenshotBlock}
 </section>
 HTML;
 }
@@ -559,6 +573,9 @@ function contract_document_style_css(): string
   .protocol-grid { display: grid; grid-template-columns: 260px 1fr; column-gap: 28px; row-gap: 10px; margin-top: 18px; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.45; align-items: start; }
   .protocol-grid dt { font-weight: 700; color: #333; }
   .protocol-grid dd { margin: 0; overflow-wrap: anywhere; }
+  .agb-screenshot { margin-top: 28px; page-break-inside: avoid; }
+  .agb-screenshot h3 { font-size: 14px; margin: 0 0 4px; }
+  .agb-screenshot-image { max-width: 100%; border: 1px solid #ccc; border-radius: 4px; margin-top: 8px; }
   @media print { body { margin: 0; } }
 CSS;
 }

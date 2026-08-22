@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=remove-customers-checklist-logo-20260822-1" />
+    <link rel="stylesheet" href="styles.css?v=contract-release-flow-20260822-1" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -197,7 +197,7 @@
               <strong id="metric-signed">0</strong>
               <small>online abgeschlossen</small>
             </article>
-            <article class="metric-card">
+            <article class="metric-card clickable-metric" data-overview-target="contracts">
               <span>Rückfragen</span>
               <strong id="metric-followups">0</strong>
               <small>Kunde meldet Korrekturbedarf</small>
@@ -1028,7 +1028,46 @@
       </div>
     </div>
 
+    <div id="contract-correction-modal" class="modal-overlay" hidden>
+      <form id="contract-correction-form" class="modal-box" role="dialog" aria-modal="true" aria-labelledby="contract-correction-modal-heading">
+        <h4 id="contract-correction-modal-heading">Daten korrigieren</h4>
+        <p class="muted">Kontaktdaten und Leistungsbeschreibung des Vertrags anpassen. Danach kann der Vertrag freigegeben werden.</p>
+        <input id="contract-correction-id" type="hidden" />
+        <label class="modal-field">
+          Name des Kunden *
+          <input id="contract-correction-customer-name" type="text" required />
+        </label>
+        <label class="modal-field">
+          Ansprechpartner *
+          <input id="contract-correction-contact-person" type="text" required />
+        </label>
+        <label class="modal-field">
+          Telefonnummer *
+          <input id="contract-correction-phone" type="tel" required />
+        </label>
+        <label class="modal-field">
+          E-Mail-Adresse *
+          <input id="contract-correction-email" type="email" required />
+        </label>
+        <label class="modal-field">
+          Preis (monatlich, netto) *
+          <input id="contract-correction-price" type="number" min="0" step="0.01" required />
+        </label>
+        <label class="modal-field">
+          Leistungsbeschreibung *
+          <textarea id="contract-correction-service-text" class="offer-service-editor" rows="10" required></textarea>
+        </label>
+        <div class="form-actions">
+          <button id="contract-correction-cancel" class="ghost-button" type="button">Abbrechen</button>
+          <button class="primary-button" type="submit">
+            <i data-lucide="save" aria-hidden="true"></i>
+            Speichern
+          </button>
+        </div>
+      </form>
+    </div>
+
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=remove-customers-checklist-logo-20260822-1"></script>
+    <script src="app.js?v=contract-release-flow-20260822-1"></script>
   </body>
 </html>

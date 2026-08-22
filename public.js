@@ -325,12 +325,18 @@ function routeToState(data) {
     return;
   }
 
-  if (contract.status === "daten_abgelehnt" || contract.status === "intervall_abgelehnt") {
+  if (
+    contract.status === "daten_abgelehnt" ||
+    contract.status === "intervall_abgelehnt" ||
+    contract.status === "datenschutz_abgelehnt"
+  ) {
     showScreen("abgelehnt");
     return;
   }
 
   switch (contract.currentStep) {
+    case "datenschutz":
+      break;
     case "daten":
       renderDataCheck();
       break;
@@ -438,7 +444,9 @@ function bindEvents() {
     if (yesNoButton) {
       const screen = yesNoButton.closest(".public-screen");
       const confirmed = yesNoButton.dataset.yesno === "yes";
-      if (screen.id === "screen-daten") {
+      if (screen.id === "screen-datenschutz") {
+        handleAction("confirm-privacy", { confirmed });
+      } else if (screen.id === "screen-daten") {
         handleAction("confirm-data", { confirmed });
       }
       return;

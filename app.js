@@ -2,8 +2,11 @@ const CONTRACT_STATUS_LABELS = {
   entwurf: "Läuft beim Kunden",
   daten_abgelehnt: "Rückfrage: Daten prüfen",
   intervall_abgelehnt: "Rückfrage: Intervall prüfen",
+  datenschutz_abgelehnt: "Rückfrage: Datenschutz",
   signiert: "Signiert",
 };
+
+const REJECTED_CONTRACT_STATUSES = ["daten_abgelehnt", "intervall_abgelehnt", "datenschutz_abgelehnt"];
 
 const state = {
   data: { customers: [], offers: [], contracts: [] },
@@ -148,6 +151,16 @@ const els = {
   linkModalInput: document.querySelector("#link-modal-input"),
   linkModalCopy: document.querySelector("#link-modal-copy"),
   linkModalClose: document.querySelector("#link-modal-close"),
+  contractCorrectionModal: document.querySelector("#contract-correction-modal"),
+  contractCorrectionForm: document.querySelector("#contract-correction-form"),
+  contractCorrectionId: document.querySelector("#contract-correction-id"),
+  contractCorrectionCustomerName: document.querySelector("#contract-correction-customer-name"),
+  contractCorrectionContactPerson: document.querySelector("#contract-correction-contact-person"),
+  contractCorrectionPhone: document.querySelector("#contract-correction-phone"),
+  contractCorrectionEmail: document.querySelector("#contract-correction-email"),
+  contractCorrectionPrice: document.querySelector("#contract-correction-price"),
+  contractCorrectionServiceText: document.querySelector("#contract-correction-service-text"),
+  contractCorrectionCancel: document.querySelector("#contract-correction-cancel"),
   logoPreview: document.querySelector("#logo-preview"),
   logoFileInput: document.querySelector("#logo-file-input"),
   logoRemove: document.querySelector("#logo-remove"),
@@ -238,6 +251,7 @@ async function apiFetch(path, options = {}) {
 const apiGet = (path) => apiFetch(path);
 const apiPost = (path, body) => apiFetch(path, { method: "POST", body: JSON.stringify(body || {}) });
 const apiPut = (path, body) => apiFetch(path, { method: "PUT", body: JSON.stringify(body || {}) });
+const apiPatch = (path, body) => apiFetch(path, { method: "PATCH", body: JSON.stringify(body || {}) });
 const apiDelete = (path) => apiFetch(path, { method: "DELETE" });
 
 function escapeHtml(value) {
@@ -562,7 +576,7 @@ function renderMetrics() {
   els.metricContracts.textContent = state.data.contracts.length;
   els.metricSigned.textContent = state.data.contracts.filter((contract) => contract.status === "signiert").length;
   els.metricFollowups.textContent = state.data.contracts.filter((contract) =>
-    contract.status === "daten_abgelehnt" || contract.status === "intervall_abgelehnt",
+    REJECTED_CONTRACT_STATUSES.includes(contract.status),
   ).length;
 
   const latestOffers = [...savedOffers]
@@ -1323,7 +1337,7 @@ function contractBadgeClass(status) {
   if (status === "signiert") {
     return "success";
   }
-  if (status === "daten_abgelehnt" || status === "intervall_abgelehnt") {
+  if (REJECTED_CONTRACT_STATUSES.includes(status)) {
     return "danger";
   }
   return "warning";
@@ -1339,6 +1353,18 @@ function renderContractRow(contract) {
           <i data-lucide="signature" aria-hidden="true"></i>
           Vollmacht
         </a>
+      `
+    : "";
+  const rejectionActions = REJECTED_CONTRACT_STATUSES.includes(contract.status)
+    ? `
+        <button class="secondary-button" type="button" data-action="correct-contract" data-id="${escapeHtml(contract.id)}">
+          <i data-lucide="pencil" aria-hidden="true"></i>
+          Daten korrigieren
+        </button>
+        <button class="secondary-button" type="button" data-action="release-contract" data-id="${escapeHtml(contract.id)}">
+          <i data-lucide="unlock" aria-hidden="true"></i>
+          Vertrag freigeben
+        </button>
       `
     : "";
 
@@ -1364,6 +1390,7 @@ function renderContractRow(contract) {
             Kunde
           </a>
           ${authorizationButton}
+          ${rejectionActions}
           <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
             <i data-lucide="trash-2" aria-hidden="true"></i>
             Löschen
@@ -1587,6 +1614,73 @@ async function copyLinkModalValue() {
     els.linkModalInput.select();
     document.execCommand("copy");
     showToast("Link wurde kopiert.");
+  }
+}
+
+function openContractCorrectionModal(id) {
+  const contract = getContract(id);
+  if (!contract) {
+    showToast("Vertrag wurde nicht gefunden.");
+    return;
+  }
+
+  els.contractCorrectionId.value = contract.id;
+  els.contractCorrectionCustomerName.value = contract.customer.name;
+  els.contractCorrectionContactPerson.value = contract.customer.contactLastName;
+  els.contractCorrectionPhone.value = contract.customer.phone;
+  els.contractCorrectionEmail.value = contract.customer.email;
+  els.contractCorrectionPrice.value = contract.offer.price;
+  els.contractCorrectionServiceText.value = contract.offer.notes || "";
+  els.contractCorrectionModal.hidden = false;
+  els.contractCorrectionCustomerName.focus();
+}
+
+function closeContractCorrectionModal() {
+  els.contractCorrectionModal.hidden = true;
+  els.contractCorrectionForm.reset();
+}
+
+async function handleContractCorrectionSubmit(event) {
+  event.preventDefault();
+
+  const id = els.contractCorrectionId.value;
+  const payload = {
+    action: "update-contact",
+    customerName: els.contractCorrectionCustomerName.value.trim(),
+    contactPerson: els.contractCorrectionContactPerson.value.trim(),
+    phone: els.contractCorrectionPhone.value.trim(),
+    email: els.contractCorrectionEmail.value.trim(),
+    price: Number(els.contractCorrectionPrice.value),
+    serviceText: els.contractCorrectionServiceText.value.trim(),
+  };
+
+  try {
+    await apiPatch(`api/contracts.php?id=${encodeURIComponent(id)}`, payload);
+    closeContractCorrectionModal();
+    await loadAll();
+    showToast("Daten wurden aktualisiert.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function releaseContract(id) {
+  const contract = getContract(id);
+  if (!contract) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Vertrag "${contract.number}" wieder freigeben, damit der Kunde ihn erneut abschließen kann?`);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await apiPatch(`api/contracts.php?id=${encodeURIComponent(id)}`, { action: "release" });
+    await loadAll();
+    showToast("Vertrag wurde freigegeben.");
+  } catch (error) {
+    showToast(error.message);
   }
 }
 
@@ -2784,6 +2878,14 @@ function handleRecordAction(event) {
   if (action === "delete-contract") {
     deleteContract(id);
   }
+
+  if (action === "correct-contract") {
+    openContractCorrectionModal(id);
+  }
+
+  if (action === "release-contract") {
+    releaseContract(id);
+  }
 }
 
 function bindEvents() {
@@ -2966,6 +3068,15 @@ function bindEvents() {
       closeLinkModal();
     }
   });
+
+  els.contractCorrectionForm.addEventListener("submit", handleContractCorrectionSubmit);
+  els.contractCorrectionCancel.addEventListener("click", closeContractCorrectionModal);
+  els.contractCorrectionModal.addEventListener("click", (event) => {
+    if (event.target === els.contractCorrectionModal) {
+      closeContractCorrectionModal();
+    }
+  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !els.offerSendModal.hidden) {
       closeOfferSendModal();
@@ -2973,6 +3084,10 @@ function bindEvents() {
     }
     if (event.key === "Escape" && !els.linkModal.hidden) {
       closeLinkModal();
+      return;
+    }
+    if (event.key === "Escape" && !els.contractCorrectionModal.hidden) {
+      closeContractCorrectionModal();
     }
   });
 

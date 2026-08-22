@@ -57,6 +57,17 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
           </p>
         </section>
 
+        <section id="screen-datenschutz" class="public-screen wizard-screen">
+          <h2>D&uuml;rfen wir Ihre Daten speichern?</h2>
+          <p class="muted">
+            D&uuml;rfen wir Ihre personenbezogenen Daten f&uuml;r die Erstellung dieses Vertrags speichern und verarbeiten?
+          </p>
+          <div class="form-actions">
+            <button class="ghost-button" data-yesno="no" type="button">Nein</button>
+            <button class="primary-button" data-yesno="yes" type="button">Ja, einverstanden</button>
+          </div>
+        </section>
+
         <section id="screen-daten" class="public-screen wizard-screen">
           <p class="step-indicator">Schritt 2 von 5</p>
           <h2>Sind diese Angaben korrekt?</h2>
@@ -104,6 +115,10 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
           <h2>Vertragsbedingungen</h2>
           <div class="terms-text">
             <p>Bitte best&auml;tigen Sie den Auftrag, bevor Sie zur Unterschrift weitergehen.</p>
+            <p class="muted">
+              Es gelten unsere
+              <a href="https://cleanteam-solingen.de/agb/" target="_blank" rel="noopener">Allgemeinen Gesch&auml;ftsbedingungen</a>.
+            </p>
             <label class="public-confirm-check">
               <input id="terms-confirmation" type="checkbox" />
               <span>Ja, ich best&auml;tige den Auftrag f&uuml;r die vereinbarten Reinigungsleistungen.</span>
@@ -143,6 +158,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=contract-service-layout-20260719-1"></script>
+    <script src="public.js?v=datenschutz-agb-step-20260822-1"></script>
   </body>
 </html>
