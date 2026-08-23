@@ -323,6 +323,19 @@ textarea:focus {
   background: var(--blue-050);
 }
 
+.file-upload-button {
+  position: relative;
+  cursor: pointer;
+}
+
+.file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
 .icon-button {
   width: 42px;
   padding: 0;
@@ -1603,7 +1616,8 @@ button.compact-item.selected {
   justify-content: flex-start;
 }
 
-.contractor-signature-actions button {
+.contractor-signature-actions button,
+.contractor-signature-actions label {
   min-height: 44px;
 }
 

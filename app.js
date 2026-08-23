@@ -179,6 +179,7 @@ const els = {
   contractorSignaturePad: document.querySelector("#contractor-signature-pad"),
   contractorSignatureStatus: document.querySelector("#contractor-signature-status"),
   contractorSignatureClear: document.querySelector("#contractor-signature-clear"),
+  contractorSignatureUploadInput: document.querySelector("#contractor-signature-upload-input"),
   contractorSignatureRemove: document.querySelector("#contractor-signature-remove"),
   contractorSignatureSave: document.querySelector("#contractor-signature-save"),
   userForm: document.querySelector("#user-form"),
@@ -2518,6 +2519,45 @@ function drawContractorSignatureDataUrl(dataUrl, updatedAt) {
   image.src = dataUrl;
 }
 
+function handleContractorSignatureUpload(file) {
+  if (!file) {
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    showToast("Bitte eine Bilddatei auswählen (JPG oder PNG).");
+    return;
+  }
+
+  const canvas = els.contractorSignaturePad;
+  const context = contractorSignatureContext();
+  if (!canvas || !context) {
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const image = new Image();
+    image.onload = () => {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      const scale = Math.min(canvas.width / image.width, canvas.height / image.height, 1);
+      const width = image.width * scale;
+      const height = image.height * scale;
+      context.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+      contractorSignatureHasInk = true;
+      updateContractorSignatureStatus("Neues Bild geladen. Zum Übernehmen speichern.");
+    };
+    image.onerror = () => {
+      showToast("Bild konnte nicht gelesen werden. Bitte eine andere Datei wählen.");
+    };
+    image.src = reader.result;
+  };
+  reader.onerror = () => {
+    showToast("Bild konnte nicht gelesen werden. Bitte eine andere Datei wählen.");
+  };
+  reader.readAsDataURL(file);
+}
+
 async function handleContractorSignatureSave() {
   initContractorSignaturePad();
   if (!contractorSignatureHasInk) {
@@ -2948,6 +2988,10 @@ function bindEvents() {
   els.logoRemove.addEventListener("click", handleLogoRemove);
   els.contractorSignatureClear.addEventListener("click", () => {
     clearContractorSignaturePad("Zeichenfläche ist leer. Neue Unterschrift zeichnen und speichern.");
+  });
+  els.contractorSignatureUploadInput.addEventListener("change", (event) => {
+    handleContractorSignatureUpload(event.target.files[0]);
+    event.target.value = "";
   });
   els.contractorSignatureSave.addEventListener("click", handleContractorSignatureSave);
   els.contractorSignatureRemove.addEventListener("click", handleContractorSignatureRemove);
