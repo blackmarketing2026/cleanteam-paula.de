@@ -9,18 +9,7 @@ const els = {
   card: document.querySelector("#public-card"),
   screens: document.querySelectorAll(".public-screen"),
   errorMessage: document.querySelector("#error-message"),
-  offerSummary: document.querySelector("#offer-summary"),
-  offerValidity: document.querySelector("#offer-validity"),
-  startContract: document.querySelector("#start-contract"),
   dataCheckList: document.querySelector("#data-check-list"),
-  authYes: document.querySelector("#auth-yes"),
-  authNo: document.querySelector("#auth-no"),
-  authorizationQuestionActions: document.querySelector("#authorization-question-actions"),
-  representationField: document.querySelector("#representation-field"),
-  authorizationGrantorName: document.querySelector("#authorization-grantor-name"),
-  authorizationAddress: document.querySelector("#authorization-address"),
-  authorizationBack: document.querySelector("#authorization-back"),
-  representationContinue: document.querySelector("#representation-continue"),
   serviceDetails: document.querySelector("#service-details"),
   termsConfirmation: document.querySelector("#terms-confirmation"),
   termsContinue: document.querySelector("#terms-continue"),
@@ -110,20 +99,6 @@ function renderDefinitionList(target, entries) {
     .join("");
 }
 
-function renderOfferSummary() {
-  const offer = state.offer;
-  const entries = [
-    ["Kunde", offer.customer.name],
-    ["Geschäftsführer / Inhaber", contactName(offer.customer)],
-  ];
-  if (offer.squareMeters > 0) {
-    entries.push(["Fläche", `${offer.squareMeters} m²`]);
-  }
-  entries.push(["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`]);
-  renderDefinitionList(els.offerSummary, entries);
-  els.offerValidity.textContent = `Dieser Vertrag ist gültig bis ${formatDate(offer.expiresAt)}.`;
-}
-
 function renderDataCheck() {
   const offer = state.offer;
   renderDefinitionList(els.dataCheckList, [
@@ -134,109 +109,6 @@ function renderDataCheck() {
   ]);
 }
 
-function renderAuthorizationAddressOptions() {
-  const options = state.offer?.authorizationAddressOptions || [];
-  els.authorizationAddress.innerHTML = options.length
-    ? options
-        .map((option) => {
-          const label = `${option.label}: ${option.value}`;
-          return `<option value="${escapeHtml(option.value)}">${escapeHtml(label)}</option>`;
-        })
-        .join("")
-    : `<option value="">Keine Firmenadresse verfügbar</option>`;
-  els.authorizationAddress.disabled = options.length === 0;
-}
-
-function showAuthorizationForm(visible) {
-  els.authorizationQuestionActions.hidden = visible;
-  els.representationField.hidden = !visible;
-  if (visible) {
-    renderAuthorizationAddressOptions();
-    els.authorizationGrantorName.focus();
-  }
-}
-
-function normalizeServiceLine(line) {
-  return String(line || "")
-    .trim()
-    .replace(/^[\u2022*-]\s*/, "")
-    .trim();
-}
-
-function isServiceNoiseLine(line) {
-  return (
-    /^(Objektdaten|Zusammenfassung|Leistungsbeschreibung \/ Dienstleistung|Etagen und R(?:ä|Ã¤)ume)$/i.test(line) ||
-    /^(Firma \/ Kunde|Ansprechpartner vor Ort|E-Mail|Telefon|Objektadresse|Objektgr(?:ö|Ã¶)ße|Etagen\/Bereiche|R(?:ä|Ã¤)ume|Reinigungspositionen):/i.test(line)
-  );
-}
-
-function splitServiceValue(line) {
-  const separator = line.indexOf(":");
-  if (separator === -1) {
-    return ["", line];
-  }
-
-  return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
-}
-
-function parseServiceRooms(notes) {
-  const rawLines = String(notes || "")
-    .split(/\r?\n/)
-    .map(normalizeServiceLine)
-    .filter(Boolean);
-  const startIndex = rawLines.findIndex((line) => /^Etagen und R(?:ä|Ã¤)ume$/i.test(line));
-  const lines = (startIndex >= 0 ? rawLines.slice(startIndex + 1) : rawLines).filter((line) => !isServiceNoiseLine(line));
-  const rooms = [];
-  const looseServices = [];
-  let currentRoom = null;
-  let readingServices = false;
-
-  lines.forEach((line) => {
-    if (/^\d+\.\s+/.test(line)) {
-      return;
-    }
-
-    const roomMatch = line.match(/^\d+\.\d+\s+(.+)$/);
-    if (roomMatch) {
-      currentRoom = { title: roomMatch[1].trim(), details: [], services: [], notes: [] };
-      rooms.push(currentRoom);
-      readingServices = false;
-      return;
-    }
-
-    if (/^Leistungen:?$/i.test(line)) {
-      readingServices = true;
-      return;
-    }
-
-    const [label, value] = splitServiceValue(line);
-    if (/^(Raumart|Bodenart)$/i.test(label) && value !== "") {
-      if (currentRoom) {
-        currentRoom.details.push([label, value]);
-      }
-      return;
-    }
-
-    if (/^(Extra Vereinbarungen|Notiz)$/i.test(label) && value !== "") {
-      if (currentRoom) {
-        currentRoom.notes.push(value);
-      }
-      return;
-    }
-
-    if (readingServices || /^(Boden|Tische|Schreibtische|Fenster|M(?:ü|Ã¼)ll|Sanit(?:ä|Ã¤)r|Toiletten|Waschbecken|Spiegel|K(?:ü|Ã¼)che|Treppe|Flur|Staub):/i.test(line)) {
-      const service = label && value ? { label, value } : { label: "", value: line };
-      if (currentRoom) {
-        currentRoom.services.push(service);
-      } else {
-        looseServices.push(service);
-      }
-    }
-  });
-
-  return { rooms, looseServices };
-}
-
 function renderFactGrid(items) {
   return `
     <dl class="public-service-facts">
@@ -245,56 +117,12 @@ function renderFactGrid(items) {
   `;
 }
 
-function renderServiceRooms(rooms, looseServices) {
-  if (rooms.length === 0 && looseServices.length === 0) {
-    return `<p class="public-service-empty">Die Reinigungsleistungen sind im Vertrag beschrieben.</p>`;
-  }
-
-  const roomCards = rooms
-    .map((room) => {
-      const details = room.details.length
-        ? `<div class="public-room-meta">${room.details.map(([label, value]) => `<span>${escapeHtml(label)}: ${escapeHtml(value)}</span>`).join("")}</div>`
-        : "";
-      const services = room.services.length
-        ? `<div class="public-room-services">${room.services
-            .map((service) => `<div><strong>${escapeHtml(service.label || "Leistung")}</strong><span>${escapeHtml(service.value)}</span></div>`)
-            .join("")}</div>`
-        : `<p class="public-service-empty">Keine Leistungsdetails hinterlegt.</p>`;
-      const notes = room.notes.length ? `<p class="public-room-note">${escapeHtml(room.notes.join(" "))}</p>` : "";
-
-      return `
-        <article class="public-room-card">
-          <h4>${escapeHtml(room.title)}</h4>
-          ${details}
-          ${services}
-          ${notes}
-        </article>
-      `;
-    })
-    .join("");
-
-  const loose = looseServices.length
-    ? `<div class="public-room-services public-room-services-standalone">
-        ${looseServices.map((service) => `<div><strong>${escapeHtml(service.label || "Leistung")}</strong><span>${escapeHtml(service.value)}</span></div>`).join("")}
-      </div>`
-    : "";
-
-  return roomCards + loose;
-}
-
 function renderServiceDetails() {
   const offer = state.offer;
-  const items = [];
-  if (offer.squareMeters > 0) {
-    items.push(["Fläche", `${offer.squareMeters} m²`]);
-  }
-  items.push(
+  const items = [
     ["Startdatum", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
     ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
-    ["Leistung", offer.service || "Reinigungsleistung"],
-  );
-
-  const service = parseServiceRooms(offer.notes || "");
+  ];
 
   els.serviceDetails.innerHTML = `
     <div class="public-service-card">
@@ -303,10 +131,7 @@ function renderServiceDetails() {
     </div>
     <div class="public-service-card">
       <h3>Leistungsbeschreibung</h3>
-      <p class="public-service-intro">Vereinbart sind die folgenden Bereiche und Leistungen.</p>
-      <div class="public-room-list">
-        ${renderServiceRooms(service.rooms, service.looseServices)}
-      </div>
+      <p class="public-service-text">${escapeHtml(offer.notes || "Die Reinigungsleistungen sind im Vertrag beschrieben.")}</p>
     </div>
   `;
 }
@@ -335,8 +160,6 @@ function routeToState(data) {
   const contract = data.contract;
 
   if (!contract) {
-    renderOfferSummary();
-    showScreen("offer");
     return;
   }
 
@@ -361,10 +184,6 @@ function routeToState(data) {
     case "daten":
       renderDataCheck();
       break;
-    case "vollmacht":
-      renderAuthorizationAddressOptions();
-      showAuthorizationForm(false);
-      break;
     case "leistung":
       renderServiceDetails();
       break;
@@ -378,6 +197,11 @@ function routeToState(data) {
 async function loadOffer() {
   try {
     const data = await api("offer");
+    if (!data.offer.expired && !data.contract) {
+      const started = await api("start");
+      routeToState(started);
+      return;
+    }
     routeToState(data);
   } catch (error) {
     els.errorMessage.textContent = error.message;
@@ -515,8 +339,6 @@ function handleSignatureUploadFile(file) {
 }
 
 function bindEvents() {
-  els.startContract.addEventListener("click", () => handleAction("start"));
-
   els.card.addEventListener("click", (event) => {
     const yesNoButton = event.target.closest("[data-yesno]");
     if (yesNoButton) {
@@ -545,39 +367,6 @@ function bindEvents() {
 
   els.termsConfirmation.addEventListener("change", () => {
     els.termsContinue.disabled = !els.termsConfirmation.checked;
-  });
-
-  els.authYes.addEventListener("click", () => {
-    showAuthorizationForm(false);
-    handleAction("authorization", { authorized: true });
-  });
-
-  els.authNo.addEventListener("click", () => {
-    showAuthorizationForm(true);
-  });
-
-  els.authorizationBack.addEventListener("click", () => {
-    showAuthorizationForm(false);
-  });
-
-  els.representationContinue.addEventListener("click", () => {
-    const grantorName = els.authorizationGrantorName.value.trim();
-    const companyAddress = els.authorizationAddress.value.trim();
-    if (!grantorName) {
-      showToast("Bitte geben Sie den Ansprechpartner an, der die Vollmacht erteilt.");
-      els.authorizationGrantorName.focus();
-      return;
-    }
-    if (!companyAddress) {
-      showToast("Bitte wählen Sie die Firmenadresse aus.");
-      els.authorizationAddress.focus();
-      return;
-    }
-    handleAction("authorization", {
-      authorized: false,
-      authorizationGrantorName: grantorName,
-      authorizationCompanyAddress: companyAddress,
-    });
   });
 
   els.clearSignature.addEventListener("click", clearSignaturePad);

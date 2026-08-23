@@ -14,8 +14,20 @@ if ($token === '') {
     json_error('Kein Vertragslink angegeben.', 404);
 }
 
-const STEP_ORDER = ['datenschutz', 'daten', 'vollmacht', 'leistung', 'bedingungen', 'signatur', 'fertig'];
+const STEP_ORDER = ['datenschutz', 'daten', 'leistung', 'bedingungen', 'signatur', 'fertig'];
 const TERMINAL_STATUSES = ['daten_abgelehnt', 'intervall_abgelehnt', 'datenschutz_abgelehnt'];
+
+// Alte, inzwischen entfernte Schrittnamen (Vollmacht-Funktion) auf den naechsten
+// noch gueltigen Schritt abbilden, damit laengst laufende, noch nicht unterschriebene
+// Vertraege nicht in einem unbekannten Schritt haengen bleiben.
+function normalize_current_step(string $step): string
+{
+    if (in_array($step, ['intervall', 'vollmacht', 'vertragspartner'], true)) {
+        return 'leistung';
+    }
+
+    return $step;
+}
 
 function load_offer(PDO $pdo, string $token): array
 {
@@ -80,33 +92,6 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
     }
 }
 
-function authorization_address_options(array $offer): array
-{
-    $options = [];
-    $seen = [];
-    $customerAddress = trim((string) ($offer['c_address'] ?? '') . ' ' . (string) ($offer['c_house_number'] ?? ''));
-    $customerZipCity = trim((string) ($offer['c_zip'] ?? '') . ' ' . (string) ($offer['c_city'] ?? ''));
-    $customerFullAddress = trim($customerAddress . ($customerZipCity !== '' ? ', ' . $customerZipCity : ''));
-
-    foreach ([
-        ['label' => 'Firmenadresse', 'value' => $customerFullAddress],
-    ] as $option) {
-        if ($option['value'] === '' || isset($seen[$option['value']])) {
-            continue;
-        }
-
-        $seen[$option['value']] = true;
-        $options[] = $option;
-    }
-
-    return $options;
-}
-
-function authorization_note(string $grantorName, string $companyAddress): string
-{
-    return 'Vollmacht durch ' . $grantorName . ', Firmenadresse: ' . $companyAddress;
-}
-
 function offer_is_expired(array $offer): bool
 {
     return strtotime($offer['expires_at'] . ' UTC') < time();
@@ -115,11 +100,8 @@ function offer_is_expired(array $offer): bool
 function public_state(array $offer, ?array $contract): array
 {
     $currentStep = $contract['current_step'] ?? null;
-    if ($currentStep === 'intervall') {
-        $currentStep = 'vollmacht';
-    }
-    if ($currentStep === 'vertragspartner') {
-        $currentStep = 'leistung';
+    if ($currentStep !== null) {
+        $currentStep = normalize_current_step($currentStep);
     }
 
     return [
@@ -148,21 +130,12 @@ function public_state(array $offer, ?array $contract): array
                 'zip' => $offer['c_zip'],
                 'city' => $offer['c_city'],
             ],
-            'authorizationAddressOptions' => authorization_address_options($offer),
         ],
         'contract' => $contract === null ? null : [
             'status' => $contract['status'],
             'currentStep' => $currentStep,
             'dataConfirmed' => (bool) $contract['data_confirmed'],
             'intervalConfirmed' => (bool) $contract['interval_confirmed'],
-            'authorized' => $contract['authorized'] === null ? null : (bool) $contract['authorized'],
-            'representationNote' => $contract['representation_note'],
-            'authorizationGrantorName' => $contract['authorization_grantor_name'] ?? null,
-            'authorizationCompanyAddress' => $contract['authorization_company_address'] ?? null,
-            'hasAuthorizationDocument' => !empty($contract['authorization_grantor_name'])
-                && !empty($contract['authorization_company_address'])
-                && isset($contract['authorized'])
-                && (int) $contract['authorized'] === 0,
             'number' => $contract['number'],
             'signedAt' => to_iso($contract['signed_at']),
             'signatureDataUrl' => $contract['signature_data'],
@@ -265,7 +238,7 @@ if ($method === 'POST' && $action === 'confirm-data') {
     $confirmed = (bool) ($body['confirmed'] ?? false);
 
     if ($confirmed) {
-        $pdo->prepare("UPDATE contracts SET data_confirmed = 1, interval_confirmed = 1, current_step = 'vollmacht' WHERE id = :id")
+        $pdo->prepare("UPDATE contracts SET data_confirmed = 1, interval_confirmed = 1, current_step = 'leistung' WHERE id = :id")
             ->execute(['id' => $contract['id']]);
     } else {
         $pdo->prepare("UPDATE contracts SET status = 'daten_abgelehnt' WHERE id = :id")
@@ -281,7 +254,7 @@ if ($method === 'POST' && $action === 'confirm-interval') {
     $confirmed = (bool) ($body['confirmed'] ?? false);
 
     if ($confirmed) {
-        $pdo->prepare("UPDATE contracts SET interval_confirmed = 1, current_step = 'vollmacht' WHERE id = :id")
+        $pdo->prepare("UPDATE contracts SET interval_confirmed = 1, current_step = 'leistung' WHERE id = :id")
             ->execute(['id' => $contract['id']]);
     } else {
         $pdo->prepare("UPDATE contracts SET status = 'intervall_abgelehnt' WHERE id = :id")
@@ -291,62 +264,11 @@ if ($method === 'POST' && $action === 'confirm-interval') {
     json_response(public_state($offer, load_contract($pdo, $offer['id'])));
 }
 
-if ($method === 'POST' && $action === 'authorization') {
-    $contract = require_active_contract(load_contract($pdo, $offer['id']));
-    $body = read_json_body();
-    $authorized = (bool) ($body['authorized'] ?? false);
-    $grantorName = trim((string) ($body['authorizationGrantorName'] ?? ''));
-    $companyAddress = trim((string) ($body['authorizationCompanyAddress'] ?? ''));
-
-    if (!$authorized) {
-        if ($grantorName === '') {
-            json_error('Bitte geben Sie den Ansprechpartner an, der die Vollmacht erteilt.', 422);
-        }
-
-        if ($companyAddress === '') {
-            json_error('Bitte wählen Sie die Firmenadresse aus.', 422);
-        }
-
-        $allowedAddresses = [];
-        foreach (authorization_address_options($offer) as $option) {
-            $allowedAddresses[] = (string) $option['value'];
-        }
-        if ($allowedAddresses !== [] && !in_array($companyAddress, $allowedAddresses, true)) {
-            json_error('Bitte wählen Sie eine gültige Firmenadresse aus.', 422);
-        }
-    }
-
-    $stmt = $pdo->prepare(
-        "UPDATE contracts SET authorized = :authorized, representation_note = :note,
-            authorization_grantor_name = :grantor_name, authorization_company_address = :company_address,
-            current_step = 'leistung' WHERE id = :id"
-    );
-    $stmt->execute([
-        'authorized' => $authorized ? 1 : 0,
-        'note' => $authorized ? null : authorization_note($grantorName, $companyAddress),
-        'grantor_name' => $authorized ? null : $grantorName,
-        'company_address' => $authorized ? null : $companyAddress,
-        'id' => $contract['id'],
-    ]);
-
-    if (!$authorized) {
-        save_contract_pdf($pdo, $contract['id'], 'authorization', true);
-    }
-
-    json_response(public_state($offer, load_contract($pdo, $offer['id'])));
-}
-
 if ($method === 'POST' && $action === 'advance') {
     $contract = require_active_contract(load_contract($pdo, $offer['id']));
     $body = read_json_body();
     $targetStep = (string) ($body['step'] ?? '');
-    $currentStep = (string) $contract['current_step'];
-    if ($currentStep === 'intervall') {
-        $currentStep = 'vollmacht';
-    }
-    if ($currentStep === 'vertragspartner') {
-        $currentStep = 'leistung';
-    }
+    $currentStep = normalize_current_step((string) $contract['current_step']);
 
     $currentIndex = array_search($currentStep, STEP_ORDER, true);
     $targetIndex = array_search($targetStep, STEP_ORDER, true);

@@ -14,7 +14,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=signature-upload-20260823-1" />
+    <link rel="stylesheet" href="styles.css?v=wizard-simplify-20260823-1" />
   </head>
   <body data-token="<?php echo $token; ?>">
     <main class="public-shell">
@@ -34,19 +34,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         <section id="screen-error" class="public-screen">
           <h2>Link nicht verf&uuml;gbar</h2>
           <p id="error-message" class="muted"></p>
-        </section>
-
-        <section id="screen-offer" class="public-screen">
-          <p class="eyebrow">Vertragsdaten</p>
-          <h2>Ihr individueller Reinigungsvertrag</h2>
-          <dl id="offer-summary" class="data-check"></dl>
-          <p id="offer-validity" class="muted"></p>
-          <p class="question">Sind diese Daten korrekt?</p>
-          <div class="form-actions">
-            <button id="start-contract" class="primary-button" type="button">
-              Schritt 1 f&uuml;r die Vertragserstellung
-            </button>
-          </div>
         </section>
 
         <section id="screen-abgelehnt" class="public-screen">
@@ -69,7 +56,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </section>
 
         <section id="screen-daten" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 2 von 5</p>
+          <p class="step-indicator">Schritt 2 von 4</p>
           <h2>Sind diese Angaben korrekt?</h2>
           <dl id="data-check-list" class="data-check"></dl>
           <div class="form-actions">
@@ -78,31 +65,8 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
           </div>
         </section>
 
-        <section id="screen-vollmacht" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 3 von 5</p>
-          <h2>Sind Sie berechtigt, diesen Vertrag zu unterschreiben?</h2>
-          <div id="authorization-question-actions" class="form-actions">
-            <button class="ghost-button" id="auth-no" type="button">Nein, Vollmacht erfassen</button>
-            <button class="primary-button" id="auth-yes" type="button">Ja, bin ich</button>
-          </div>
-          <div id="representation-field" class="representation-field" hidden>
-            <label>
-              Name des Ansprechpartners, der die Vollmacht erteilt *
-              <input id="authorization-grantor-name" type="text" autocomplete="name" />
-            </label>
-            <label>
-              Firmenadresse *
-              <select id="authorization-address"></select>
-            </label>
-            <div class="form-actions">
-              <button class="ghost-button" id="authorization-back" type="button">Zur&uuml;ck</button>
-              <button class="primary-button" id="representation-continue" type="button">Vollmacht speichern</button>
-            </div>
-          </div>
-        </section>
-
         <section id="screen-leistung" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 4 von 5</p>
+          <p class="step-indicator">Schritt 3 von 4</p>
           <h2>Leistungsumfang</h2>
           <div id="service-details" class="public-service-summary"></div>
           <div class="form-actions">
@@ -111,17 +75,16 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </section>
 
         <section id="screen-bedingungen" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 5 von 5</p>
+          <p class="step-indicator">Schritt 4 von 4</p>
           <h2>Vertragsbedingungen</h2>
           <div class="terms-text">
             <p>Bitte best&auml;tigen Sie den Auftrag, bevor Sie zur Unterschrift weitergehen.</p>
-            <p class="muted">
-              Es gelten unsere
-              <a href="https://cleanteam-solingen.de/agb/" target="_blank" rel="noopener">Allgemeinen Gesch&auml;ftsbedingungen</a>.
-            </p>
             <label class="public-confirm-check">
               <input id="terms-confirmation" type="checkbox" />
-              <span>Ja, ich best&auml;tige den Auftrag f&uuml;r die vereinbarten Reinigungsleistungen.</span>
+              <span>
+                Alles passt &ndash; ich best&auml;tige den Auftrag und stimme den
+                <a href="https://cleanteam-solingen.de/agb/" target="_blank" rel="noopener">Vertragsbedingungen</a> zu.
+              </span>
             </label>
           </div>
           <div class="form-actions">
@@ -180,6 +143,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=signature-upload-20260823-1"></script>
+    <script src="public.js?v=wizard-simplify-20260823-1"></script>
   </body>
 </html>
