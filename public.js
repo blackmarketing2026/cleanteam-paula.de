@@ -198,7 +198,7 @@ async function loadOffer() {
   try {
     const data = await api("offer");
     if (!data.offer.expired && !data.contract) {
-      const started = await api("start");
+      const started = await api("start", {});
       routeToState(started);
       return;
     }

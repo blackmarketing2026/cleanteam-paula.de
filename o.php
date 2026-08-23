@@ -143,6 +143,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=wizard-simplify-20260823-1"></script>
+    <script src="public.js?v=fix-autostart-post-20260823-1"></script>
   </body>
 </html>
