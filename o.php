@@ -147,9 +147,9 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
             Sie k&ouml;nnen den vollst&auml;ndigen Vertrag unten einsehen, ausdrucken oder als PDF speichern.
           </p>
           <div class="form-actions">
-            <button id="print-final-contract" class="secondary-button" type="button">
-              Drucken / Als PDF speichern
-            </button>
+            <a id="print-final-contract" class="secondary-button" href="#" target="_blank" rel="noopener">
+              Vertrag &ouml;ffnen / als PDF speichern
+            </a>
           </div>
           <iframe id="final-contract-frame" class="contract-frame"></iframe>
         </section>
@@ -158,6 +158,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=datenschutz-agb-step-20260822-1"></script>
+    <script src="public.js?v=mobile-pdf-link-optional-sqm-20260823-1"></script>
   </body>
 </html>

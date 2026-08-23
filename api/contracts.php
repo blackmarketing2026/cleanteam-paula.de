@@ -180,9 +180,6 @@ if ($method === 'PATCH') {
             || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
             json_error('Name, Ansprechpartner, Telefonnummer, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
         }
-        if ($squareMeters <= 0) {
-            json_error('Bitte die Quadratmeter eintragen.', 422);
-        }
         if ($price <= 0) {
             json_error('Bitte den monatlichen Preis eintragen.', 422);
         }

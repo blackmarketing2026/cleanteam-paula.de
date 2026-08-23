@@ -52,12 +52,13 @@ $validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC
 $contactName = $offer['c_salutation'] . ' ' . $offer['c_contact_last_name'];
 
 $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
-    . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individueller Vertrag steht ab sofort online bereit:</p>'
-    . '<p style="margin:18px 0;"><a href="' . email_h($publicUrl) . '" style="display:inline-block;padding:12px 20px;background:#0a4f91;color:#ffffff;text-decoration:none;border-radius:7px;font-weight:700;">Vertrag ansehen</a></p>'
+    . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individueller Vertrag steht ab sofort online bereit.</p>'
+    . '<p>Bitte schließen Sie den Vertrag jetzt online ab – klicken Sie dazu einfach auf den folgenden Button:</p>'
+    . '<p style="margin:18px 0;"><a href="' . email_h($publicUrl) . '" style="display:inline-block;padding:12px 20px;background:#0a4f91;color:#ffffff;text-decoration:none;border-radius:7px;font-weight:700;">Vertrag jetzt abschließen</a></p>'
     . '<p>Der Link ist bis zum ' . email_h($validUntil) . ' gültig.</p>';
 $message = render_email_template_message($pdo, $bodyContent, [
     'title' => 'Ihr Vertrag von CleanTeam',
-    'preheader' => 'Ihr individueller Vertrag steht online bereit.',
+    'preheader' => 'Bitte schließen Sie Ihren Vertrag jetzt online ab.',
     'fromName' => $settings['from_name'] ?? 'CleanTeam',
     'signatureText' => $settings['signature'] ?? '',
     'signatureContext' => 'offer',
@@ -78,7 +79,7 @@ try {
         $settings['from_name'],
         $toEmail,
         $offer['c_name'],
-        'Ihr Vertrag von CleanTeam',
+        'Vertrag jetzt abschließen',
         $body,
         true,
         $message['inlineImages']

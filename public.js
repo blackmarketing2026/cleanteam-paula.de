@@ -104,8 +104,10 @@ function renderOfferSummary() {
   const entries = [
     ["Kunde", offer.customer.name],
     ["Ansprechpartner", contactName(offer.customer)],
-    ["Fläche", `${offer.squareMeters} m²`],
   ];
+  if (offer.squareMeters > 0) {
+    entries.push(["Fläche", `${offer.squareMeters} m²`]);
+  }
   entries.push(["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`]);
   renderDefinitionList(els.offerSummary, entries);
   els.offerValidity.textContent = `Dieser Vertrag ist gültig bis ${formatDate(offer.expiresAt)}.`;
@@ -272,12 +274,15 @@ function renderServiceRooms(rooms, looseServices) {
 
 function renderServiceDetails() {
   const offer = state.offer;
-  const items = [
-    ["Fläche", `${offer.squareMeters} m²`],
+  const items = [];
+  if (offer.squareMeters > 0) {
+    items.push(["Fläche", `${offer.squareMeters} m²`]);
+  }
+  items.push(
     ["Startdatum", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
     ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
     ["Leistung", offer.service || "Reinigungsleistung"],
-  ];
+  );
 
   const service = parseServiceRooms(offer.notes || "");
 
@@ -298,7 +303,13 @@ function renderServiceDetails() {
 
 function renderFinalContract() {
   // Zeigt dasselbe serverseitig erzeugte Kunden-PDF, das auch per E-Mail verschickt wird.
-  els.finalContractFrame.src = `contract.php?token=${encodeURIComponent(token)}&format=pdf`;
+  const pdfUrl = `contract.php?token=${encodeURIComponent(token)}&format=pdf`;
+  els.finalContractFrame.src = pdfUrl;
+  // Eigener Link statt nur iframe.contentWindow.print(): In mobilen In-App-Browsern (z. B.
+  // WhatsApp/Instagram) und teils in Safari auf iOS wird ein per iframe eingebettetes PDF
+  // oft gar nicht angezeigt und lässt sich programmatisch nicht drucken. Ein echter Link, der
+  // das PDF direkt öffnet, funktioniert dagegen überall zuverlässig.
+  els.printFinalContract.href = pdfUrl;
 }
 
 function routeToState(data) {
@@ -510,10 +521,6 @@ function bindEvents() {
       return;
     }
     handleAction("sign", { signatureDataUrl: els.signaturePad.toDataURL("image/png") });
-  });
-
-  els.printFinalContract.addEventListener("click", () => {
-    els.finalContractFrame.contentWindow.print();
   });
 }
 

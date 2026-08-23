@@ -1391,7 +1391,7 @@ async function handleOfferSubmit(event) {
   const address = els.offerAddress.value.trim();
   const zip = els.offerZip.value.trim();
   const city = els.offerCity.value.trim();
-  const squareMeters = Number(els.offerSquareMeters.value);
+  const squareMeters = Number(els.offerSquareMeters.value) || 0;
   const interval = els.offerInterval.value;
   const intervalCustom = els.offerIntervalCustom.value.trim();
   const price = Number(els.offerPrice.value);
@@ -1440,12 +1440,6 @@ async function handleOfferSubmit(event) {
     return;
   }
 
-  if (!Number.isFinite(squareMeters) || squareMeters <= 0) {
-    showToast("Bitte die Quadratmeter eintragen.");
-    els.offerSquareMeters.focus();
-    return;
-  }
-
   if (!interval) {
     showToast("Bitte ein Reinigungsintervall auswählen.");
     els.offerInterval.focus();
@@ -1485,7 +1479,7 @@ async function handleOfferSubmit(event) {
       <div class="record-lines">
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
         <span>${escapeHtml(phone)} · ${escapeHtml(email)}</span>
-        <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)} · ${squareMeters} m² · ${escapeHtml(intervalDisplay)}</span>
+        <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)}${squareMeters > 0 ? ` · ${squareMeters} m²` : ""} · ${escapeHtml(intervalDisplay)}</span>
         <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."}</span>
       </div>
     `;
@@ -1508,7 +1502,7 @@ async function handleOfferReviewSubmit(event) {
     address: els.offerAddress.value.trim(),
     zip: els.offerZip.value.trim(),
     city: els.offerCity.value.trim(),
-    squareMeters: Number(els.offerSquareMeters.value),
+    squareMeters: Number(els.offerSquareMeters.value) || 0,
     interval: els.offerInterval.value,
     intervalCustom: els.offerIntervalCustom.value.trim(),
     price: Number(els.offerPrice.value),
@@ -1665,7 +1659,7 @@ function openContractCorrectionModal(id) {
   els.contractCorrectionAddress.value = contract.customer.address;
   els.contractCorrectionZip.value = contract.customer.zip;
   els.contractCorrectionCity.value = contract.customer.city;
-  els.contractCorrectionSquareMeters.value = contract.offer.squareMeters;
+  els.contractCorrectionSquareMeters.value = contract.offer.squareMeters || "";
   const fixedIntervals = ["Wöchentlich", "Täglich", "Monatlich"];
   if (fixedIntervals.includes(contract.offer.interval)) {
     els.contractCorrectionInterval.value = contract.offer.interval;
@@ -1711,7 +1705,7 @@ async function handleContractCorrectionSubmit(event) {
     address: els.contractCorrectionAddress.value.trim(),
     zip: els.contractCorrectionZip.value.trim(),
     city: els.contractCorrectionCity.value.trim(),
-    squareMeters: Number(els.contractCorrectionSquareMeters.value),
+    squareMeters: Number(els.contractCorrectionSquareMeters.value) || 0,
     interval,
     intervalCustom,
     price: Number(els.contractCorrectionPrice.value),
