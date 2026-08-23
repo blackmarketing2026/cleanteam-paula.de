@@ -72,7 +72,6 @@ const els = {
   smtpFromEmail: document.querySelector("#smtp-from-email"),
   sendTestMail: document.querySelector("#send-test-mail"),
   toast: document.querySelector("#toast"),
-  metricCustomers: document.querySelector("#metric-customers"),
   metricOffers: document.querySelector("#metric-offers"),
   metricContracts: document.querySelector("#metric-contracts"),
   metricSigned: document.querySelector("#metric-signed"),
@@ -256,7 +255,6 @@ function renderAll() {
 }
 
 function renderMetrics() {
-  els.metricCustomers.textContent = state.data.customers.length;
   els.metricOffers.textContent = state.data.offers.length;
   els.metricContracts.textContent = state.data.contracts.length;
   els.metricSigned.textContent = state.data.contracts.filter((contract) => contract.status === "signiert").length;

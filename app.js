@@ -199,7 +199,6 @@ const els = {
   userList: document.querySelector("#user-list"),
   brandMarks: document.querySelectorAll(".brand-mark"),
   toast: document.querySelector("#toast"),
-  metricCustomers: document.querySelector("#metric-customers"),
   metricOffers: document.querySelector("#metric-offers"),
   metricContracts: document.querySelector("#metric-contracts"),
   metricSigned: document.querySelector("#metric-signed"),
@@ -587,7 +586,6 @@ function renderAll() {
 function renderMetrics() {
   const savedOffers = visibleSavedOffers();
 
-  els.metricCustomers.textContent = state.data.customers.length;
   els.metricOffers.textContent = savedOffers.length;
   els.metricContracts.textContent = state.data.contracts.length;
   els.metricSigned.textContent = state.data.contracts.filter((contract) => contract.status === "signiert").length;
