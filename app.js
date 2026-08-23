@@ -1150,14 +1150,12 @@ function renderOfferCard(offer) {
         Neuen Vertrag erstellen
       </button>
     `;
-  const resetLinkButton = offer.contractId || offer.linkOpenedAt
-    ? `
-      <button class="ghost-button" type="button" data-action="reset-contract-link" data-id="${escapeHtml(offer.id)}">
-        <i data-lucide="rotate-ccw" aria-hidden="true"></i>
-        Link zurücksetzen
-      </button>
-    `
-    : "";
+  const resetLinkButton = `
+    <button class="ghost-button" type="button" data-action="reset-contract-link" data-id="${escapeHtml(offer.id)}">
+      <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+      Link zurücksetzen
+    </button>
+  `;
 
   return `
     <article class="record-item">
@@ -1875,7 +1873,7 @@ async function deleteOffer(id) {
 async function resetContractLink(offerId) {
   const offer = getOffer(offerId);
   const confirmed = window.confirm(
-    "Abschlussprozess für diesen Vertragslink zurücksetzen? Der bisherige Fortschritt geht verloren, und der Kunde kann den Link erneut von vorne durchgehen.",
+    "Neuen Link für diesen Vertrag erstellen? Der bisherige Link wird dabei ungültig, ein eventueller Fortschritt geht verloren.",
   );
   if (!confirmed) {
     return;
@@ -1891,7 +1889,7 @@ async function resetContractLink(offerId) {
       await apiPatch(`api/offers.php?id=${encodeURIComponent(offerId)}`, { action: "reset-link" });
     }
     await loadAll();
-    showToast("Link wurde zurückgesetzt.");
+    showToast("Neuer Token wurde erstellt.");
   } catch (error) {
     showToast(error.message);
   }
