@@ -1,0 +1,9 @@
+# Erzwingt HTTPS jetzt, wo All-Inkl ein Let's-Encrypt-Zertifikat bereitstellt.
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>

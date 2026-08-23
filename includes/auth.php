@@ -14,6 +14,8 @@ function start_session(): void
             'lifetime' => 0,
             'path' => '/',
             'samesite' => 'Lax',
+            'secure' => is_https_request(),
+            'httponly' => true,
         ]);
         session_start();
     }

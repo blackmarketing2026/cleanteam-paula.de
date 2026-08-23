@@ -149,6 +149,15 @@ function branding_default_logo_disk_path(): string
     return __DIR__ . '/../' . branding_default_logo_relative_path();
 }
 
+function is_https_request(): bool
+{
+    $forwardedProto = strtolower(trim((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
+
+    return (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+        || (string) ($_SERVER['SERVER_PORT'] ?? '') === '443'
+        || $forwardedProto === 'https';
+}
+
 function request_origin(): ?string
 {
     $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
@@ -156,11 +165,7 @@ function request_origin(): ?string
         return null;
     }
 
-    $forwardedProto = strtolower(trim((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
-    $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
-        || (string) ($_SERVER['SERVER_PORT'] ?? '') === '443'
-        || $forwardedProto === 'https';
-    $scheme = $isHttps ? 'https' : 'http';
+    $scheme = is_https_request() ? 'https' : 'http';
 
     return $scheme . '://' . $host;
 }
