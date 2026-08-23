@@ -49,13 +49,15 @@ if (!$settings || $settings['host'] === '' || $settings['username'] === '' || ($
 
 $publicUrl = base_url() . '/offer.php?token=' . $offer['token'];
 $validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))->format('d.m.Y');
+$validityDays = (int) ($offer['validity_days'] ?? 14);
 $contactName = $offer['c_salutation'] . ' ' . $offer['c_contact_last_name'];
 
 $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
     . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individueller Vertrag steht ab sofort online bereit.</p>'
     . '<p>Bitte schließen Sie den Vertrag jetzt online ab – klicken Sie dazu einfach auf den folgenden Button:</p>'
-    . '<p style="margin:18px 0;"><a href="' . email_h($publicUrl) . '" style="display:inline-block;padding:12px 20px;background:#0a4f91;color:#ffffff;text-decoration:none;border-radius:7px;font-weight:700;">Vertrag jetzt abschließen</a></p>'
-    . '<p>Der Link ist bis zum ' . email_h($validUntil) . ' gültig.</p>';
+    . '<p style="margin:18px 0;"><a href="' . email_h($publicUrl) . '" style="display:inline-block;padding:12px 20px;background:#0a4f91;color:#ffffff;text-decoration:none;border-radius:7px;font-weight:700;">Jetzt Vertrag online abschließen</a></p>'
+    . '<p>Der Link ist ' . $validityDays . ' Tage lang gültig, also bis zum ' . email_h($validUntil) . '. Danach verfällt er automatisch und kann nicht mehr verwendet werden.</p>'
+    . '<p style="color:#51657d;font-size:13px;">Hinweis: Dieser Link ist nur einmalig gültig. Klicken Sie bitte nur darauf, wenn Sie den Vertrag auch tatsächlich abschließen möchten. Wurde er versehentlich schon einmal geöffnet, muss er aus Datenschutzgründen erst wieder von uns freigegeben werden, bevor er erneut funktioniert.</p>';
 $message = render_email_template_message($pdo, $bodyContent, [
     'title' => 'Ihr Vertrag von CleanTeam',
     'preheader' => 'Bitte schließen Sie Ihren Vertrag jetzt online ab.',
@@ -79,7 +81,7 @@ try {
         $settings['from_name'],
         $toEmail,
         $offer['c_name'],
-        'Vertrag jetzt abschließen',
+        'Jetzt Vertrag online abschließen',
         $body,
         true,
         $message['inlineImages']
