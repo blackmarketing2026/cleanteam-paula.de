@@ -1651,6 +1651,26 @@ async function copyLinkModalValue() {
   }
 }
 
+function ensureSelectHasValue(selectEl, value) {
+  const legacyOption = selectEl.querySelector('option[data-legacy-value="true"]');
+  if (legacyOption) {
+    legacyOption.remove();
+  }
+
+  if (!value) {
+    return;
+  }
+
+  const hasMatch = Array.from(selectEl.options).some((option) => option.value === value);
+  if (!hasMatch) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    option.dataset.legacyValue = "true";
+    selectEl.insertBefore(option, selectEl.firstChild);
+  }
+}
+
 function openContractCorrectionModal(id) {
   const contract = getContract(id);
   if (!contract) {
@@ -1666,6 +1686,7 @@ function openContractCorrectionModal(id) {
   els.contractCorrectionZip.value = contract.customer.zip;
   els.contractCorrectionCity.value = contract.customer.city;
   els.contractCorrectionSquareMeters.value = contract.offer.squareMeters || "";
+  ensureSelectHasValue(els.contractCorrectionInterval, contract.offer.interval);
   els.contractCorrectionInterval.value = contract.offer.interval;
   els.contractCorrectionPrice.value = contract.offer.price;
   els.contractCorrectionVat.value = contract.offer.vatApplicable === false ? "no" : "yes";
@@ -1733,6 +1754,7 @@ function openOfferEditModal(id) {
   els.offerEditZip.value = offer.customer.zip;
   els.offerEditCity.value = offer.customer.city;
   els.offerEditSquareMeters.value = offer.squareMeters || "";
+  ensureSelectHasValue(els.offerEditInterval, offer.interval);
   els.offerEditInterval.value = offer.interval;
   els.offerEditPrice.value = offer.price;
   els.offerEditVat.value = offer.vatApplicable === false ? "no" : "yes";
