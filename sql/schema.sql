@@ -1,4 +1,4 @@
--- CleanTeam Salemanager - Datenbankschema (MySQL 5.7+/MariaDB 10.3+)
+-- CleanTeam Paula - Datenbankschema (MySQL 5.7+/MariaDB 10.3+)
 -- Einspielen z. B. per phpMyAdmin im All-Inklusive-Hosting-Paket.
 
 SET NAMES utf8mb4;

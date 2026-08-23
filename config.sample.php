@@ -18,9 +18,9 @@ return [
 
     // Basis-URL der Installation ohne abschliessenden Slash, wird fuer die
     // Vertragslinks in den E-Mails an Kunden verwendet.
-    'base_url' => 'https://www.example.de/salemanager',
+    'base_url' => 'https://www.example.de/paula',
 
     // Optional: eigene oeffentlich erreichbare Basis-URL nur fuer Bilder in
     // E-Mails. Leer lassen, wenn sie der base_url entspricht.
-    // 'email_asset_base_url' => 'https://www.example.de/salemanager',
+    // 'email_asset_base_url' => 'https://www.example.de/paula',
 ];
