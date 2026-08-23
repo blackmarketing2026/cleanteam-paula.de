@@ -103,10 +103,6 @@
               <i data-lucide="signature" aria-hidden="true"></i>
               <span>Signatur</span>
             </button>
-            <button class="nav-link" type="button" data-view="settings-contract-number">
-              <i data-lucide="hash" aria-hidden="true"></i>
-              <span>Vertragsnummer</span>
-            </button>
             <button class="nav-link" type="button" data-view="settings-users">
               <i data-lucide="shield-check" aria-hidden="true"></i>
               <span>User & Rollen</span>
@@ -786,42 +782,6 @@
           </section>
         </section>
 
-        <section id="settings-contract-number-view" class="view" aria-label="Vertragsnummer">
-          <div class="section-heading">
-            <div>
-              <p class="muted">Legt fest, mit welcher Nummer der nächste neu erstellte Vertrag beginnt.</p>
-            </div>
-          </div>
-
-          <section class="panel form-panel" aria-labelledby="contract-number-heading">
-            <div class="panel-header">
-              <div>
-                <h4 id="contract-number-heading">Nächste Vertragsnummer</h4>
-                <p class="muted">Format ist immer CT-Jahr-Nummer, z. B. CT-2026-001. Nur die laufende Nummer ist hier einstellbar.</p>
-              </div>
-            </div>
-            <form id="contract-number-form" class="form-grid">
-              <label>
-                Vertragsjahr *
-                <input id="contract-number-year" type="number" min="2000" max="2100" step="1" required placeholder="z. B. 2026" />
-              </label>
-              <label>
-                Laufende Nummer *
-                <input id="contract-number-next" type="number" min="1" step="1" required placeholder="z. B. 1" />
-              </label>
-              <div class="span-2">
-                <span class="muted">Vorschau: <strong id="contract-number-preview">–</strong></span>
-              </div>
-              <div class="form-actions span-2">
-                <button class="primary-button" type="submit">
-                  <i data-lucide="save" aria-hidden="true"></i>
-                  Speichern
-                </button>
-              </div>
-            </form>
-          </section>
-        </section>
-
         <section id="settings-users-view" class="view" aria-label="User & Rollen">
           <div class="section-heading">
             <div>
@@ -1019,7 +979,83 @@
       </form>
     </div>
 
+    <div id="offer-edit-modal" class="modal-overlay" hidden>
+      <form id="offer-edit-form" class="modal-box" role="dialog" aria-modal="true" aria-labelledby="offer-edit-modal-heading">
+        <h4 id="offer-edit-modal-heading">Vertragsentwurf bearbeiten</h4>
+        <p class="muted">Kundendaten und Leistung des Vertragsentwurfs anpassen.</p>
+        <input id="offer-edit-id" type="hidden" />
+        <label class="modal-field">
+          Name des Kunden *
+          <input id="offer-edit-customer-name" type="text" required />
+        </label>
+        <label class="modal-field">
+          Geschäftsführer / Inhaber *
+          <input id="offer-edit-contact-person" type="text" required />
+        </label>
+        <label class="modal-field">
+          E-Mail-Adresse *
+          <input id="offer-edit-email" type="email" required />
+        </label>
+        <label class="modal-field">
+          Straße und Hausnummer (Objektadresse) *
+          <input id="offer-edit-address" type="text" required />
+        </label>
+        <label class="modal-field">
+          Postleitzahl *
+          <input id="offer-edit-zip" type="text" inputmode="numeric" required />
+        </label>
+        <label class="modal-field">
+          Ort *
+          <input id="offer-edit-city" type="text" required />
+        </label>
+        <label class="modal-field">
+          Quadratmeter
+          <input id="offer-edit-square-meters" type="number" min="0" step="1" />
+        </label>
+        <label class="modal-field">
+          Reinigungsintervall *
+          <select id="offer-edit-interval" required>
+            <option value="">Bitte wählen</option>
+            <option value="Wöchentlich">Wöchentlich</option>
+            <option value="Täglich">Täglich</option>
+            <option value="Monatlich">Monatlich</option>
+            <option value="Individuell">Individuell</option>
+          </select>
+        </label>
+        <label id="offer-edit-interval-custom-field" class="modal-field" hidden>
+          Individuelles Intervall *
+          <input id="offer-edit-interval-custom" type="text" />
+        </label>
+        <label class="modal-field">
+          Preis (monatlich, netto) *
+          <input id="offer-edit-price" type="number" min="0" step="0.01" required />
+        </label>
+        <label class="modal-field">
+          Beginn der Dienstleistung *
+          <input id="offer-edit-start-date" type="date" required />
+        </label>
+        <label class="modal-field">
+          Umsatzsteuer berechnen? *
+          <select id="offer-edit-vat" required>
+            <option value="yes">Ja</option>
+            <option value="no">Nein</option>
+          </select>
+        </label>
+        <label class="modal-field">
+          Leistungsbeschreibung *
+          <textarea id="offer-edit-service-text" class="offer-service-editor" rows="10" required></textarea>
+        </label>
+        <div class="form-actions">
+          <button id="offer-edit-cancel" class="ghost-button" type="button">Abbrechen</button>
+          <button class="primary-button" type="submit">
+            <i data-lucide="save" aria-hidden="true"></i>
+            Speichern
+          </button>
+        </div>
+      </form>
+    </div>
+
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=drop-phone-rename-contact-20260823-1"></script>
+    <script src="app.js?v=edit-offer-draft-20260823-1"></script>
   </body>
 </html>

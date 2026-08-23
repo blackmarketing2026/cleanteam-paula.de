@@ -155,13 +155,27 @@ const els = {
   contractCorrectionVat: document.querySelector("#contract-correction-vat"),
   contractCorrectionServiceText: document.querySelector("#contract-correction-service-text"),
   contractCorrectionCancel: document.querySelector("#contract-correction-cancel"),
+  offerEditModal: document.querySelector("#offer-edit-modal"),
+  offerEditForm: document.querySelector("#offer-edit-form"),
+  offerEditId: document.querySelector("#offer-edit-id"),
+  offerEditCustomerName: document.querySelector("#offer-edit-customer-name"),
+  offerEditContactPerson: document.querySelector("#offer-edit-contact-person"),
+  offerEditEmail: document.querySelector("#offer-edit-email"),
+  offerEditAddress: document.querySelector("#offer-edit-address"),
+  offerEditZip: document.querySelector("#offer-edit-zip"),
+  offerEditCity: document.querySelector("#offer-edit-city"),
+  offerEditSquareMeters: document.querySelector("#offer-edit-square-meters"),
+  offerEditInterval: document.querySelector("#offer-edit-interval"),
+  offerEditIntervalCustomField: document.querySelector("#offer-edit-interval-custom-field"),
+  offerEditIntervalCustom: document.querySelector("#offer-edit-interval-custom"),
+  offerEditPrice: document.querySelector("#offer-edit-price"),
+  offerEditStartDate: document.querySelector("#offer-edit-start-date"),
+  offerEditVat: document.querySelector("#offer-edit-vat"),
+  offerEditServiceText: document.querySelector("#offer-edit-service-text"),
+  offerEditCancel: document.querySelector("#offer-edit-cancel"),
   logoPreview: document.querySelector("#logo-preview"),
   logoFileInput: document.querySelector("#logo-file-input"),
   logoRemove: document.querySelector("#logo-remove"),
-  contractNumberForm: document.querySelector("#contract-number-form"),
-  contractNumberYear: document.querySelector("#contract-number-year"),
-  contractNumberNext: document.querySelector("#contract-number-next"),
-  contractNumberPreview: document.querySelector("#contract-number-preview"),
   contractorSignaturePad: document.querySelector("#contractor-signature-pad"),
   contractorSignatureStatus: document.querySelector("#contractor-signature-status"),
   contractorSignatureClear: document.querySelector("#contractor-signature-clear"),
@@ -194,7 +208,6 @@ const titles = {
   "settings-notify": "Vertragsbenachrichtigungen-Einstellungen",
   "settings-logo": "Logo-Einstellungen",
   "settings-signature": "Signatur",
-  "settings-contract-number": "Vertragsnummer",
   "settings-users": "User & Rollen",
 };
 
@@ -492,10 +505,6 @@ function switchView(view) {
 
   if (view === "settings-signature") {
     loadContractorSignature();
-  }
-
-  if (view === "settings-contract-number") {
-    loadContractNumberSettings();
   }
 
   if (view === "offers-new") {
@@ -1184,6 +1193,10 @@ function renderOfferCard(offer) {
           Link kopieren
         </button>
         ${contractActions}
+        <button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
+          <i data-lucide="pencil" aria-hidden="true"></i>
+          Bearbeiten
+        </button>
         <button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
           Löschen
@@ -1713,6 +1726,89 @@ async function handleContractCorrectionSubmit(event) {
     closeContractCorrectionModal();
     await loadAll();
     showToast("Daten wurden aktualisiert.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function openOfferEditModal(id) {
+  const offer = getOffer(id);
+  if (!offer) {
+    showToast("Vertragsentwurf wurde nicht gefunden.");
+    return;
+  }
+
+  els.offerEditId.value = offer.id;
+  els.offerEditCustomerName.value = offer.customer.name;
+  els.offerEditContactPerson.value = offer.customer.contactLastName;
+  els.offerEditEmail.value = offer.customer.email;
+  els.offerEditAddress.value = offer.customer.address;
+  els.offerEditZip.value = offer.customer.zip;
+  els.offerEditCity.value = offer.customer.city;
+  els.offerEditSquareMeters.value = offer.squareMeters || "";
+  const fixedIntervals = ["Wöchentlich", "Täglich", "Monatlich"];
+  if (fixedIntervals.includes(offer.interval)) {
+    els.offerEditInterval.value = offer.interval;
+    els.offerEditIntervalCustom.value = "";
+    els.offerEditIntervalCustomField.hidden = true;
+  } else {
+    els.offerEditInterval.value = "Individuell";
+    els.offerEditIntervalCustom.value = offer.interval || "";
+    els.offerEditIntervalCustomField.hidden = false;
+  }
+  els.offerEditPrice.value = offer.price;
+  els.offerEditVat.value = offer.vatApplicable === false ? "no" : "yes";
+  els.offerEditStartDate.value = offer.startDate || "";
+  els.offerEditServiceText.value = offer.notes || "";
+  els.offerEditModal.hidden = false;
+  els.offerEditCustomerName.focus();
+}
+
+function closeOfferEditModal() {
+  els.offerEditModal.hidden = true;
+  els.offerEditForm.reset();
+  els.offerEditIntervalCustomField.hidden = true;
+}
+
+async function handleOfferEditSubmit(event) {
+  event.preventDefault();
+
+  const interval = els.offerEditInterval.value;
+  const intervalCustom = els.offerEditIntervalCustom.value.trim();
+  if (interval === "Individuell" && !intervalCustom) {
+    showToast("Bitte das individuelle Reinigungsintervall beschreiben.");
+    els.offerEditIntervalCustom.focus();
+    return;
+  }
+
+  const id = els.offerEditId.value;
+  const payload = {
+    customerName: els.offerEditCustomerName.value.trim(),
+    contactPerson: els.offerEditContactPerson.value.trim(),
+    email: els.offerEditEmail.value.trim(),
+    address: els.offerEditAddress.value.trim(),
+    zip: els.offerEditZip.value.trim(),
+    city: els.offerEditCity.value.trim(),
+    squareMeters: Number(els.offerEditSquareMeters.value) || 0,
+    interval,
+    intervalCustom,
+    price: Number(els.offerEditPrice.value),
+    vatApplicable: els.offerEditVat.value === "yes",
+    startDate: els.offerEditStartDate.value,
+    serviceText: els.offerEditServiceText.value.trim(),
+  };
+
+  if (!payload.startDate) {
+    showToast("Bitte den Beginn der Dienstleistung eintragen.");
+    els.offerEditStartDate.focus();
+    return;
+  }
+
+  try {
+    await apiPut(`api/offers.php?id=${encodeURIComponent(id)}`, payload);
+    closeOfferEditModal();
+    await loadAll();
+    showToast("Vertragsentwurf wurde aktualisiert.");
   } catch (error) {
     showToast(error.message);
   }
@@ -2475,42 +2571,6 @@ async function loadContractorSignature() {
   }
 }
 
-async function loadContractNumberSettings() {
-  try {
-    const result = await apiGet("api/contract-number.php");
-    els.contractNumberYear.value = result.year;
-    els.contractNumberNext.value = result.nextNumber;
-    els.contractNumberPreview.textContent = result.nextNumberPreview;
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-async function handleContractNumberSubmit(event) {
-  event.preventDefault();
-
-  const year = Number(els.contractNumberYear.value);
-  const nextNumber = Number(els.contractNumberNext.value);
-  if (!Number.isFinite(year) || year < 2000 || year > 2100) {
-    showToast("Bitte ein gültiges Jahr eintragen.");
-    els.contractNumberYear.focus();
-    return;
-  }
-  if (!Number.isFinite(nextNumber) || nextNumber <= 0) {
-    showToast("Bitte eine gültige Startnummer eintragen.");
-    els.contractNumberNext.focus();
-    return;
-  }
-
-  try {
-    const result = await apiPost("api/contract-number.php", { year, nextNumber });
-    els.contractNumberPreview.textContent = result.nextNumberPreview;
-    showToast("Vertragsnummer wurde gespeichert.");
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
 function userRoleOptions(selectedRole) {
   const roles = Object.keys(state.userRoles).length
     ? state.userRoles
@@ -2753,6 +2813,10 @@ function handleRecordAction(event) {
     deleteOffer(id);
   }
 
+  if (action === "edit-offer") {
+    openOfferEditModal(id);
+  }
+
   if (action === "delete-contract") {
     deleteContract(id);
   }
@@ -2831,6 +2895,9 @@ function bindEvents() {
   els.contractCorrectionInterval.addEventListener("change", () => {
     els.contractCorrectionIntervalCustomField.hidden = els.contractCorrectionInterval.value !== "Individuell";
   });
+  els.offerEditInterval.addEventListener("change", () => {
+    els.offerEditIntervalCustomField.hidden = els.offerEditInterval.value !== "Individuell";
+  });
 
   els.offerList.addEventListener("click", handleRecordAction);
   els.contractList.addEventListener("click", handleRecordAction);
@@ -2879,16 +2946,6 @@ function bindEvents() {
 
   els.logoFileInput.addEventListener("change", handleLogoUpload);
   els.logoRemove.addEventListener("click", handleLogoRemove);
-  els.contractNumberForm.addEventListener("submit", handleContractNumberSubmit);
-  const updateContractNumberPreview = () => {
-    const year = Number(els.contractNumberYear.value);
-    const value = Number(els.contractNumberNext.value);
-    els.contractNumberPreview.textContent = Number.isFinite(year) && year > 0 && Number.isFinite(value) && value > 0
-      ? `CT-${year}-${String(value).padStart(3, "0")}`
-      : "–";
-  };
-  els.contractNumberYear.addEventListener("input", updateContractNumberPreview);
-  els.contractNumberNext.addEventListener("input", updateContractNumberPreview);
   els.contractorSignatureClear.addEventListener("click", () => {
     clearContractorSignaturePad("Zeichenfläche ist leer. Neue Unterschrift zeichnen und speichern.");
   });
@@ -2948,6 +3005,14 @@ function bindEvents() {
     }
   });
 
+  els.offerEditForm.addEventListener("submit", handleOfferEditSubmit);
+  els.offerEditCancel.addEventListener("click", closeOfferEditModal);
+  els.offerEditModal.addEventListener("click", (event) => {
+    if (event.target === els.offerEditModal) {
+      closeOfferEditModal();
+    }
+  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !els.offerSendModal.hidden) {
       closeOfferSendModal();
@@ -2959,6 +3024,10 @@ function bindEvents() {
     }
     if (event.key === "Escape" && !els.contractCorrectionModal.hidden) {
       closeContractCorrectionModal();
+      return;
+    }
+    if (event.key === "Escape" && !els.offerEditModal.hidden) {
+      closeOfferEditModal();
     }
   });
 

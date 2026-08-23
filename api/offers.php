@@ -189,6 +189,85 @@ if ($method === 'POST') {
     json_response(offer_row_to_json($stmt->fetch()), 201);
 }
 
+if ($method === 'PUT') {
+    $id = (string) ($_GET['id'] ?? '');
+    if ($id === '') {
+        json_error('Vertrags-ID fehlt.', 422);
+    }
+
+    $stmt = $pdo->prepare('SELECT id, customer_id FROM offers WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    $existing = $stmt->fetch();
+    if (!$existing) {
+        json_error('Vertragsentwurf wurde nicht gefunden.', 404);
+    }
+
+    $body = read_json_body();
+    $customerName = trim((string) ($body['customerName'] ?? ''));
+    $contactPerson = trim((string) ($body['contactPerson'] ?? ''));
+    $email = trim((string) ($body['email'] ?? ''));
+    $address = trim((string) ($body['address'] ?? ''));
+    $zip = trim((string) ($body['zip'] ?? ''));
+    $city = trim((string) ($body['city'] ?? ''));
+    $squareMeters = (int) ($body['squareMeters'] ?? 0);
+    $price = round((float) ($body['price'] ?? 0), 2);
+    $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
+    $startDate = trim((string) ($body['startDate'] ?? ''));
+    $serviceText = trim((string) ($body['serviceText'] ?? ''));
+    $interval = trim((string) ($body['interval'] ?? ''));
+    $intervalCustom = trim((string) ($body['intervalCustom'] ?? ''));
+
+    $allowedIntervals = ['Wöchentlich', 'Täglich', 'Monatlich', 'Individuell'];
+    if (!in_array($interval, $allowedIntervals, true)) {
+        json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
+    }
+    if ($interval === 'Individuell' && $intervalCustom === '') {
+        json_error('Bitte das individuelle Reinigungsintervall beschreiben.', 422);
+    }
+    $intervalLabel = $interval === 'Individuell' ? $intervalCustom : $interval;
+
+    if ($customerName === '' || $contactPerson === '' || $email === ''
+        || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
+        json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
+    }
+    if ($price <= 0) {
+        json_error('Bitte den monatlichen Preis eintragen.', 422);
+    }
+    if ($startDate === '' || strtotime($startDate) === false) {
+        json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
+    }
+
+    $pdo->prepare(
+        'UPDATE customers SET name = :name, contact_last_name = :contact, email = :email,
+            address = :address, zip = :zip, city = :city WHERE id = :id'
+    )->execute([
+        'name' => $customerName,
+        'contact' => $contactPerson,
+        'email' => $email,
+        'address' => $address,
+        'zip' => $zip,
+        'city' => $city,
+        'id' => $existing['customer_id'],
+    ]);
+
+    $pdo->prepare(
+        'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
+            price = :price, base_price = :price, vat_applicable = :vat_applicable, notes = :notes WHERE id = :id'
+    )->execute([
+        'square_meters' => $squareMeters,
+        'interval_label' => $intervalLabel,
+        'start_date' => $startDate,
+        'price' => $price,
+        'vat_applicable' => $vatApplicable ? 1 : 0,
+        'notes' => format_service_text($serviceText),
+        'id' => $id,
+    ]);
+
+    $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');
+    $stmt->execute(['id' => $id]);
+    json_response(offer_row_to_json($stmt->fetch()));
+}
+
 if ($method === 'DELETE') {
     $id = (string) ($_GET['id'] ?? '');
     if ($id === '') {
