@@ -2582,6 +2582,10 @@ function renderUsers() {
                 <i data-lucide="save" aria-hidden="true"></i>
                 Speichern
               </button>
+              <button class="ghost-button" type="button" data-action="delete-user" data-id="${escapeHtml(user.id)}" ${Number(user.id) === Number(state.currentUserId) ? "disabled" : ""}>
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                Löschen
+              </button>
             </div>
           </article>
         `;
@@ -2653,6 +2657,22 @@ async function saveManagedUser(button) {
   }
 }
 
+async function deleteUser(id) {
+  const user = state.users.find((candidate) => Number(candidate.id) === Number(id));
+  const confirmed = window.confirm(`User "${user?.email || id}" wirklich löschen?`);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await apiDelete(`api/users.php?id=${encodeURIComponent(id)}`);
+    await loadUsers();
+    showToast("User wurde gelöscht.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function toggleUserPasswordVisibility(button) {
   const wrapper = button.closest(".password-reveal");
   const input = wrapper?.querySelector('[name="managedUserCurrentPassword"]');
@@ -2673,6 +2693,12 @@ function handleUserListAction(event) {
   const saveButton = event.target.closest('[data-action="save-user"]');
   if (saveButton) {
     saveManagedUser(saveButton);
+    return;
+  }
+
+  const deleteButton = event.target.closest('[data-action="delete-user"]');
+  if (deleteButton && !deleteButton.disabled) {
+    deleteUser(deleteButton.dataset.id);
     return;
   }
 

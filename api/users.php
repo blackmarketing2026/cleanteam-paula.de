@@ -156,4 +156,31 @@ if ($method === 'PUT') {
     json_response(['ok' => true, 'user' => user_response($user)]);
 }
 
+if ($method === 'DELETE') {
+    $id = (int) ($_GET['id'] ?? 0);
+    if ($id <= 0) {
+        json_error('User-ID fehlt.', 422);
+    }
+
+    $user = load_user($pdo, $id);
+    if ($user === null) {
+        json_error('User wurde nicht gefunden.', 404);
+    }
+
+    if ((int) $currentUser['id'] === $id) {
+        json_error('Der eigene Zugang kann nicht gelöscht werden.', 422);
+    }
+
+    if (strtolower((string) $user['email']) === ADMIN_USER_EMAIL) {
+        json_error('Dieser Admin-User kann nicht gelöscht werden.', 422);
+    }
+
+    if (normalize_user_role((string) $user['role']) === USER_ROLE_ADMIN && admin_count($pdo) <= 1) {
+        json_error('Der letzte Admin kann nicht gelöscht werden.', 422);
+    }
+
+    $pdo->prepare('DELETE FROM users WHERE id = :id')->execute(['id' => $id]);
+    json_response(['ok' => true]);
+}
+
 json_error('Methode nicht erlaubt.', 405);
