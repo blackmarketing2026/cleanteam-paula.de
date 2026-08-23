@@ -1144,6 +1144,10 @@ function renderOfferCard(offer) {
         <i data-lucide="file-text" aria-hidden="true"></i>
         Vertragsdokument
       </a>
+      <button class="ghost-button" type="button" data-action="reset-contract-link" data-id="${escapeHtml(offer.contractId)}">
+        <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+        Link zurücksetzen
+      </button>
     `
     : "";
   const contractProcessAction = offer.contractId
@@ -1835,6 +1839,26 @@ async function deleteOffer(id) {
     }
     await loadAll();
     showToast("Vertragsentwurf wurde gelöscht.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function resetContractLink(id) {
+  const confirmed = window.confirm(
+    "Abschlussprozess für diesen Vertragslink zurücksetzen? Der bisherige Fortschritt geht verloren, und der Kunde kann den Link erneut von vorne durchgehen.",
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await apiDelete(`api/contracts.php?id=${encodeURIComponent(id)}`);
+    if (state.selectedContractId === id) {
+      state.selectedContractId = null;
+    }
+    await loadAll();
+    showToast("Link wurde zurückgesetzt.");
   } catch (error) {
     showToast(error.message);
   }
@@ -2814,6 +2838,10 @@ function handleRecordAction(event) {
     state.contractFilters.search = "";
     state.contractFilters.period = "all";
     switchView("contracts");
+  }
+
+  if (action === "reset-contract-link") {
+    resetContractLink(id);
   }
 
   if (action === "delete-offer") {
