@@ -3,11 +3,7 @@
 set_exception_handler(function (Throwable $exception): void {
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
-    // TEMPORAER zur Fehlersuche (Pflichten-des-Auftraggebers-Speicherfehler, 2026-08-23):
-    // echten Fehler mit in die Meldung packen, die im Frontend als Toast erscheint. Danach wieder entfernen.
-    echo json_encode([
-        'error' => 'Es ist ein unerwarteter Fehler aufgetreten: ' . $exception->getMessage() . ' in ' . basename($exception->getFile()) . ':' . $exception->getLine(),
-    ]);
+    echo json_encode(['error' => 'Es ist ein unerwarteter Fehler aufgetreten.']);
 });
 
 function json_response($data, int $status = 200): void

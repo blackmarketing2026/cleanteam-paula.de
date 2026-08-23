@@ -272,7 +272,7 @@ if ($method === 'PUT') {
 
     $pdo->prepare(
         'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
-            price = :price, base_price = :price, vat_applicable = :vat_applicable, notes = :notes,
+            price = :price, base_price = :base_price, vat_applicable = :vat_applicable, notes = :notes,
             customer_obligations_note = :customer_obligations_note,
             validity_days = :validity_days, expires_at = DATE_ADD(:created_at, INTERVAL :validity_days2 DAY) WHERE id = :id'
     )->execute([
@@ -280,6 +280,7 @@ if ($method === 'PUT') {
         'interval_label' => $intervalLabel,
         'start_date' => $startDate,
         'price' => $price,
+        'base_price' => $price,
         'vat_applicable' => $vatApplicable ? 1 : 0,
         'notes' => format_service_text($serviceText),
         'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
