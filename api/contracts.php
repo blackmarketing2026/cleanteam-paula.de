@@ -45,6 +45,7 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
 }
 
 const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes,
+    o.customer_obligations_note AS offer_customer_obligations_note,
     o.price, o.vat_applicable, o.created_at AS offer_created_at, o.token,
     c.name AS c_name, c.email AS c_email, c.phone AS c_phone, c.salutation AS c_salutation,
     c.contact_last_name AS c_contact_last_name, c.address AS c_address, c.house_number AS c_house_number,
@@ -94,6 +95,7 @@ function contract_row_to_json(array $row): array
             'service' => $row['service'],
             'startDate' => $row['start_date'],
             'notes' => $row['offer_notes'],
+            'customerObligationsNote' => $row['offer_customer_obligations_note'],
             'price' => (float) $row['price'],
             'vatApplicable' => !isset($row['vat_applicable']) || (int) $row['vat_applicable'] === 1,
             'createdAt' => to_iso($row['offer_created_at']),
@@ -106,6 +108,7 @@ ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
 ensure_offers_interval_label_length($pdo);
 ensure_offers_vat_column($pdo);
+ensure_offers_customer_obligations_column($pdo);
 
 function contract_documents_table_exists(PDO $pdo): bool
 {
@@ -164,6 +167,7 @@ if ($method === 'PATCH') {
         $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
         $startDate = trim((string) ($body['startDate'] ?? ''));
         $serviceText = trim((string) ($body['serviceText'] ?? ''));
+        $customerObligationsNote = trim((string) ($body['customerObligationsNote'] ?? ''));
 
         $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
         if (!in_array($interval, $allowedIntervals, true)) {
@@ -196,7 +200,7 @@ if ($method === 'PATCH') {
         ]);
 
         $pdo->prepare(
-            'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date, price = :price, base_price = :price, vat_applicable = :vat_applicable, notes = :notes WHERE id = :id'
+            'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date, price = :price, base_price = :price, vat_applicable = :vat_applicable, notes = :notes, customer_obligations_note = :customer_obligations_note WHERE id = :id'
         )->execute([
                 'square_meters' => $squareMeters,
                 'interval_label' => $intervalLabel,
@@ -204,6 +208,7 @@ if ($method === 'PATCH') {
                 'price' => $price,
                 'vat_applicable' => $vatApplicable ? 1 : 0,
                 'notes' => format_service_text($serviceText),
+                'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
                 'id' => $row['offer_id'],
             ]);
     } else {

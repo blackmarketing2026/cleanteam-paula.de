@@ -76,6 +76,7 @@ function offer_row_to_json(array $row): array
         'service' => $row['service'],
         'startDate' => $row['start_date'],
         'notes' => $row['notes'],
+        'customerObligationsNote' => $row['customer_obligations_note'],
         'basePrice' => $basePrice,
         'priceAdjustment' => (float) ($row['price_adjustment'] ?? 0),
         'priceAdjustmentNote' => $row['price_adjustment_note'] ?? null,
@@ -107,6 +108,7 @@ ensure_offers_vat_column($pdo);
 ensure_offers_agb_snapshot_columns($pdo);
 ensure_offers_validity_days_column($pdo);
 ensure_offers_link_opened_column($pdo);
+ensure_offers_customer_obligations_column($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();
@@ -126,6 +128,7 @@ if ($method === 'POST') {
     $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
     $startDate = trim((string) ($body['startDate'] ?? ''));
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
+    $customerObligationsNote = trim((string) ($body['customerObligationsNote'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
     $validityDays = (int) ($body['validityDays'] ?? 14);
 
@@ -174,8 +177,8 @@ if ($method === 'POST') {
     $token = generate_token();
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), :validity_days2)'
+        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, customer_obligations_note, base_price, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days)
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :customer_obligations_note, :base_price, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), :validity_days2)'
     );
     $stmt->execute([
         'id' => $id,
@@ -185,6 +188,7 @@ if ($method === 'POST') {
         'service' => 'Individuelle Leistung',
         'start_date' => $startDate,
         'notes' => format_service_text($serviceText),
+        'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
         'base_price' => $price,
         'price' => $price,
         'vat_applicable' => $vatApplicable ? 1 : 0,
@@ -229,6 +233,7 @@ if ($method === 'PUT') {
     $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
     $startDate = trim((string) ($body['startDate'] ?? ''));
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
+    $customerObligationsNote = trim((string) ($body['customerObligationsNote'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
     $validityDays = (int) ($body['validityDays'] ?? 14);
 
@@ -268,6 +273,7 @@ if ($method === 'PUT') {
     $pdo->prepare(
         'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
             price = :price, base_price = :price, vat_applicable = :vat_applicable, notes = :notes,
+            customer_obligations_note = :customer_obligations_note,
             validity_days = :validity_days, expires_at = DATE_ADD(:created_at, INTERVAL :validity_days2 DAY) WHERE id = :id'
     )->execute([
         'square_meters' => $squareMeters,
@@ -276,6 +282,7 @@ if ($method === 'PUT') {
         'price' => $price,
         'vat_applicable' => $vatApplicable ? 1 : 0,
         'notes' => format_service_text($serviceText),
+        'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
         'validity_days' => $validityDays,
         'validity_days2' => $validityDays,
         'created_at' => $existing['created_at'],

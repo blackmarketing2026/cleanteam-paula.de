@@ -65,9 +65,11 @@ const els = {
   offerValidityDays: document.querySelector("#offer-validity-days"),
   offerVat: document.querySelector("#offer-vat"),
   offerServiceText: document.querySelector("#offer-service-text"),
+  offerObligationsText: document.querySelector("#offer-obligations-text"),
   offerReviewForm: document.querySelector("#offer-review-form"),
   offerReviewSummary: document.querySelector("#offer-review-summary"),
   offerServiceTextCorrected: document.querySelector("#offer-service-text-corrected"),
+  offerObligationsTextCorrected: document.querySelector("#offer-obligations-text-corrected"),
   offerReviewBack: document.querySelector("#offer-review-back"),
   offerList: document.querySelector("#offer-list"),
   offerSendModal: document.querySelector("#offer-send-modal"),
@@ -151,6 +153,7 @@ const els = {
   contractCorrectionStartDate: document.querySelector("#contract-correction-start-date"),
   contractCorrectionVat: document.querySelector("#contract-correction-vat"),
   contractCorrectionServiceText: document.querySelector("#contract-correction-service-text"),
+  contractCorrectionObligationsText: document.querySelector("#contract-correction-obligations-text"),
   contractCorrectionCancel: document.querySelector("#contract-correction-cancel"),
   offerEditModal: document.querySelector("#offer-edit-modal"),
   offerEditForm: document.querySelector("#offer-edit-form"),
@@ -168,6 +171,7 @@ const els = {
   offerEditValidityDays: document.querySelector("#offer-edit-validity-days"),
   offerEditVat: document.querySelector("#offer-edit-vat"),
   offerEditServiceText: document.querySelector("#offer-edit-service-text"),
+  offerEditObligationsText: document.querySelector("#offer-edit-obligations-text"),
   offerEditCancel: document.querySelector("#offer-edit-cancel"),
   logoPreview: document.querySelector("#logo-preview"),
   logoFileInput: document.querySelector("#logo-file-input"),
@@ -1411,6 +1415,7 @@ async function handleOfferSubmit(event) {
   const startDate = els.offerStartDate.value;
   const validityDays = Number(els.offerValidityDays.value);
   const serviceText = els.offerServiceText.value.trim();
+  const obligationsText = els.offerObligationsText.value.trim();
 
   if (!customerName) {
     showToast("Bitte den Namen des Kunden eintragen.");
@@ -1481,6 +1486,7 @@ async function handleOfferSubmit(event) {
   try {
     const { text } = await apiPost("api/format-text.php", { text: serviceText });
     els.offerServiceTextCorrected.value = text;
+    els.offerObligationsTextCorrected.value = obligationsText;
     els.offerReviewSummary.innerHTML = `
       <div class="record-lines">
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
@@ -1514,6 +1520,7 @@ async function handleOfferReviewSubmit(event) {
     startDate: els.offerStartDate.value,
     validityDays: Number(els.offerValidityDays.value) || 14,
     serviceText: els.offerServiceTextCorrected.value.trim(),
+    customerObligationsNote: els.offerObligationsTextCorrected.value.trim(),
   };
 
   try {
@@ -1690,6 +1697,7 @@ function openContractCorrectionModal(id) {
   els.contractCorrectionVat.value = contract.offer.vatApplicable === false ? "no" : "yes";
   els.contractCorrectionStartDate.value = contract.offer.startDate || "";
   els.contractCorrectionServiceText.value = contract.offer.notes || "";
+  els.contractCorrectionObligationsText.value = contract.offer.customerObligationsNote || "";
   els.contractCorrectionModal.hidden = false;
   els.contractCorrectionCustomerName.focus();
 }
@@ -1719,6 +1727,7 @@ async function handleContractCorrectionSubmit(event) {
     vatApplicable: els.contractCorrectionVat.value === "yes",
     startDate: els.contractCorrectionStartDate.value,
     serviceText: els.contractCorrectionServiceText.value.trim(),
+    customerObligationsNote: els.contractCorrectionObligationsText.value.trim(),
   };
 
   if (!payload.startDate) {
@@ -1759,6 +1768,7 @@ function openOfferEditModal(id) {
   els.offerEditStartDate.value = offer.startDate || "";
   els.offerEditValidityDays.value = offer.validityDays || 14;
   els.offerEditServiceText.value = offer.notes || "";
+  els.offerEditObligationsText.value = offer.customerObligationsNote || "";
   els.offerEditModal.hidden = false;
   els.offerEditCustomerName.focus();
 }
@@ -1794,6 +1804,7 @@ async function handleOfferEditSubmit(event) {
     startDate: els.offerEditStartDate.value,
     validityDays,
     serviceText: els.offerEditServiceText.value.trim(),
+    customerObligationsNote: els.offerEditObligationsText.value.trim(),
   };
 
   if (!payload.startDate) {

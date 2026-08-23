@@ -291,6 +291,10 @@
                 Leistungsbeschreibung *
                 <textarea id="offer-service-text" class="offer-service-editor" rows="18" required placeholder="Alle vereinbarten Leistungen als Fließtext eintragen"></textarea>
               </label>
+              <label class="span-2">
+                Pflichten des Auftraggebers (optional)
+                <textarea id="offer-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6" placeholder="Zusätzliche, kundenspezifische Pflichten des Auftraggebers – wird in § 5 des Vertrags ergänzt (optional, eine Pflicht pro Zeile)"></textarea>
+              </label>
               <div class="form-actions span-2">
                 <button class="primary-button" type="submit">
                   <i data-lucide="wand-2" aria-hidden="true"></i>
@@ -312,6 +316,10 @@
               <label class="span-2">
                 Leistungsbeschreibung
                 <textarea id="offer-service-text-corrected" class="offer-service-editor" rows="18"></textarea>
+              </label>
+              <label class="span-2">
+                Pflichten des Auftraggebers (optional)
+                <textarea id="offer-obligations-text-corrected" class="offer-service-editor offer-obligations-editor" rows="6"></textarea>
               </label>
               <div class="form-actions span-2">
                 <button class="secondary-button" type="button" id="offer-review-back">
@@ -974,6 +982,10 @@
           Leistungsbeschreibung *
           <textarea id="contract-correction-service-text" class="offer-service-editor" rows="10" required></textarea>
         </label>
+        <label class="modal-field">
+          Pflichten des Auftraggebers (optional)
+          <textarea id="contract-correction-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6"></textarea>
+        </label>
         <div class="form-actions">
           <button id="contract-correction-cancel" class="ghost-button" type="button">Abbrechen</button>
           <button class="primary-button" type="submit">
@@ -1052,6 +1064,10 @@
           Leistungsbeschreibung *
           <textarea id="offer-edit-service-text" class="offer-service-editor" rows="10" required></textarea>
         </label>
+        <label class="modal-field">
+          Pflichten des Auftraggebers (optional)
+          <textarea id="offer-edit-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6"></textarea>
+        </label>
         <div class="form-actions">
           <button id="offer-edit-cancel" class="ghost-button" type="button">Abbrechen</button>
           <button class="primary-button" type="submit">
@@ -1063,6 +1079,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=always-show-reset-link-20260823-1"></script>
+    <script src="app.js?v=customer-obligations-field-20260823-1"></script>
   </body>
 </html>

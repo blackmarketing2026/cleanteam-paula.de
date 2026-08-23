@@ -90,6 +90,14 @@ function ensure_offers_link_opened_column(PDO $pdo): void
     }
 }
 
+function ensure_offers_customer_obligations_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'customer_obligations_note'");
+    if (!$stmt->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD COLUMN customer_obligations_note LONGTEXT NULL AFTER notes');
+    }
+}
+
 function format_service_text(string $text): string
 {
     $text = str_replace(["\r\n", "\r"], "\n", $text);

@@ -217,7 +217,29 @@ function render_obligations_html(): string
     foreach (CUSTOMER_OBLIGATIONS as $item) {
         $html .= '<li>' . h($item) . '</li>';
     }
+    // Wird beim Rendern des Vertrags durch die kundenspezifischen Zusatzpflichten aus
+    // offers.customer_obligations_note ersetzt (leer, wenn keine hinterlegt sind).
+    $html .= '{{zusaetzliche_pflichten_items}}';
     $html .= '</ol>';
+
+    return $html;
+}
+
+function render_additional_obligations_items_html(?string $customerObligationsNote): string
+{
+    $note = trim((string) $customerObligationsNote);
+    if ($note === '') {
+        return '';
+    }
+
+    $html = '';
+    foreach (preg_split('/\r\n|\r|\n/', $note) as $line) {
+        $line = trim($line);
+        if ($line === '') {
+            continue;
+        }
+        $html .= '<li>' . h($line) . '</li>';
+    }
 
     return $html;
 }
@@ -461,6 +483,7 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
     $customerFullAddress = trim($customerAddress . ', ' . $customerZipCity, ', ');
     $offerNotes = trim((string) ($offer['notes'] ?? ''));
+    $customerObligationsNote = (string) ($offer['customer_obligations_note'] ?? '');
 
     $authorized = isset($contract['authorized']) && $contract['authorized'] !== null ? (bool) $contract['authorized'] : null;
     $representationNote = $contract['representation_note'] ?? null;
@@ -502,6 +525,7 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     }
 
     $values['logo'] = $forPdf ? '' : contract_logo_html();
+    $values['zusaetzliche_pflichten_items'] = render_additional_obligations_items_html($customerObligationsNote);
     $values['zusatzhinweis_block'] = $offerNotes !== ''
         ? '<p>' . ($forPdf ? '' : '<strong>Zusatzhinweis:</strong> ') . h($offerNotes) . '</p>'
         : '';

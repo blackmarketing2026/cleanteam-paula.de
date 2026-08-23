@@ -733,6 +733,10 @@ button svg {
   resize: vertical;
 }
 
+.offer-obligations-editor {
+  min-height: 140px;
+}
+
 .contract-table {
   width: 100%;
   min-width: 980px;
