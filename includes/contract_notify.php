@@ -185,12 +185,18 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
 
         $pdf = save_contract_pdf($pdo, $contractId, 'customer', true);
 
-        $messageContent = '<p style="margin:0 0 14px 0;">Sehr geehrte Damen und Herren,</p>'
-            . '<p>herzlichen Gl&uuml;ckwunsch und herzlich willkommen bei CleanTeam Group! Wir freuen uns sehr auf die Zusammenarbeit mit Ihnen.</p>'
-            . '<p>Der Vertrag befindet sich im Anhang und kann bei Bedarf ausgedruckt werden.</p>';
+        $signatureSettings = load_email_signature_settings($pdo);
+        $senderName = trim((string) $signatureSettings['senderName']) !== ''
+            ? trim((string) $signatureSettings['senderName'])
+            : 'Ihr CleanTeam-Team';
+
+        $messageContent = '<p style="margin:0 0 14px 0;">Willkommen bei CleanTeam!</p>'
+            . '<p>Mein Name ist ' . email_h($senderName) . '. Ich bin Ihr Ansprechpartner f&uuml;r Ihren Vertrag.</p>'
+            . '<p>Sie finden Ihren unterschriebenen Vertrag im Anhang.</p>'
+            . '<p>Bei Fragen stehe ich Ihnen gerne zur Verf&uuml;gung &ndash; per E-Mail oder direkt telefonisch im B&uuml;ro.</p>';
         $message = render_email_template_message($pdo, $messageContent, [
-            'title' => 'Willkommen bei CleanTeam Group',
-            'preheader' => 'Herzlich willkommen bei CleanTeam Group.',
+            'title' => 'Willkommen bei CleanTeam',
+            'preheader' => 'Willkommen bei CleanTeam.',
             'fromName' => $smtp['from_name'] ?? 'CleanTeam',
             'signatureText' => $smtp['signature'] ?? '',
             'signatureContext' => 'contract_customer',
@@ -209,7 +215,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             $smtp['from_name'],
             $customerEmail,
             $context['customer']['name'],
-            'Willkommen bei CleanTeam Group',
+            'Willkommen bei CleanTeam',
             $message['html'],
             (string) $pdf['filename'],
             (string) $pdf['content'],
