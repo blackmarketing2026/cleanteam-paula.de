@@ -14,7 +14,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=hide-contract-frame-mobile-20260823-1" />
+    <link rel="stylesheet" href="styles.css?v=signature-upload-20260823-1" />
   </head>
   <body data-token="<?php echo $token; ?>">
     <main class="public-shell">
@@ -131,20 +131,42 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
         <section id="screen-signatur" class="public-screen wizard-screen">
           <h2>Vertrag unterschreiben</h2>
-          <p class="muted">Bitte unterschreiben Sie mit dem Finger, Stift oder der Maus.</p>
-          <div class="signature-area">
+          <p class="muted">Unterschreiben Sie digital mit dem Finger, Stift oder der Maus, oder laden Sie ein Bild Ihrer Unterschrift hoch.</p>
+          <div class="signature-mode-toggle" role="tablist">
+            <button id="signature-mode-draw" class="signature-mode-button active" type="button" data-mode="draw" role="tab" aria-selected="true">
+              Digital unterschreiben
+            </button>
+            <button id="signature-mode-upload" class="signature-mode-button" type="button" data-mode="upload" role="tab" aria-selected="false">
+              Bild hochladen
+            </button>
+          </div>
+          <div id="signature-draw-panel" class="signature-area">
             <canvas id="signature-pad" width="900" height="260" aria-label="Signaturfeld"></canvas>
             <div class="form-actions">
               <button id="clear-signature" class="ghost-button" type="button">Leeren</button>
-              <button id="save-signature" class="primary-button" type="button">Vertrag jetzt unterschreiben</button>
             </div>
+          </div>
+          <div id="signature-upload-panel" class="signature-area" hidden>
+            <label id="signature-upload-dropzone" class="signature-upload-dropzone" for="signature-upload-input">
+              <span>Bild der Unterschrift auswählen (JPG, PNG)</span>
+              <input id="signature-upload-input" type="file" accept="image/*" />
+            </label>
+            <div id="signature-upload-preview-wrap" class="signature-upload-preview-wrap" hidden>
+              <img id="signature-upload-preview" alt="Hochgeladene Unterschrift" />
+              <button id="signature-upload-clear" class="ghost-button" type="button">Andere Datei wählen</button>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="save-signature" class="primary-button" type="button">Vertrag jetzt unterschreiben</button>
           </div>
         </section>
 
         <section id="screen-fertig" class="public-screen">
-          <h2>Vielen Dank, Ihr Vertrag ist unterschrieben!</h2>
+          <h2>Willkommen bei CleanTeam!</h2>
           <p class="muted">
-            Sie k&ouml;nnen den vollst&auml;ndigen Vertrag unten einsehen, ausdrucken oder als PDF speichern.
+            Vielen Dank f&uuml;r Ihr Vertrauen &ndash; Ihr Vertrag ist erfolgreich unterschrieben. Wir freuen uns,
+            Sie als Kunden begr&uuml;&szlig;en zu d&uuml;rfen, und stehen Ihnen jederzeit gerne zur Verf&uuml;gung.
+            Den vollst&auml;ndigen Vertrag k&ouml;nnen Sie unten einsehen, ausdrucken oder als PDF speichern.
           </p>
           <div class="form-actions">
             <a id="print-final-contract" class="secondary-button" href="#" target="_blank" rel="noopener">
@@ -158,6 +180,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=drop-phone-rename-contact-20260823-1"></script>
+    <script src="public.js?v=signature-upload-20260823-1"></script>
   </body>
 </html>
