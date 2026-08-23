@@ -221,11 +221,14 @@ if ($method === 'DELETE') {
         json_error('Vertrags-ID fehlt.', 422);
     }
 
-    $stmt = $pdo->prepare('SELECT id FROM contracts WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, offer_id FROM contracts WHERE id = :id');
     $stmt->execute(['id' => $id]);
-    if (!$stmt->fetch()) {
+    $row = $stmt->fetch();
+    if (!$row) {
         json_error('Vertrag wurde nicht gefunden.', 404);
     }
+
+    ensure_offers_link_opened_column($pdo);
 
     $pdo->beginTransaction();
     try {
@@ -236,6 +239,11 @@ if ($method === 'DELETE') {
 
         $stmt = $pdo->prepare('DELETE FROM contracts WHERE id = :id');
         $stmt->execute(['id' => $id]);
+
+        // Der Vertragslink darf nach dem Zuruecksetzen wieder von vorne geoeffnet werden.
+        $pdo->prepare('UPDATE offers SET link_opened_at = NULL WHERE id = :offer_id')
+            ->execute(['offer_id' => $row['offer_id']]);
+
         $pdo->commit();
     } catch (Throwable $exception) {
         $pdo->rollBack();

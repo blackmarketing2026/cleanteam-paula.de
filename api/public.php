@@ -183,9 +183,23 @@ $offer = load_offer($pdo, $token);
 ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
+ensure_offers_link_opened_column($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
     $contract = load_contract($pdo, $offer['id']);
+    $isCompleted = $contract !== null && $contract['status'] === 'signiert';
+
+    if (!$isCompleted && $offer['link_opened_at'] !== null) {
+        json_error(
+            'Dieser Link wurde bereits geöffnet und ist aus Datenschutzgründen gesperrt. Bitte kontaktieren Sie CleanTeam, damit der Link wieder freigegeben wird.',
+            410
+        );
+    }
+
+    if ($offer['link_opened_at'] === null) {
+        $pdo->prepare('UPDATE offers SET link_opened_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $offer['id']]);
+    }
+
     json_response(public_state($offer, $contract));
 }
 

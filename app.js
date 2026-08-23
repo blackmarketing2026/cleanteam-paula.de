@@ -1140,10 +1140,6 @@ function renderOfferCard(offer) {
         <i data-lucide="signature" aria-hidden="true"></i>
         Vertrag ansehen
       </button>
-      <button class="ghost-button" type="button" data-action="reset-contract-link" data-id="${escapeHtml(offer.contractId)}">
-        <i data-lucide="rotate-ccw" aria-hidden="true"></i>
-        Link zurücksetzen
-      </button>
     `
     : "";
   const contractProcessAction = offer.contractId
@@ -1154,6 +1150,14 @@ function renderOfferCard(offer) {
         Neuen Vertrag erstellen
       </button>
     `;
+  const resetLinkButton = offer.contractId || offer.linkOpenedAt
+    ? `
+      <button class="ghost-button" type="button" data-action="reset-contract-link" data-id="${escapeHtml(offer.id)}">
+        <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+        Link zurücksetzen
+      </button>
+    `
+    : "";
 
   return `
     <article class="record-item">
@@ -1190,6 +1194,7 @@ function renderOfferCard(offer) {
           Link kopieren
         </button>
         ${contractActions}
+        ${resetLinkButton}
         <button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="pencil" aria-hidden="true"></i>
           Bearbeiten
@@ -1845,7 +1850,8 @@ async function deleteOffer(id) {
   }
 }
 
-async function resetContractLink(id) {
+async function resetContractLink(offerId) {
+  const offer = getOffer(offerId);
   const confirmed = window.confirm(
     "Abschlussprozess für diesen Vertragslink zurücksetzen? Der bisherige Fortschritt geht verloren, und der Kunde kann den Link erneut von vorne durchgehen.",
   );
@@ -1854,9 +1860,13 @@ async function resetContractLink(id) {
   }
 
   try {
-    await apiDelete(`api/contracts.php?id=${encodeURIComponent(id)}`);
-    if (state.selectedContractId === id) {
-      state.selectedContractId = null;
+    if (offer?.contractId) {
+      await apiDelete(`api/contracts.php?id=${encodeURIComponent(offer.contractId)}`);
+      if (state.selectedContractId === offer.contractId) {
+        state.selectedContractId = null;
+      }
+    } else {
+      await apiPatch(`api/offers.php?id=${encodeURIComponent(offerId)}`, { action: "reset-link" });
     }
     await loadAll();
     showToast("Link wurde zurückgesetzt.");

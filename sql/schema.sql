@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS offers (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   expires_at DATETIME NOT NULL,
   validity_days SMALLINT UNSIGNED NOT NULL DEFAULT 14,
+  link_opened_at DATETIME NULL,
   sent_at DATETIME NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uniq_offers_token (token),

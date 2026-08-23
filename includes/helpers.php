@@ -82,6 +82,14 @@ function ensure_offers_vat_column(PDO $pdo): void
     }
 }
 
+function ensure_offers_link_opened_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'link_opened_at'");
+    if (!$stmt->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD COLUMN link_opened_at DATETIME NULL AFTER expires_at');
+    }
+}
+
 function format_service_text(string $text): string
 {
     $text = str_replace(["\r\n", "\r"], "\n", $text);

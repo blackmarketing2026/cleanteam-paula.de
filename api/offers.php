@@ -86,6 +86,7 @@ function offer_row_to_json(array $row): array
         'createdAt' => to_iso($row['created_at']),
         'expiresAt' => to_iso($row['expires_at']),
         'validityDays' => (int) ($row['validity_days'] ?? 14),
+        'linkOpenedAt' => to_iso($row['link_opened_at'] ?? null),
         'sentAt' => to_iso($row['sent_at']),
         'contractId' => $row['contract_id'],
         'contractStatus' => $row['contract_status'],
@@ -105,6 +106,7 @@ ensure_offers_interval_label_length($pdo);
 ensure_offers_vat_column($pdo);
 ensure_offers_agb_snapshot_columns($pdo);
 ensure_offers_validity_days_column($pdo);
+ensure_offers_link_opened_column($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();
@@ -279,6 +281,32 @@ if ($method === 'PUT') {
         'created_at' => $existing['created_at'],
         'id' => $id,
     ]);
+
+    $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');
+    $stmt->execute(['id' => $id]);
+    json_response(offer_row_to_json($stmt->fetch()));
+}
+
+if ($method === 'PATCH') {
+    $id = (string) ($_GET['id'] ?? '');
+    if ($id === '') {
+        json_error('Vertrags-ID fehlt.', 422);
+    }
+
+    $body = read_json_body();
+    $action = (string) ($body['action'] ?? '');
+
+    if ($action !== 'reset-link') {
+        json_error('Unbekannte Aktion.', 422);
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM offers WHERE id = :id');
+    $stmt->execute(['id' => $id]);
+    if (!$stmt->fetch()) {
+        json_error('Vertragsentwurf wurde nicht gefunden.', 404);
+    }
+
+    $pdo->prepare('UPDATE offers SET link_opened_at = NULL WHERE id = :id')->execute(['id' => $id]);
 
     $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');
     $stmt->execute(['id' => $id]);
