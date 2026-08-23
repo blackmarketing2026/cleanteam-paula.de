@@ -188,8 +188,8 @@ final class SimplePdfDocument
             return false;
         }
 
-        $maxWidth = 180.0;
-        $maxHeight = 62.0;
+        $maxWidth = 280.0;
+        $maxHeight = 100.0;
         $ratio = min($maxWidth / $image['width'], $maxHeight / $image['height'], 1.0);
         $width = max(1.0, $image['width'] * $ratio);
         $height = max(1.0, $image['height'] * $ratio);
@@ -199,7 +199,8 @@ final class SimplePdfDocument
         $this->images[$name] = $image;
         $this->pages[$this->pageIndex]['images'][$name] = true;
 
-        $x = self::MARGIN_LEFT + 246.0;
+        $contentWidth = self::PAGE_WIDTH - self::MARGIN_LEFT - self::MARGIN_RIGHT;
+        $x = self::MARGIN_LEFT + ($contentWidth - $width) / 2;
         $y = $this->y - $height;
         $this->write(sprintf(
             "q %.2F 0 0 %.2F %.2F %.2F cm /%s Do Q\n",
