@@ -3037,11 +3037,6 @@ function bindEvents() {
 
   els.offerEditForm.addEventListener("submit", handleOfferEditSubmit);
   els.offerEditCancel.addEventListener("click", closeOfferEditModal);
-  els.offerEditModal.addEventListener("click", (event) => {
-    if (event.target === els.offerEditModal) {
-      closeOfferEditModal();
-    }
-  });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !els.offerSendModal.hidden) {
