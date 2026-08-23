@@ -151,17 +151,15 @@ function email_delivery_is_allowed(PDO $pdo, string $type): bool
 
     switch ($type) {
         case 'offer':
-            return $settings['customerEmailsEnabled'] && $settings['offerEmailsEnabled'];
+            return $settings['offerEmailsEnabled'];
         case 'contract_customer':
-            return $settings['customerEmailsEnabled'] && $settings['contractEmailsEnabled'];
-        case 'mailbox':
-            return $settings['customerEmailsEnabled'] && $settings['mailboxEmailsEnabled'];
+            return $settings['contractEmailsEnabled'];
         case 'internal_contract_notification':
             return $settings['internalContractNotificationsEnabled'];
         case 'test':
             return $settings['testEmailsEnabled'];
         case 'contract_notification_test':
-            return $settings['internalContractNotificationsEnabled'] && $settings['testEmailsEnabled'];
+            return $settings['internalContractNotificationsEnabled'];
         default:
             return false;
     }
@@ -174,13 +172,12 @@ function email_delivery_disabled_message(string $type): string
             return 'E-Mail-Versand fuer Kostenvoranschlaege ist in den Einstellungen ausgeschaltet.';
         case 'contract_customer':
             return 'E-Mail-Versand fuer Kundenvertraege ist in den Einstellungen ausgeschaltet.';
-        case 'mailbox':
-            return 'Manueller E-Mail-Versand aus dem Postfach ist in den Einstellungen ausgeschaltet.';
         case 'internal_contract_notification':
             return 'Interne Vertragsbenachrichtigungen sind in den Einstellungen ausgeschaltet.';
         case 'test':
-        case 'contract_notification_test':
             return 'Test-E-Mails sind in den Einstellungen ausgeschaltet.';
+        case 'contract_notification_test':
+            return 'Interne Vertragsbenachrichtigungen sind in den Einstellungen ausgeschaltet.';
         default:
             return 'E-Mail-Versand ist in den Einstellungen ausgeschaltet.';
     }

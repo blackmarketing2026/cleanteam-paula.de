@@ -96,12 +96,9 @@ const els = {
   smtpFromEmail: document.querySelector("#smtp-from-email"),
   sendTestMail: document.querySelector("#send-test-mail"),
   emailSettingsForm: document.querySelector("#email-settings-form"),
-  emailSettingsCustomerEnabled: document.querySelector("#email-settings-customer-enabled"),
   emailSettingsOfferEnabled: document.querySelector("#email-settings-offer-enabled"),
   emailSettingsContractEnabled: document.querySelector("#email-settings-contract-enabled"),
-  emailSettingsMailboxEnabled: document.querySelector("#email-settings-mailbox-enabled"),
   emailSettingsInternalContractEnabled: document.querySelector("#email-settings-internal-contract-enabled"),
-  emailSettingsTestEnabled: document.querySelector("#email-settings-test-enabled"),
   emailSignatureForm: document.querySelector("#email-signature-form"),
   emailSignatureName: document.querySelector("#email-signature-name"),
   emailSignatureRole: document.querySelector("#email-signature-role"),
@@ -116,7 +113,6 @@ const els = {
   emailSignatureUseAll: document.querySelector("#email-signature-use-all"),
   emailSignatureUseOffer: document.querySelector("#email-signature-use-offer"),
   emailSignatureUseContract: document.querySelector("#email-signature-use-contract"),
-  emailSignatureUseMailbox: document.querySelector("#email-signature-use-mailbox"),
   emailSignatureUsageOptions: document.querySelectorAll("[data-email-signature-use]"),
   emailSignatureImagePreview: document.querySelector("#email-signature-image-preview"),
   emailSignatureImageInput: document.querySelector("#email-signature-image-input"),
@@ -124,33 +120,15 @@ const els = {
   emailSignatureImageStatus: document.querySelector("#email-signature-image-status"),
   emailSignaturePreview: document.querySelector("#email-signature-preview"),
   emailSignatureSaveStatus: document.querySelector("#email-signature-save-status"),
-  mailboxNotConfigured: document.querySelector("#mailbox-not-configured"),
-  mailboxNotConfiguredAdminText: document.querySelector("#mailbox-not-configured-admin-text"),
-  mailboxNotConfiguredUserText: document.querySelector("#mailbox-not-configured-user-text"),
-  mailboxConfigured: document.querySelector("#mailbox-configured"),
-  mailboxGotoSettings: document.querySelector("#mailbox-goto-settings"),
-  mailboxAccountLabel: document.querySelector("#mailbox-account-label"),
-  mailboxRefresh: document.querySelector("#mailbox-refresh"),
-  mailboxList: document.querySelector("#mailbox-list"),
-  mailboxMessage: document.querySelector("#mailbox-message"),
-  mailboxComposeToggle: document.querySelector("#mailbox-compose-toggle"),
-  mailboxComposeForm: document.querySelector("#mailbox-compose-form"),
-  mailboxComposeCancel: document.querySelector("#mailbox-compose-cancel"),
-  mailboxComposeTo: document.querySelector("#mailbox-compose-to"),
-  mailboxComposeSubject: document.querySelector("#mailbox-compose-subject"),
-  mailboxComposeBody: document.querySelector("#mailbox-compose-body"),
   mailboxSettingsForm: document.querySelector("#mailbox-settings-form"),
   mailboxSettingsPanel: document.querySelector("#mailbox-settings-panel"),
   mailboxHost: document.querySelector("#mailbox-host"),
-  mailboxImapPort: document.querySelector("#mailbox-imap-port"),
-  mailboxImapEncryption: document.querySelector("#mailbox-imap-encryption"),
   mailboxSmtpPort: document.querySelector("#mailbox-smtp-port"),
   mailboxSmtpEncryption: document.querySelector("#mailbox-smtp-encryption"),
   mailboxUsername: document.querySelector("#mailbox-username"),
   mailboxPassword: document.querySelector("#mailbox-password"),
   mailboxFromName: document.querySelector("#mailbox-from-name"),
   mailboxSignature: document.querySelector("#mailbox-signature"),
-  mailboxFolderTabs: document.querySelectorAll(".mailbox-folder-tabs [data-folder]"),
   contractNotifyForm: document.querySelector("#contract-notify-form"),
   contractNotifyEnabled: document.querySelector("#contract-notify-enabled"),
   contractNotifyEmails: document.querySelector("#contract-notify-emails"),
@@ -212,7 +190,6 @@ const titles = {
   "offers-new": "Neuer Vertrag erstellen",
   "offers-saved": "Vertragsentwürfe",
   contracts: "Verträge",
-  mailbox: "Postfach",
   "settings-smtp": "SMTP-Server-Einstellungen",
   "settings-email": "E-Mail-Einstellungen",
   "settings-email-signature": "E-Mail-Signatur",
@@ -223,7 +200,7 @@ const titles = {
   "settings-users": "User & Rollen",
 };
 
-const hiddenViews = new Set(["mailbox", "settings-smtp"]);
+const hiddenViews = new Set(["settings-smtp"]);
 
 let currentLogoUrl = null;
 let emailSignatureImageUrl = "";
@@ -234,13 +211,6 @@ let contractorSignaturePadReady = false;
 let contractorSignatureHasInk = false;
 let contractorSignatureDrawing = false;
 let contractorSignatureLastPoint = null;
-
-const mailboxState = {
-  messages: [],
-  selectedUid: null,
-  folder: "inbox",
-  signature: "",
-};
 
 async function apiFetch(path, options = {}) {
   const response = await fetch(path, {
@@ -393,15 +363,6 @@ function applyRolePermissions() {
   if (els.mailboxSettingsPanel) {
     els.mailboxSettingsPanel.hidden = !canManageSettings;
   }
-  if (els.mailboxGotoSettings) {
-    els.mailboxGotoSettings.hidden = !canManageSettings;
-  }
-  if (els.mailboxNotConfiguredAdminText) {
-    els.mailboxNotConfiguredAdminText.hidden = !canManageSettings;
-  }
-  if (els.mailboxNotConfiguredUserText) {
-    els.mailboxNotConfiguredUserText.hidden = canManageSettings;
-  }
 }
 
 function applySession(session = {}) {
@@ -516,6 +477,7 @@ function switchView(view) {
 
   if (view === "settings-email") {
     loadEmailSettings();
+    loadMailboxSettings();
   }
 
   if (view === "settings-email-signature") {
@@ -536,10 +498,6 @@ function switchView(view) {
 
   if (view === "settings-contract-number") {
     loadContractNumberSettings();
-  }
-
-  if (view === "mailbox") {
-    loadMailbox();
   }
 
   if (view === "offers-new") {
@@ -1910,12 +1868,9 @@ async function handleSmtpSubmit(event) {
 async function loadEmailSettings() {
   try {
     const settings = await apiGet("api/email-settings.php");
-    els.emailSettingsCustomerEnabled.checked = settings.customerEmailsEnabled;
     els.emailSettingsOfferEnabled.checked = settings.offerEmailsEnabled;
     els.emailSettingsContractEnabled.checked = settings.contractEmailsEnabled;
-    els.emailSettingsMailboxEnabled.checked = settings.mailboxEmailsEnabled;
     els.emailSettingsInternalContractEnabled.checked = settings.internalContractNotificationsEnabled;
-    els.emailSettingsTestEnabled.checked = settings.testEmailsEnabled;
   } catch (error) {
     showToast(error.message);
   }
@@ -1925,12 +1880,9 @@ async function handleEmailSettingsSubmit(event) {
   event.preventDefault();
 
   const payload = {
-    customerEmailsEnabled: els.emailSettingsCustomerEnabled.checked,
     offerEmailsEnabled: els.emailSettingsOfferEnabled.checked,
     contractEmailsEnabled: els.emailSettingsContractEnabled.checked,
-    mailboxEmailsEnabled: els.emailSettingsMailboxEnabled.checked,
     internalContractNotificationsEnabled: els.emailSettingsInternalContractEnabled.checked,
-    testEmailsEnabled: els.emailSettingsTestEnabled.checked,
   };
 
   try {
@@ -1958,7 +1910,6 @@ function emailSignaturePayload() {
     usage: {
       offer: Boolean(els.emailSignatureUseOffer?.checked),
       contractCustomer: Boolean(els.emailSignatureUseContract?.checked),
-      mailbox: Boolean(els.emailSignatureUseMailbox?.checked),
     },
   };
 }
@@ -1994,9 +1945,6 @@ function applyEmailSignature(settings = {}) {
   }
   if (els.emailSignatureUseContract) {
     els.emailSignatureUseContract.checked = usage.contractCustomer !== false;
-  }
-  if (els.emailSignatureUseMailbox) {
-    els.emailSignatureUseMailbox.checked = usage.mailbox !== false;
   }
   syncEmailSignatureUsageControls();
   renderEmailSignatureImage();
@@ -2197,7 +2145,7 @@ function handleEmailSignatureImageRemove() {
   );
 }
 
-async function loadMailbox() {
+async function loadMailboxSettings() {
   try {
     const settings = await apiGet("api/mailbox.php?action=settings");
     const canManageSettings = Boolean(settings.canManageSettings ?? isAdmin());
@@ -2205,19 +2153,8 @@ async function loadMailbox() {
     if (els.mailboxSettingsPanel) {
       els.mailboxSettingsPanel.hidden = !canManageSettings;
     }
-    if (els.mailboxGotoSettings) {
-      els.mailboxGotoSettings.hidden = !canManageSettings;
-    }
-    if (els.mailboxNotConfiguredAdminText) {
-      els.mailboxNotConfiguredAdminText.hidden = !canManageSettings;
-    }
-    if (els.mailboxNotConfiguredUserText) {
-      els.mailboxNotConfiguredUserText.hidden = canManageSettings;
-    }
 
     els.mailboxHost.value = settings.host || "";
-    els.mailboxImapPort.value = settings.imapPort || 993;
-    els.mailboxImapEncryption.value = settings.imapEncryption || "ssl";
     els.mailboxSmtpPort.value = settings.smtpPort || 587;
     els.mailboxSmtpEncryption.value = settings.smtpEncryption || "tls";
     els.mailboxUsername.value = settings.username || "";
@@ -2227,137 +2164,6 @@ async function loadMailbox() {
       : "Noch kein Passwort hinterlegt";
     els.mailboxFromName.value = settings.fromName || "CleanTeam";
     els.mailboxSignature.value = settings.signature || "";
-    mailboxState.signature = settings.signature || "";
-
-    els.mailboxNotConfigured.hidden = settings.configured;
-    els.mailboxConfigured.hidden = !settings.configured;
-
-    if (settings.configured) {
-      els.mailboxAccountLabel.textContent = settings.username;
-      await loadMailboxInbox();
-    }
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-function switchMailboxFolder(folder) {
-  mailboxState.folder = folder;
-  mailboxState.selectedUid = null;
-  els.mailboxFolderTabs.forEach((button) => {
-    button.classList.toggle("active", button.dataset.folder === folder);
-  });
-  els.mailboxMessage.innerHTML = "Noch keine Nachricht ausgewählt.";
-  loadMailboxInbox();
-}
-
-async function loadMailboxInbox() {
-  const folderLabel = mailboxState.folder === "sent" ? "Postausgang" : "Posteingang";
-  els.mailboxList.innerHTML = `<div class="empty-state">Lade ${folderLabel}…</div>`;
-
-  try {
-    const result = await apiGet(`api/mailbox.php?action=inbox&folder=${mailboxState.folder}`);
-    mailboxState.messages = result.messages;
-    renderMailboxList();
-  } catch (error) {
-    els.mailboxList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
-  }
-}
-
-function renderMailboxList() {
-  const messages = mailboxState.messages;
-
-  els.mailboxList.innerHTML = messages.length
-    ? messages.map(renderMailboxListItem).join("")
-    : `<div class="empty-state">Keine E-Mails im Posteingang.</div>`;
-
-  refreshIcons();
-}
-
-function renderMailboxListItem(message) {
-  const selected = message.uid === mailboxState.selectedUid ? " selected" : "";
-  const unreadBadge = message.seen ? "" : `<span class="badge">Neu</span>`;
-
-  return `
-    <button class="compact-item${selected}" type="button" data-action="open-mailbox-message" data-id="${message.uid}">
-      <div>
-        <div class="record-title">${escapeHtml(message.subject)}</div>
-        <div class="record-meta">
-          <span>${escapeHtml(message.from)}</span>
-          <span>${message.date ? formatDate(message.date) : ""}</span>
-        </div>
-      </div>
-      ${unreadBadge}
-    </button>
-  `;
-}
-
-async function openMailboxMessage(uid) {
-  mailboxState.selectedUid = Number(uid);
-  renderMailboxList();
-
-  els.mailboxMessage.classList.remove("empty-state");
-  els.mailboxMessage.innerHTML = `<div class="empty-state">Lade Nachricht…</div>`;
-
-  try {
-    const message = await apiGet(
-      `api/mailbox.php?action=message&uid=${encodeURIComponent(uid)}&folder=${mailboxState.folder}`
-    );
-
-    els.mailboxMessage.innerHTML = `
-      <div class="record-lines" style="margin-bottom:16px;">
-        <strong>${escapeHtml(message.subject)}</strong>
-        <span>Von: ${escapeHtml(message.from)}</span>
-        <span>An: ${escapeHtml(message.to)}</span>
-        <span>${message.date ? formatDate(message.date) : ""}</span>
-      </div>
-      <div class="mailbox-body"></div>
-    `;
-
-    const bodyContainer = els.mailboxMessage.querySelector(".mailbox-body");
-    if (message.html) {
-      // E-Mail-HTML stammt von Dritten und ist nicht vertrauenswürdig. Wird deshalb in einem
-      // sandboxed iframe ohne Skriptausführung und ohne Zugriff auf die App-Session gerendert.
-      const frame = document.createElement("iframe");
-      frame.sandbox = "";
-      frame.className = "mailbox-frame";
-      bodyContainer.appendChild(frame);
-      frame.srcdoc = message.html;
-    } else if (message.plain) {
-      const pre = document.createElement("pre");
-      pre.textContent = message.plain;
-      bodyContainer.appendChild(pre);
-    } else {
-      bodyContainer.textContent = "Kein Inhalt.";
-    }
-
-    const messageInList = mailboxState.messages.find((item) => item.uid === Number(uid));
-    if (messageInList) {
-      messageInList.seen = true;
-      renderMailboxList();
-    }
-  } catch (error) {
-    els.mailboxMessage.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
-  }
-}
-
-async function handleMailboxComposeSubmit(event) {
-  event.preventDefault();
-
-  const payload = {
-    to: els.mailboxComposeTo.value.trim(),
-    subject: els.mailboxComposeSubject.value.trim(),
-    body: els.mailboxComposeBody.value,
-  };
-
-  try {
-    await apiPost("api/mailbox.php?action=send", payload);
-    showToast("E-Mail wurde gesendet.");
-    els.mailboxComposeForm.reset();
-    els.mailboxComposeForm.hidden = true;
-    if (mailboxState.folder === "sent") {
-      await loadMailboxInbox();
-    }
   } catch (error) {
     showToast(error.message);
   }
@@ -2368,8 +2174,6 @@ async function handleMailboxSettingsSubmit(event) {
 
   const payload = {
     host: els.mailboxHost.value.trim(),
-    imapPort: Number(els.mailboxImapPort.value),
-    imapEncryption: els.mailboxImapEncryption.value,
     smtpPort: Number(els.mailboxSmtpPort.value),
     smtpEncryption: els.mailboxSmtpEncryption.value,
     username: els.mailboxUsername.value.trim(),
@@ -2380,8 +2184,8 @@ async function handleMailboxSettingsSubmit(event) {
 
   try {
     await apiPost("api/mailbox.php?action=settings", payload);
-    showToast("Postfach-Einstellungen wurden gespeichert.");
-    await loadMailbox();
+    showToast("Versand-Konto wurde gespeichert.");
+    await loadMailboxSettings();
   } catch (error) {
     showToast(error.message);
   }
@@ -2935,10 +2739,6 @@ function handleRecordAction(event) {
     deleteOffer(id);
   }
 
-  if (action === "open-mailbox-message") {
-    openMailboxMessage(id);
-  }
-
   if (action === "delete-contract") {
     deleteContract(id);
   }
@@ -3061,26 +2861,6 @@ function bindEvents() {
     els.emailSignatureImageRemove.addEventListener("click", handleEmailSignatureImageRemove);
   }
 
-  els.mailboxList.addEventListener("click", handleRecordAction);
-  els.mailboxRefresh.addEventListener("click", loadMailboxInbox);
-  els.mailboxGotoSettings.addEventListener("click", () => {
-    document.querySelector("#mailbox-settings-heading").scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-  els.mailboxComposeToggle.addEventListener("click", () => {
-    const wasHidden = els.mailboxComposeForm.hidden;
-    els.mailboxComposeForm.hidden = !wasHidden;
-    if (wasHidden) {
-      els.mailboxComposeBody.focus();
-    }
-  });
-  els.mailboxFolderTabs.forEach((button) => {
-    button.addEventListener("click", () => switchMailboxFolder(button.dataset.folder));
-  });
-  els.mailboxComposeCancel.addEventListener("click", () => {
-    els.mailboxComposeForm.reset();
-    els.mailboxComposeForm.hidden = true;
-  });
-  els.mailboxComposeForm.addEventListener("submit", handleMailboxComposeSubmit);
   els.mailboxSettingsForm.addEventListener("submit", handleMailboxSettingsSubmit);
 
   els.logoFileInput.addEventListener("change", handleLogoUpload);

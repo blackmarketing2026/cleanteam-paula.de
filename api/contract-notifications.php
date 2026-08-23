@@ -40,7 +40,7 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
 
     $smtp = load_mailbox_smtp($pdo);
     if ($smtp === null) {
-        json_error('Bitte zuerst das Postfach unter "Postfach" einrichten.', 422);
+        json_error('Bitte zuerst das E-Mail-Versand-Konto unter Einstellungen > E-Mails einrichten.', 422);
     }
 
     $pdf = save_contract_pdf($pdo, $context['contract']['id'], 'cleanteam', false);

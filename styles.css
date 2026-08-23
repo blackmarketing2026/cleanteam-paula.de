@@ -885,12 +885,6 @@ button.compact-item.selected {
   box-shadow: 0 0 0 4px rgba(19, 121, 216, 0.08);
 }
 
-.mailbox-frame {
-  width: 100%;
-  min-height: 360px;
-  border: 0;
-}
-
 .contract-frame {
   width: 100%;
   min-height: 70vh;
@@ -1132,6 +1126,11 @@ button.compact-item.selected {
   border-radius: 0;
   background: none;
   accent-color: var(--blue-800);
+}
+
+.checkbox-row + small.muted {
+  display: block;
+  margin: 2px 0 0 28px;
 }
 
 .email-list {
@@ -1531,18 +1530,6 @@ button.compact-item.selected {
 
 .visit-details[open] summary {
   margin-bottom: 12px;
-}
-
-.mailbox-folder-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.mailbox-folder-tabs .secondary-button.active {
-  border-color: var(--blue-600);
-  background: var(--blue-050);
-  color: var(--blue-900);
 }
 
 .compact-item strong,

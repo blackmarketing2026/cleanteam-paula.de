@@ -73,10 +73,6 @@
               <span>Vertragsliste</span>
             </button>
           </div>
-          <button class="nav-link" type="button" data-view="mailbox" hidden>
-            <i data-lucide="mail" aria-hidden="true"></i>
-            Postfach
-          </button>
           <button id="settings-group-toggle" class="nav-link nav-group-toggle" type="button" aria-expanded="false">
             <i data-lucide="settings" aria-hidden="true"></i>
             <span>Einstellungen</span>
@@ -421,153 +417,6 @@
           </section>
         </section>
 
-        <section id="mailbox-view" class="view" aria-label="Postfach">
-          <div class="section-heading">
-            <div>
-              <p class="muted">E-Mails empfangen und senden über das CleanTeam-Postfach.</p>
-            </div>
-          </div>
-
-          <div id="mailbox-not-configured" class="panel empty-state" hidden>
-            <span id="mailbox-not-configured-admin-text">
-              Postfach ist noch nicht eingerichtet. Bitte unter
-              <button id="mailbox-goto-settings" class="ghost-button" type="button" style="display:inline-flex;">Postfach-Einstellungen</button>
-              Host, Benutzername und Passwort hinterlegen.
-            </span>
-            <span id="mailbox-not-configured-user-text" hidden>
-              Postfach ist noch nicht eingerichtet. Bitte wenden Sie sich an einen Admin.
-            </span>
-          </div>
-
-          <div id="mailbox-configured" class="contract-layout" hidden>
-            <section class="panel" aria-labelledby="mailbox-list-heading">
-              <div class="panel-header wrap-header">
-                <div>
-                  <h4 id="mailbox-list-heading">Postfach</h4>
-                  <p class="muted" id="mailbox-account-label"></p>
-                </div>
-                <div class="form-actions">
-                  <button id="mailbox-refresh" class="ghost-button" type="button">
-                    <i data-lucide="refresh-cw" aria-hidden="true"></i>
-                    Aktualisieren
-                  </button>
-                  <button id="mailbox-compose-toggle" class="primary-button" type="button">
-                    <i data-lucide="pencil" aria-hidden="true"></i>
-                    Neue E-Mail
-                  </button>
-                </div>
-              </div>
-
-              <div class="mailbox-folder-tabs">
-                <button class="secondary-button active" type="button" data-folder="inbox">
-                  <i data-lucide="inbox" aria-hidden="true"></i>
-                  Posteingang
-                </button>
-                <button class="secondary-button" type="button" data-folder="sent">
-                  <i data-lucide="send" aria-hidden="true"></i>
-                  Postausgang
-                </button>
-              </div>
-
-              <form id="mailbox-compose-form" class="form-grid" hidden>
-                <label class="span-2">
-                  An *
-                  <input id="mailbox-compose-to" type="email" required placeholder="empfaenger@beispiel.de" />
-                </label>
-                <label class="span-2">
-                  Betreff *
-                  <input id="mailbox-compose-subject" type="text" required />
-                </label>
-                <label class="span-2">
-                  Nachricht *
-                  <textarea id="mailbox-compose-body" rows="6" required></textarea>
-                </label>
-                <div class="form-actions span-2">
-                  <button id="mailbox-compose-cancel" class="ghost-button" type="button">Abbrechen</button>
-                  <button class="primary-button" type="submit">
-                    <i data-lucide="send" aria-hidden="true"></i>
-                    Senden
-                  </button>
-                </div>
-              </form>
-
-              <div id="mailbox-list" class="record-list"></div>
-            </section>
-
-            <section class="panel contract-panel" aria-labelledby="mailbox-message-heading">
-              <div class="panel-header">
-                <div>
-                  <h4 id="mailbox-message-heading">Nachricht</h4>
-                </div>
-              </div>
-              <article id="mailbox-message" class="contract-preview empty-state">
-                Noch keine Nachricht ausgewählt.
-              </article>
-            </section>
-          </div>
-
-          <section id="mailbox-settings-panel" class="panel form-panel" aria-labelledby="mailbox-settings-heading">
-            <div class="panel-header">
-              <div>
-                <h4 id="mailbox-settings-heading">Postfach-Einstellungen</h4>
-                <p class="muted">IMAP (Empfang) und SMTP (Versand) für dasselbe Postfach.</p>
-              </div>
-            </div>
-            <form id="mailbox-settings-form" class="form-grid">
-              <label class="span-2">
-                Server-Host *
-                <input id="mailbox-host" type="text" required placeholder="w019e94b.kasserver.com" />
-              </label>
-              <label>
-                IMAP-Port *
-                <input id="mailbox-imap-port" type="number" min="1" max="65535" required placeholder="993" />
-              </label>
-              <label>
-                IMAP-Verschlüsselung *
-                <select id="mailbox-imap-encryption" required>
-                  <option value="ssl">SSL/TLS (meist Port 993)</option>
-                  <option value="tls">STARTTLS</option>
-                  <option value="none">Keine</option>
-                </select>
-              </label>
-              <label>
-                SMTP-Port *
-                <input id="mailbox-smtp-port" type="number" min="1" max="65535" required placeholder="587" />
-              </label>
-              <label>
-                SMTP-Verschlüsselung *
-                <select id="mailbox-smtp-encryption" required>
-                  <option value="tls">STARTTLS (meist Port 587)</option>
-                  <option value="ssl">SSL/TLS (meist Port 465)</option>
-                  <option value="none">Keine</option>
-                </select>
-              </label>
-              <label>
-                Benutzername / E-Mail-Adresse *
-                <input id="mailbox-username" type="text" required placeholder="postfach@cleanteam-group.com" />
-              </label>
-              <label>
-                Passwort
-                <input id="mailbox-password" type="password" placeholder="Unverändert lassen = altes Passwort behalten" autocomplete="new-password" />
-              </label>
-              <label>
-                Absendername
-                <input id="mailbox-from-name" type="text" placeholder="CleanTeam" />
-              </label>
-              <label class="span-2">
-                Signatur-Zusatz
-                <textarea id="mailbox-signature" rows="4" placeholder="z. B. Direktkontakt, Öffnungszeiten oder Abteilungshinweis"></textarea>
-              </label>
-              <div class="form-actions span-2">
-                <button class="primary-button" type="submit">
-                  <i data-lucide="save" aria-hidden="true"></i>
-                  Einstellungen speichern
-                </button>
-              </div>
-            </form>
-          </section>
-        </section>
-
         <section id="settings-smtp-view" class="view" aria-label="SMTP-Server-Einstellungen">
           <div class="section-heading">
             <div>
@@ -631,41 +480,88 @@
         <section id="settings-email-view" class="view" aria-label="E-Mail-Einstellungen">
           <div class="section-heading">
             <div>
-              <p class="muted">Steuert, welche E-Mails das Dashboard aktiv versenden darf.</p>
+              <p class="muted">Versand-Konto und Versandfreigaben f&uuml;r automatische E-Mails.</p>
             </div>
           </div>
+
+          <section id="mailbox-settings-panel" class="panel form-panel" aria-labelledby="mailbox-settings-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="mailbox-settings-heading">E-Mail-Versand-Konto</h4>
+                <p class="muted">SMTP-Konto, &uuml;ber das alle automatischen E-Mails verschickt werden.</p>
+              </div>
+            </div>
+            <form id="mailbox-settings-form" class="form-grid">
+              <label class="span-2">
+                Server-Host *
+                <input id="mailbox-host" type="text" required placeholder="w019e94b.kasserver.com" />
+              </label>
+              <label>
+                SMTP-Port *
+                <input id="mailbox-smtp-port" type="number" min="1" max="65535" required placeholder="587" />
+              </label>
+              <label>
+                SMTP-Verschl&uuml;sselung *
+                <select id="mailbox-smtp-encryption" required>
+                  <option value="tls">STARTTLS (meist Port 587)</option>
+                  <option value="ssl">SSL/TLS (meist Port 465)</option>
+                  <option value="none">Keine</option>
+                </select>
+              </label>
+              <label>
+                Benutzername / E-Mail-Adresse *
+                <input id="mailbox-username" type="text" required placeholder="postfach@cleanteam-group.com" />
+              </label>
+              <label>
+                Passwort
+                <input id="mailbox-password" type="password" placeholder="Unverändert lassen = altes Passwort behalten" autocomplete="new-password" />
+              </label>
+              <label>
+                Absendername
+                <input id="mailbox-from-name" type="text" placeholder="CleanTeam" />
+              </label>
+              <label class="span-2">
+                Signatur-Zusatz
+                <textarea id="mailbox-signature" rows="4" placeholder="z. B. Direktkontakt, Öffnungszeiten oder Abteilungshinweis"></textarea>
+              </label>
+              <div class="form-actions span-2">
+                <button class="primary-button" type="submit">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Einstellungen speichern
+                </button>
+              </div>
+            </form>
+          </section>
 
           <section class="panel form-panel" aria-labelledby="email-settings-form-heading">
             <div class="panel-header">
               <div>
                 <h4 id="email-settings-form-heading">Versandfreigaben</h4>
+                <p class="muted">Legt einzeln fest, welche automatischen E-Mails aktiv verschickt werden d&uuml;rfen.</p>
               </div>
             </div>
             <form id="email-settings-form" class="form-grid">
-              <label class="span-2 checkbox-row">
-                <input id="email-settings-customer-enabled" type="checkbox" />
-                D&uuml;rfen E-Mails an Kunden gesendet werden
-              </label>
-              <label class="span-2 checkbox-row">
-                <input id="email-settings-offer-enabled" type="checkbox" />
-                Vertragslinks per E-Mail an Kunden senden
-              </label>
-              <label class="span-2 checkbox-row">
-                <input id="email-settings-contract-enabled" type="checkbox" />
-                Vertrags-E-Mails an Kunden senden
-              </label>
-              <label class="span-2 checkbox-row">
-                <input id="email-settings-mailbox-enabled" type="checkbox" />
-                Manuelle E-Mails aus dem Postfach senden
-              </label>
-              <label class="span-2 checkbox-row">
-                <input id="email-settings-internal-contract-enabled" type="checkbox" />
-                Interne Vertragsbenachrichtigungen senden
-              </label>
-              <label class="span-2 checkbox-row">
-                <input id="email-settings-test-enabled" type="checkbox" />
-                Test-E-Mails aus den Einstellungen senden
-              </label>
+              <div class="span-2">
+                <label class="checkbox-row">
+                  <input id="email-settings-contract-enabled" type="checkbox" />
+                  Vertrag an Kunden senden
+                </label>
+                <small class="muted">Sobald der Kunde unterschrieben hat, erh&auml;lt er automatisch den unterschriebenen Vertrag als PDF per E-Mail.</small>
+              </div>
+              <div class="span-2">
+                <label class="checkbox-row">
+                  <input id="email-settings-internal-contract-enabled" type="checkbox" />
+                  Vertrag an Buchhaltung senden
+                </label>
+                <small class="muted">Sobald der Kunde unterschrieben hat, geht der Vertrag automatisch an die unter Vertragsbenachrichtigungen hinterlegten Empf&auml;nger.</small>
+              </div>
+              <div class="span-2">
+                <label class="checkbox-row">
+                  <input id="email-settings-offer-enabled" type="checkbox" />
+                  Vertragslink vor der Unterschrift per E-Mail senden
+                </label>
+                <small class="muted">Erlaubt, den Signaturlink eines Vertragsentwurfs per E-Mail an den Kunden zu schicken (Alternative: Link kopieren).</small>
+              </div>
               <div class="form-actions span-2">
                 <button class="primary-button" type="submit">
                   <i data-lucide="save" aria-hidden="true"></i>
@@ -679,7 +575,7 @@
         <section id="settings-email-signature-view" class="view" aria-label="E-Mail-Signatur">
           <div class="section-heading">
             <div>
-              <p class="muted">Professionelle Signatur f&uuml;r automatische E-Mails und Postfach-Nachrichten.</p>
+              <p class="muted">Professionelle Signatur f&uuml;r automatische E-Mails.</p>
             </div>
           </div>
 
@@ -747,10 +643,6 @@
                     <input id="email-signature-use-contract" type="checkbox" data-email-signature-use="contractCustomer" />
                     Vertrags-E-Mails an Kunden
                   </label>
-                  <label class="checkbox-row">
-                    <input id="email-signature-use-mailbox" type="checkbox" data-email-signature-use="mailbox" />
-                    Manuelle E-Mails aus dem Postfach
-                  </label>
                 </div>
               </fieldset>
 
@@ -789,7 +681,7 @@
         <section id="settings-notify-view" class="view" aria-label="Vertragsbenachrichtigungen-Einstellungen">
           <div class="section-heading">
             <div>
-              <p class="muted">Sendet den fertigen Vertrag automatisch per E-Mail, sobald er erstellt wird.</p>
+              <p class="muted">Sendet den unterschriebenen Vertrag automatisch per E-Mail an die Buchhaltung, sobald der Kunde unterschrieben hat.</p>
             </div>
           </div>
 
@@ -802,7 +694,7 @@
             <form id="contract-notify-form" class="form-grid">
               <label class="span-2 checkbox-row">
                 <input id="contract-notify-enabled" type="checkbox" />
-                Vertrag nach Erstellung per E-Mail senden
+                Vertrag nach Unterschrift an die Buchhaltung senden
               </label>
               <div id="contract-notify-emails" class="span-2 email-list"></div>
               <div class="span-2">

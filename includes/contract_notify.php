@@ -62,9 +62,9 @@ function load_contract_context(PDO $pdo, string $contractId): ?array
     return ['contract' => $contract, 'offer' => $offer, 'customer' => $customer];
 }
 
-// Liefert das Kundenmanagement-Postfach (dasselbe Konto wie beim Vertragsversand und im
-// Postfach-Bereich), sofern vollstaendig konfiguriert, sonst null. Bewusst nicht die separaten
-// "SMTP-Server-Einstellungen" - die sind oft nie befuellt, das Postfach dagegen schon.
+// Liefert das E-Mail-Versand-Konto (Einstellungen > E-Mails), sofern vollstaendig konfiguriert,
+// sonst null. Bewusst nicht die separaten "SMTP-Server-Einstellungen" - die sind oft nie befuellt,
+// das Versand-Konto dagegen schon.
 function load_mailbox_smtp(PDO $pdo): ?array
 {
     $smtp = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1')->fetch();

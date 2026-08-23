@@ -44,7 +44,7 @@ $settingsStmt = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1');
 $settings = $settingsStmt->fetch();
 
 if (!$settings || $settings['host'] === '' || $settings['username'] === '' || ($settings['password_encrypted'] ?? '') === '') {
-    json_error('Bitte zuerst das Postfach unter "Postfach" einrichten.', 422);
+    json_error('Bitte zuerst das E-Mail-Versand-Konto unter Einstellungen > E-Mails einrichten.', 422);
 }
 
 $publicUrl = base_url() . '/offer.php?token=' . $offer['token'];
