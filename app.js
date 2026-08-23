@@ -54,7 +54,6 @@ const els = {
   offerForm: document.querySelector("#offer-form"),
   offerCustomerName: document.querySelector("#offer-customer-name"),
   offerContactPerson: document.querySelector("#offer-contact-person"),
-  offerPhone: document.querySelector("#offer-phone"),
   offerEmail: document.querySelector("#offer-email"),
   offerAddress: document.querySelector("#offer-address"),
   offerZip: document.querySelector("#offer-zip"),
@@ -143,7 +142,6 @@ const els = {
   contractCorrectionId: document.querySelector("#contract-correction-id"),
   contractCorrectionCustomerName: document.querySelector("#contract-correction-customer-name"),
   contractCorrectionContactPerson: document.querySelector("#contract-correction-contact-person"),
-  contractCorrectionPhone: document.querySelector("#contract-correction-phone"),
   contractCorrectionEmail: document.querySelector("#contract-correction-email"),
   contractCorrectionAddress: document.querySelector("#contract-correction-address"),
   contractCorrectionZip: document.querySelector("#contract-correction-zip"),
@@ -1386,7 +1384,6 @@ async function handleOfferSubmit(event) {
 
   const customerName = els.offerCustomerName.value.trim();
   const contactPerson = els.offerContactPerson.value.trim();
-  const phone = els.offerPhone.value.trim();
   const email = els.offerEmail.value.trim();
   const address = els.offerAddress.value.trim();
   const zip = els.offerZip.value.trim();
@@ -1405,14 +1402,8 @@ async function handleOfferSubmit(event) {
   }
 
   if (!contactPerson) {
-    showToast("Bitte einen Ansprechpartner eintragen.");
+    showToast("Bitte den Geschäftsführer / Inhaber eintragen.");
     els.offerContactPerson.focus();
-    return;
-  }
-
-  if (!phone) {
-    showToast("Bitte eine Telefonnummer eintragen.");
-    els.offerPhone.focus();
     return;
   }
 
@@ -1478,7 +1469,7 @@ async function handleOfferSubmit(event) {
     els.offerReviewSummary.innerHTML = `
       <div class="record-lines">
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
-        <span>${escapeHtml(phone)} · ${escapeHtml(email)}</span>
+        <span>${escapeHtml(email)}</span>
         <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)}${squareMeters > 0 ? ` · ${squareMeters} m²` : ""} · ${escapeHtml(intervalDisplay)}</span>
         <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."}</span>
       </div>
@@ -1497,7 +1488,6 @@ async function handleOfferReviewSubmit(event) {
   const payload = {
     customerName: els.offerCustomerName.value.trim(),
     contactPerson: els.offerContactPerson.value.trim(),
-    phone: els.offerPhone.value.trim(),
     email: els.offerEmail.value.trim(),
     address: els.offerAddress.value.trim(),
     zip: els.offerZip.value.trim(),
@@ -1654,7 +1644,6 @@ function openContractCorrectionModal(id) {
   els.contractCorrectionId.value = contract.id;
   els.contractCorrectionCustomerName.value = contract.customer.name;
   els.contractCorrectionContactPerson.value = contract.customer.contactLastName;
-  els.contractCorrectionPhone.value = contract.customer.phone;
   els.contractCorrectionEmail.value = contract.customer.email;
   els.contractCorrectionAddress.value = contract.customer.address;
   els.contractCorrectionZip.value = contract.customer.zip;
@@ -1700,7 +1689,6 @@ async function handleContractCorrectionSubmit(event) {
     action: "update-contact",
     customerName: els.contractCorrectionCustomerName.value.trim(),
     contactPerson: els.contractCorrectionContactPerson.value.trim(),
-    phone: els.contractCorrectionPhone.value.trim(),
     email: els.contractCorrectionEmail.value.trim(),
     address: els.contractCorrectionAddress.value.trim(),
     zip: els.contractCorrectionZip.value.trim(),

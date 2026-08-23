@@ -11,7 +11,6 @@ function render_offer_document(array $offer, array $customer): string
     $customerName = h(contract_customer_display_name($customer));
     $signatoryName = h(contract_signatory_display($customer));
     $customerEmail = h((string) $customer['email']);
-    $customerPhone = h((string) $customer['phone']);
     $customerAddress = h(trim($customer['address'] . ' ' . $customer['house_number']));
     $customerZipCity = h(trim($customer['zip'] . ' ' . $customer['city']));
     $addressRow = $customerAddress !== '' || $customerZipCity !== ''
@@ -71,9 +70,8 @@ function render_offer_document(array $offer, array $customer): string
 <h2>Kunde</h2>
 <dl>
   <dt>Firma</dt><dd>{$customerName}</dd>
-  <dt>Ansprechpartner</dt><dd>{$signatoryName}</dd>
+  <dt>Geschäftsführer / Inhaber</dt><dd>{$signatoryName}</dd>
   <dt>E-Mail</dt><dd>{$customerEmail}</dd>
-  <dt>Telefon</dt><dd>{$customerPhone}</dd>
   {$addressRow}
 </dl>
 

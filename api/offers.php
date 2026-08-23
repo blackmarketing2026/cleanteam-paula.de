@@ -105,7 +105,6 @@ if ($method === 'POST') {
     $body = read_json_body();
     $customerName = trim((string) ($body['customerName'] ?? ''));
     $contactPerson = trim((string) ($body['contactPerson'] ?? ''));
-    $phone = trim((string) ($body['phone'] ?? ''));
     $email = trim((string) ($body['email'] ?? ''));
     $address = trim((string) ($body['address'] ?? ''));
     $zip = trim((string) ($body['zip'] ?? ''));
@@ -127,9 +126,9 @@ if ($method === 'POST') {
     }
     $intervalLabel = $interval === 'Individuell' ? $intervalCustom : $interval;
 
-    if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === ''
+    if ($customerName === '' || $contactPerson === '' || $email === ''
         || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
-        json_error('Name, Ansprechpartner, Telefonnummer, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
+        json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
     }
 
     if ($price <= 0) {
@@ -149,7 +148,7 @@ if ($method === 'POST') {
         'id' => $customerId,
         'name' => $customerName,
         'email' => $email,
-        'phone' => $phone,
+        'phone' => '',
         'salutation' => '',
         'contact_last_name' => $contactPerson,
         'address' => $address,

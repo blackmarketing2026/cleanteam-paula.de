@@ -114,7 +114,6 @@ function notify_contract_created(PDO $pdo, string $contractId): void
             . '<p style="margin:0 0 18px 0;">Im Anhang befindet sich der Vertrag als PDF inklusive Signaturprotokoll. Bitte ausdrucken, abheften und entsprechend korrekt abspeichern.</p>'
             . '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 4px 0;">'
             . '<tr><td style="padding:5px 10px 5px 0;color:#5b6b80;font-weight:700;">Kunde</td><td style="padding:5px 0;">' . email_h((string) ($customer['name'] ?? '')) . '</td></tr>'
-            . '<tr><td style="padding:5px 10px 5px 0;color:#5b6b80;font-weight:700;">Telefon</td><td style="padding:5px 0;">' . email_h((string) ($customer['phone'] ?? '')) . '</td></tr>'
             . '<tr><td style="padding:5px 10px 5px 0;color:#5b6b80;font-weight:700;">Adresse</td><td style="padding:5px 0;">' . email_h($customerAddressLine) . '</td></tr>'
             . '<tr><td style="padding:5px 10px 5px 0;color:#5b6b80;font-weight:700;">E-Mail</td><td style="padding:5px 0;">' . email_h((string) ($customer['email'] ?? '')) . '</td></tr>'
             . '</table>';

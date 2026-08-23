@@ -103,7 +103,7 @@ function renderOfferSummary() {
   const offer = state.offer;
   const entries = [
     ["Kunde", offer.customer.name],
-    ["Ansprechpartner", contactName(offer.customer)],
+    ["Geschäftsführer / Inhaber", contactName(offer.customer)],
   ];
   if (offer.squareMeters > 0) {
     entries.push(["Fläche", `${offer.squareMeters} m²`]);
@@ -117,9 +117,8 @@ function renderDataCheck() {
   const offer = state.offer;
   renderDefinitionList(els.dataCheckList, [
     ["Firma", offer.customer.name],
-    ["Ansprechpartner", contactName(offer.customer)],
+    ["Geschäftsführer / Inhaber", contactName(offer.customer)],
     ["E-Mail", offer.customer.email],
-    ["Telefon", offer.customer.phone],
     ["Adresse", customerAddress(offer.customer)],
   ]);
 }

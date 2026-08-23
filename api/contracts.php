@@ -154,7 +154,6 @@ if ($method === 'PATCH') {
     } elseif ($action === 'update-contact') {
         $customerName = trim((string) ($body['customerName'] ?? ''));
         $contactPerson = trim((string) ($body['contactPerson'] ?? ''));
-        $phone = trim((string) ($body['phone'] ?? ''));
         $email = trim((string) ($body['email'] ?? ''));
         $address = trim((string) ($body['address'] ?? ''));
         $zip = trim((string) ($body['zip'] ?? ''));
@@ -176,9 +175,9 @@ if ($method === 'PATCH') {
         }
         $intervalLabel = $interval === 'Individuell' ? $intervalCustom : $interval;
 
-        if ($customerName === '' || $contactPerson === '' || $phone === '' || $email === ''
+        if ($customerName === '' || $contactPerson === '' || $email === ''
             || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
-            json_error('Name, Ansprechpartner, Telefonnummer, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
+            json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
         }
         if ($price <= 0) {
             json_error('Bitte den monatlichen Preis eintragen.', 422);
@@ -188,12 +187,11 @@ if ($method === 'PATCH') {
         }
 
         $pdo->prepare(
-            'UPDATE customers SET name = :name, contact_last_name = :contact, phone = :phone, email = :email,
+            'UPDATE customers SET name = :name, contact_last_name = :contact, email = :email,
                 address = :address, zip = :zip, city = :city WHERE id = :id'
         )->execute([
             'name' => $customerName,
             'contact' => $contactPerson,
-            'phone' => $phone,
             'email' => $email,
             'address' => $address,
             'zip' => $zip,

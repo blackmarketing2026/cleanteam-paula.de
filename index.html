@@ -237,12 +237,8 @@
                 <input id="offer-customer-name" type="text" required placeholder="Firma / Kunde" />
               </label>
               <label>
-                Ansprechpartner *
+                Geschäftsführer / Inhaber *
                 <input id="offer-contact-person" type="text" required placeholder="Vor- und Nachname" />
-              </label>
-              <label>
-                Telefonnummer *
-                <input id="offer-phone" type="tel" required placeholder="z. B. 0221 12345678" />
               </label>
               <label>
                 E-Mail-Adresse *
@@ -367,7 +363,7 @@
               <div class="table-toolbar">
                 <label class="search-field">
                   <i data-lucide="search" aria-hidden="true"></i>
-                  <input id="contract-search" type="search" placeholder="Vertrag, Kunde, Ansprechpartner suchen" />
+                  <input id="contract-search" type="search" placeholder="Vertrag, Kunde, Geschäftsführer/Inhaber suchen" />
                 </label>
                 <label class="select-field">
                   Zeitraum
@@ -383,7 +379,7 @@
                   Sortieren nach
                   <select id="contract-sort">
                     <option value="customerName">Kundenname</option>
-                    <option value="contactName">Ansprechpartner</option>
+                    <option value="contactName">Geschäftsführer/Inhaber</option>
                     <option value="createdAt">Vertragsdatum</option>
                     <option value="signedAt">Signaturdatum</option>
                     <option value="number">Vertragsnummer</option>
@@ -404,7 +400,7 @@
                   <tr>
                     <th>Vertrag</th>
                     <th>Name</th>
-                    <th>Ansprechpartner</th>
+                    <th>Geschäftsführer/Inhaber</th>
                     <th>Datum</th>
                     <th>Signatur</th>
                     <th>Status</th>
@@ -957,12 +953,8 @@
           <input id="contract-correction-customer-name" type="text" required />
         </label>
         <label class="modal-field">
-          Ansprechpartner *
+          Geschäftsführer / Inhaber *
           <input id="contract-correction-contact-person" type="text" required />
-        </label>
-        <label class="modal-field">
-          Telefonnummer *
-          <input id="contract-correction-phone" type="tel" required />
         </label>
         <label class="modal-field">
           E-Mail-Adresse *
@@ -1028,6 +1020,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=new-user-password-toggle-20260823-1"></script>
+    <script src="app.js?v=drop-phone-rename-contact-20260823-1"></script>
   </body>
 </html>
