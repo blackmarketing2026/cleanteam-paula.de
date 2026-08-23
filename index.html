@@ -850,7 +850,12 @@
               </label>
               <label>
                 Passwort *
-                <input id="user-password" type="password" required minlength="6" autocomplete="new-password" placeholder="Mindestens 6 Zeichen" />
+                <div class="password-reveal">
+                  <input id="user-password" type="password" required minlength="6" autocomplete="new-password" placeholder="Mindestens 6 Zeichen" />
+                  <button class="ghost-button" type="button" data-action="toggle-user-password">
+                    <i data-lucide="eye" aria-hidden="true"></i>
+                  </button>
+                </div>
               </label>
               <label>
                 Rolle *
@@ -1023,6 +1028,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=delete-user-20260823-1"></script>
+    <script src="app.js?v=new-user-password-toggle-20260823-1"></script>
   </body>
 </html>

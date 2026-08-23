@@ -2625,6 +2625,12 @@ async function handleUserSubmit(event) {
     await apiPost("api/users.php", payload);
     els.userForm.reset();
     els.userRole.value = "role_one";
+    els.userPassword.type = "password";
+    const toggleIcon = els.userForm.querySelector('[data-action="toggle-user-password"] i');
+    if (toggleIcon) {
+      toggleIcon.setAttribute("data-lucide", "eye");
+      refreshIcons();
+    }
     await loadUsers();
     showToast("User wurde angelegt.");
   } catch (error) {
@@ -2675,7 +2681,7 @@ async function deleteUser(id) {
 
 function toggleUserPasswordVisibility(button) {
   const wrapper = button.closest(".password-reveal");
-  const input = wrapper?.querySelector('[name="managedUserCurrentPassword"]');
+  const input = wrapper?.querySelector("input");
   if (!input) {
     return;
   }
@@ -2901,6 +2907,12 @@ function bindEvents() {
   els.contractorSignatureSave.addEventListener("click", handleContractorSignatureSave);
   els.contractorSignatureRemove.addEventListener("click", handleContractorSignatureRemove);
   els.userForm.addEventListener("submit", handleUserSubmit);
+  els.userForm.addEventListener("click", (event) => {
+    const toggleButton = event.target.closest('[data-action="toggle-user-password"]');
+    if (toggleButton) {
+      toggleUserPasswordVisibility(toggleButton);
+    }
+  });
   els.userList.addEventListener("click", handleUserListAction);
 
   els.contractNotifyForm.addEventListener("submit", handleContractNotifySubmit);
