@@ -306,7 +306,10 @@ if ($method === 'PATCH') {
         json_error('Vertragsentwurf wurde nicht gefunden.', 404);
     }
 
-    $pdo->prepare('UPDATE offers SET link_opened_at = NULL WHERE id = :id')->execute(['id' => $id]);
+    // Neuen Token vergeben, damit der alte (bereits verschickte/geoeffnete) Link endgueltig
+    // ungueltig bleibt; "Link kopieren"/"Vertrag senden" verwenden danach automatisch den neuen Link.
+    $pdo->prepare('UPDATE offers SET link_opened_at = NULL, token = :token WHERE id = :id')
+        ->execute(['token' => generate_token(), 'id' => $id]);
 
     $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');
     $stmt->execute(['id' => $id]);
