@@ -41,6 +41,14 @@ function ensure_offers_agb_snapshot_columns(PDO $pdo): void
     }
 }
 
+function ensure_offers_validity_days_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'validity_days'");
+    if (!$stmt->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD COLUMN validity_days SMALLINT UNSIGNED NOT NULL DEFAULT 14 AFTER expires_at');
+    }
+}
+
 function offer_row_to_json(array $row): array
 {
     $price = (float) $row['price'];
@@ -77,6 +85,7 @@ function offer_row_to_json(array $row): array
         'publicUrl' => base_url() . '/offer.php?token=' . $row['token'],
         'createdAt' => to_iso($row['created_at']),
         'expiresAt' => to_iso($row['expires_at']),
+        'validityDays' => (int) ($row['validity_days'] ?? 14),
         'sentAt' => to_iso($row['sent_at']),
         'contractId' => $row['contract_id'],
         'contractStatus' => $row['contract_status'],
@@ -95,6 +104,7 @@ ensure_offers_pricing_columns($pdo);
 ensure_offers_interval_label_length($pdo);
 ensure_offers_vat_column($pdo);
 ensure_offers_agb_snapshot_columns($pdo);
+ensure_offers_validity_days_column($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();
@@ -115,16 +125,13 @@ if ($method === 'POST') {
     $startDate = trim((string) ($body['startDate'] ?? ''));
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
-    $intervalCustom = trim((string) ($body['intervalCustom'] ?? ''));
+    $validityDays = (int) ($body['validityDays'] ?? 14);
 
-    $allowedIntervals = ['Wöchentlich', 'Täglich', 'Monatlich', 'Individuell'];
+    $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
     if (!in_array($interval, $allowedIntervals, true)) {
         json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
     }
-    if ($interval === 'Individuell' && $intervalCustom === '') {
-        json_error('Bitte das individuelle Reinigungsintervall beschreiben.', 422);
-    }
-    $intervalLabel = $interval === 'Individuell' ? $intervalCustom : $interval;
+    $intervalLabel = $interval;
 
     if ($customerName === '' || $contactPerson === '' || $email === ''
         || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
@@ -137,6 +144,10 @@ if ($method === 'POST') {
 
     if ($startDate === '' || strtotime($startDate) === false) {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
+    }
+
+    if ($validityDays <= 0) {
+        json_error('Bitte eine gültige Anzahl an Tagen für die Gültigkeitsdauer eintragen.', 422);
     }
 
     $customerId = generate_id('customer');
@@ -161,8 +172,8 @@ if ($method === 'POST') {
     $token = generate_token();
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY))'
+        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, base_price, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days)
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :base_price, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), :validity_days2)'
     );
     $stmt->execute([
         'id' => $id,
@@ -176,6 +187,8 @@ if ($method === 'POST') {
         'price' => $price,
         'vat_applicable' => $vatApplicable ? 1 : 0,
         'token' => $token,
+        'validity_days' => $validityDays,
+        'validity_days2' => $validityDays,
     ]);
 
     $agbSnapshotText = fetch_agb_text_snapshot();
@@ -195,7 +208,7 @@ if ($method === 'PUT') {
         json_error('Vertrags-ID fehlt.', 422);
     }
 
-    $stmt = $pdo->prepare('SELECT id, customer_id FROM offers WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, customer_id, created_at FROM offers WHERE id = :id');
     $stmt->execute(['id' => $id]);
     $existing = $stmt->fetch();
     if (!$existing) {
@@ -215,16 +228,13 @@ if ($method === 'PUT') {
     $startDate = trim((string) ($body['startDate'] ?? ''));
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
-    $intervalCustom = trim((string) ($body['intervalCustom'] ?? ''));
+    $validityDays = (int) ($body['validityDays'] ?? 14);
 
-    $allowedIntervals = ['Wöchentlich', 'Täglich', 'Monatlich', 'Individuell'];
+    $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
     if (!in_array($interval, $allowedIntervals, true)) {
         json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
     }
-    if ($interval === 'Individuell' && $intervalCustom === '') {
-        json_error('Bitte das individuelle Reinigungsintervall beschreiben.', 422);
-    }
-    $intervalLabel = $interval === 'Individuell' ? $intervalCustom : $interval;
+    $intervalLabel = $interval;
 
     if ($customerName === '' || $contactPerson === '' || $email === ''
         || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
@@ -235,6 +245,9 @@ if ($method === 'PUT') {
     }
     if ($startDate === '' || strtotime($startDate) === false) {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
+    }
+    if ($validityDays <= 0) {
+        json_error('Bitte eine gültige Anzahl an Tagen für die Gültigkeitsdauer eintragen.', 422);
     }
 
     $pdo->prepare(
@@ -252,7 +265,8 @@ if ($method === 'PUT') {
 
     $pdo->prepare(
         'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
-            price = :price, base_price = :price, vat_applicable = :vat_applicable, notes = :notes WHERE id = :id'
+            price = :price, base_price = :price, vat_applicable = :vat_applicable, notes = :notes,
+            validity_days = :validity_days, expires_at = DATE_ADD(:created_at, INTERVAL :validity_days2 DAY) WHERE id = :id'
     )->execute([
         'square_meters' => $squareMeters,
         'interval_label' => $intervalLabel,
@@ -260,6 +274,9 @@ if ($method === 'PUT') {
         'price' => $price,
         'vat_applicable' => $vatApplicable ? 1 : 0,
         'notes' => format_service_text($serviceText),
+        'validity_days' => $validityDays,
+        'validity_days2' => $validityDays,
+        'created_at' => $existing['created_at'],
         'id' => $id,
     ]);
 

@@ -160,20 +160,16 @@ if ($method === 'PATCH') {
         $city = trim((string) ($body['city'] ?? ''));
         $squareMeters = (int) ($body['squareMeters'] ?? 0);
         $interval = trim((string) ($body['interval'] ?? ''));
-        $intervalCustom = trim((string) ($body['intervalCustom'] ?? ''));
         $price = round((float) ($body['price'] ?? 0), 2);
         $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
         $startDate = trim((string) ($body['startDate'] ?? ''));
         $serviceText = trim((string) ($body['serviceText'] ?? ''));
 
-        $allowedIntervals = ['Wöchentlich', 'Täglich', 'Monatlich', 'Individuell'];
+        $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
         if (!in_array($interval, $allowedIntervals, true)) {
             json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
         }
-        if ($interval === 'Individuell' && $intervalCustom === '') {
-            json_error('Bitte das individuelle Reinigungsintervall beschreiben.', 422);
-        }
-        $intervalLabel = $interval === 'Individuell' ? $intervalCustom : $interval;
+        $intervalLabel = $interval;
 
         if ($customerName === '' || $contactPerson === '' || $email === ''
             || $address === '' || $zip === '' || $city === '' || $serviceText === '') {

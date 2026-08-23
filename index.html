@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=remove-mustervertrag-20260823-1" />
+    <link rel="stylesheet" href="styles.css?v=fix-signature-pad-aspect-ratio-20260823-1" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -260,15 +260,13 @@
                 Reinigungsintervall *
                 <select id="offer-interval" required>
                   <option value="">Bitte wählen</option>
-                  <option value="Wöchentlich">Wöchentlich</option>
                   <option value="Täglich">Täglich</option>
-                  <option value="Monatlich">Monatlich</option>
-                  <option value="Individuell">Individuell</option>
+                  <option value="Einmal wöchentlich">Einmal wöchentlich</option>
+                  <option value="Zweimal wöchentlich">Zweimal wöchentlich</option>
+                  <option value="Dreimal wöchentlich">Dreimal wöchentlich</option>
+                  <option value="Viermal wöchentlich">Viermal wöchentlich</option>
+                  <option value="14-tägig">14-tägig</option>
                 </select>
-              </label>
-              <label id="offer-interval-custom-field" class="span-2" hidden>
-                Individuelles Intervall *
-                <input id="offer-interval-custom" type="text" placeholder="z. B. 2x wöchentlich" />
               </label>
               <label>
                 Preis (monatlich, netto) *
@@ -277,6 +275,10 @@
               <label>
                 Beginn der Dienstleistung *
                 <input id="offer-start-date" type="date" required />
+              </label>
+              <label>
+                Gültigkeitsdauer des Vertragslinks (Tage) *
+                <input id="offer-validity-days" type="number" min="1" step="1" required value="14" />
               </label>
               <label>
                 Umsatzsteuer berechnen? *
@@ -945,15 +947,13 @@
           Reinigungsintervall *
           <select id="contract-correction-interval" required>
             <option value="">Bitte wählen</option>
-            <option value="Wöchentlich">Wöchentlich</option>
             <option value="Täglich">Täglich</option>
-            <option value="Monatlich">Monatlich</option>
-            <option value="Individuell">Individuell</option>
+            <option value="Einmal wöchentlich">Einmal wöchentlich</option>
+            <option value="Zweimal wöchentlich">Zweimal wöchentlich</option>
+            <option value="Dreimal wöchentlich">Dreimal wöchentlich</option>
+            <option value="Viermal wöchentlich">Viermal wöchentlich</option>
+            <option value="14-tägig">14-tägig</option>
           </select>
-        </label>
-        <label id="contract-correction-interval-custom-field" class="modal-field" hidden>
-          Individuelles Intervall *
-          <input id="contract-correction-interval-custom" type="text" />
         </label>
         <label class="modal-field">
           Preis (monatlich, netto) *
@@ -1021,15 +1021,13 @@
           Reinigungsintervall *
           <select id="offer-edit-interval" required>
             <option value="">Bitte wählen</option>
-            <option value="Wöchentlich">Wöchentlich</option>
             <option value="Täglich">Täglich</option>
-            <option value="Monatlich">Monatlich</option>
-            <option value="Individuell">Individuell</option>
+            <option value="Einmal wöchentlich">Einmal wöchentlich</option>
+            <option value="Zweimal wöchentlich">Zweimal wöchentlich</option>
+            <option value="Dreimal wöchentlich">Dreimal wöchentlich</option>
+            <option value="Viermal wöchentlich">Viermal wöchentlich</option>
+            <option value="14-tägig">14-tägig</option>
           </select>
-        </label>
-        <label id="offer-edit-interval-custom-field" class="modal-field" hidden>
-          Individuelles Intervall *
-          <input id="offer-edit-interval-custom" type="text" />
         </label>
         <label class="modal-field">
           Preis (monatlich, netto) *
@@ -1038,6 +1036,10 @@
         <label class="modal-field">
           Beginn der Dienstleistung *
           <input id="offer-edit-start-date" type="date" required />
+        </label>
+        <label class="modal-field">
+          Gültigkeitsdauer des Vertragslinks (Tage) *
+          <input id="offer-edit-validity-days" type="number" min="1" step="1" required />
         </label>
         <label class="modal-field">
           Umsatzsteuer berechnen? *
@@ -1061,6 +1063,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=contractor-signature-upload-20260823-1"></script>
+    <script src="app.js?v=intervals-and-validity-days-20260823-1"></script>
   </body>
 </html>

@@ -60,10 +60,9 @@ const els = {
   offerCity: document.querySelector("#offer-city"),
   offerSquareMeters: document.querySelector("#offer-square-meters"),
   offerInterval: document.querySelector("#offer-interval"),
-  offerIntervalCustomField: document.querySelector("#offer-interval-custom-field"),
-  offerIntervalCustom: document.querySelector("#offer-interval-custom"),
   offerPrice: document.querySelector("#offer-price"),
   offerStartDate: document.querySelector("#offer-start-date"),
+  offerValidityDays: document.querySelector("#offer-validity-days"),
   offerVat: document.querySelector("#offer-vat"),
   offerServiceText: document.querySelector("#offer-service-text"),
   offerReviewForm: document.querySelector("#offer-review-form"),
@@ -148,8 +147,6 @@ const els = {
   contractCorrectionCity: document.querySelector("#contract-correction-city"),
   contractCorrectionSquareMeters: document.querySelector("#contract-correction-square-meters"),
   contractCorrectionInterval: document.querySelector("#contract-correction-interval"),
-  contractCorrectionIntervalCustomField: document.querySelector("#contract-correction-interval-custom-field"),
-  contractCorrectionIntervalCustom: document.querySelector("#contract-correction-interval-custom"),
   contractCorrectionPrice: document.querySelector("#contract-correction-price"),
   contractCorrectionStartDate: document.querySelector("#contract-correction-start-date"),
   contractCorrectionVat: document.querySelector("#contract-correction-vat"),
@@ -166,10 +163,9 @@ const els = {
   offerEditCity: document.querySelector("#offer-edit-city"),
   offerEditSquareMeters: document.querySelector("#offer-edit-square-meters"),
   offerEditInterval: document.querySelector("#offer-edit-interval"),
-  offerEditIntervalCustomField: document.querySelector("#offer-edit-interval-custom-field"),
-  offerEditIntervalCustom: document.querySelector("#offer-edit-interval-custom"),
   offerEditPrice: document.querySelector("#offer-edit-price"),
   offerEditStartDate: document.querySelector("#offer-edit-start-date"),
+  offerEditValidityDays: document.querySelector("#offer-edit-validity-days"),
   offerEditVat: document.querySelector("#offer-edit-vat"),
   offerEditServiceText: document.querySelector("#offer-edit-service-text"),
   offerEditCancel: document.querySelector("#offer-edit-cancel"),
@@ -1390,7 +1386,6 @@ function resetOfferIntake() {
   els.offerReviewForm.reset();
   els.offerIntakePanel.hidden = false;
   els.offerReviewPanel.hidden = true;
-  els.offerIntervalCustomField.hidden = true;
 }
 
 async function handleOfferSubmit(event) {
@@ -1404,9 +1399,9 @@ async function handleOfferSubmit(event) {
   const city = els.offerCity.value.trim();
   const squareMeters = Number(els.offerSquareMeters.value) || 0;
   const interval = els.offerInterval.value;
-  const intervalCustom = els.offerIntervalCustom.value.trim();
   const price = Number(els.offerPrice.value);
   const startDate = els.offerStartDate.value;
+  const validityDays = Number(els.offerValidityDays.value);
   const serviceText = els.offerServiceText.value.trim();
 
   if (!customerName) {
@@ -1451,12 +1446,6 @@ async function handleOfferSubmit(event) {
     return;
   }
 
-  if (interval === "Individuell" && !intervalCustom) {
-    showToast("Bitte das individuelle Reinigungsintervall beschreiben.");
-    els.offerIntervalCustom.focus();
-    return;
-  }
-
   if (!Number.isFinite(price) || price <= 0) {
     showToast("Bitte den monatlichen Preis eintragen.");
     els.offerPrice.focus();
@@ -1475,7 +1464,11 @@ async function handleOfferSubmit(event) {
     return;
   }
 
-  const intervalDisplay = interval === "Individuell" ? intervalCustom : interval;
+  if (!Number.isFinite(validityDays) || validityDays <= 0) {
+    showToast("Bitte eine gültige Anzahl an Tagen für die Gültigkeitsdauer eintragen.");
+    els.offerValidityDays.focus();
+    return;
+  }
 
   try {
     const { text } = await apiPost("api/format-text.php", { text: serviceText });
@@ -1484,8 +1477,8 @@ async function handleOfferSubmit(event) {
       <div class="record-lines">
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
         <span>${escapeHtml(email)}</span>
-        <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)}${squareMeters > 0 ? ` · ${squareMeters} m²` : ""} · ${escapeHtml(intervalDisplay)}</span>
-        <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."}</span>
+        <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)}${squareMeters > 0 ? ` · ${squareMeters} m²` : ""} · ${escapeHtml(interval)}</span>
+        <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."} · Link gültig ${validityDays} Tage</span>
       </div>
     `;
     els.offerIntakePanel.hidden = true;
@@ -1508,10 +1501,10 @@ async function handleOfferReviewSubmit(event) {
     city: els.offerCity.value.trim(),
     squareMeters: Number(els.offerSquareMeters.value) || 0,
     interval: els.offerInterval.value,
-    intervalCustom: els.offerIntervalCustom.value.trim(),
     price: Number(els.offerPrice.value),
     vatApplicable: els.offerVat.value === "yes",
     startDate: els.offerStartDate.value,
+    validityDays: Number(els.offerValidityDays.value) || 14,
     serviceText: els.offerServiceTextCorrected.value.trim(),
   };
 
@@ -1663,16 +1656,7 @@ function openContractCorrectionModal(id) {
   els.contractCorrectionZip.value = contract.customer.zip;
   els.contractCorrectionCity.value = contract.customer.city;
   els.contractCorrectionSquareMeters.value = contract.offer.squareMeters || "";
-  const fixedIntervals = ["Wöchentlich", "Täglich", "Monatlich"];
-  if (fixedIntervals.includes(contract.offer.interval)) {
-    els.contractCorrectionInterval.value = contract.offer.interval;
-    els.contractCorrectionIntervalCustom.value = "";
-    els.contractCorrectionIntervalCustomField.hidden = true;
-  } else {
-    els.contractCorrectionInterval.value = "Individuell";
-    els.contractCorrectionIntervalCustom.value = contract.offer.interval || "";
-    els.contractCorrectionIntervalCustomField.hidden = false;
-  }
+  els.contractCorrectionInterval.value = contract.offer.interval;
   els.contractCorrectionPrice.value = contract.offer.price;
   els.contractCorrectionVat.value = contract.offer.vatApplicable === false ? "no" : "yes";
   els.contractCorrectionStartDate.value = contract.offer.startDate || "";
@@ -1684,19 +1668,12 @@ function openContractCorrectionModal(id) {
 function closeContractCorrectionModal() {
   els.contractCorrectionModal.hidden = true;
   els.contractCorrectionForm.reset();
-  els.contractCorrectionIntervalCustomField.hidden = true;
 }
 
 async function handleContractCorrectionSubmit(event) {
   event.preventDefault();
 
   const interval = els.contractCorrectionInterval.value;
-  const intervalCustom = els.contractCorrectionIntervalCustom.value.trim();
-  if (interval === "Individuell" && !intervalCustom) {
-    showToast("Bitte das individuelle Reinigungsintervall beschreiben.");
-    els.contractCorrectionIntervalCustom.focus();
-    return;
-  }
 
   const id = els.contractCorrectionId.value;
   const payload = {
@@ -1709,7 +1686,6 @@ async function handleContractCorrectionSubmit(event) {
     city: els.contractCorrectionCity.value.trim(),
     squareMeters: Number(els.contractCorrectionSquareMeters.value) || 0,
     interval,
-    intervalCustom,
     price: Number(els.contractCorrectionPrice.value),
     vatApplicable: els.contractCorrectionVat.value === "yes",
     startDate: els.contractCorrectionStartDate.value,
@@ -1747,19 +1723,11 @@ function openOfferEditModal(id) {
   els.offerEditZip.value = offer.customer.zip;
   els.offerEditCity.value = offer.customer.city;
   els.offerEditSquareMeters.value = offer.squareMeters || "";
-  const fixedIntervals = ["Wöchentlich", "Täglich", "Monatlich"];
-  if (fixedIntervals.includes(offer.interval)) {
-    els.offerEditInterval.value = offer.interval;
-    els.offerEditIntervalCustom.value = "";
-    els.offerEditIntervalCustomField.hidden = true;
-  } else {
-    els.offerEditInterval.value = "Individuell";
-    els.offerEditIntervalCustom.value = offer.interval || "";
-    els.offerEditIntervalCustomField.hidden = false;
-  }
+  els.offerEditInterval.value = offer.interval;
   els.offerEditPrice.value = offer.price;
   els.offerEditVat.value = offer.vatApplicable === false ? "no" : "yes";
   els.offerEditStartDate.value = offer.startDate || "";
+  els.offerEditValidityDays.value = offer.validityDays || 14;
   els.offerEditServiceText.value = offer.notes || "";
   els.offerEditModal.hidden = false;
   els.offerEditCustomerName.focus();
@@ -1768,17 +1736,16 @@ function openOfferEditModal(id) {
 function closeOfferEditModal() {
   els.offerEditModal.hidden = true;
   els.offerEditForm.reset();
-  els.offerEditIntervalCustomField.hidden = true;
 }
 
 async function handleOfferEditSubmit(event) {
   event.preventDefault();
 
   const interval = els.offerEditInterval.value;
-  const intervalCustom = els.offerEditIntervalCustom.value.trim();
-  if (interval === "Individuell" && !intervalCustom) {
-    showToast("Bitte das individuelle Reinigungsintervall beschreiben.");
-    els.offerEditIntervalCustom.focus();
+  const validityDays = Number(els.offerEditValidityDays.value);
+  if (!Number.isFinite(validityDays) || validityDays <= 0) {
+    showToast("Bitte eine gültige Anzahl an Tagen für die Gültigkeitsdauer eintragen.");
+    els.offerEditValidityDays.focus();
     return;
   }
 
@@ -1792,10 +1759,10 @@ async function handleOfferEditSubmit(event) {
     city: els.offerEditCity.value.trim(),
     squareMeters: Number(els.offerEditSquareMeters.value) || 0,
     interval,
-    intervalCustom,
     price: Number(els.offerEditPrice.value),
     vatApplicable: els.offerEditVat.value === "yes",
     startDate: els.offerEditStartDate.value,
+    validityDays,
     serviceText: els.offerEditServiceText.value.trim(),
   };
 
@@ -2929,16 +2896,6 @@ function bindEvents() {
     els.offerReviewPanel.hidden = true;
     els.offerCustomerName.focus();
   });
-  els.offerInterval.addEventListener("change", () => {
-    els.offerIntervalCustomField.hidden = els.offerInterval.value !== "Individuell";
-  });
-  els.contractCorrectionInterval.addEventListener("change", () => {
-    els.contractCorrectionIntervalCustomField.hidden = els.contractCorrectionInterval.value !== "Individuell";
-  });
-  els.offerEditInterval.addEventListener("change", () => {
-    els.offerEditIntervalCustomField.hidden = els.offerEditInterval.value !== "Individuell";
-  });
-
   els.offerList.addEventListener("click", handleRecordAction);
   els.contractList.addEventListener("click", handleRecordAction);
   els.contractSearch.addEventListener("input", () => {
