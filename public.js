@@ -16,23 +16,12 @@ const els = {
   signaturePad: document.querySelector("#signature-pad"),
   clearSignature: document.querySelector("#clear-signature"),
   saveSignature: document.querySelector("#save-signature"),
-  signatureModeDraw: document.querySelector("#signature-mode-draw"),
-  signatureModeUpload: document.querySelector("#signature-mode-upload"),
-  signatureDrawPanel: document.querySelector("#signature-draw-panel"),
-  signatureUploadPanel: document.querySelector("#signature-upload-panel"),
-  signatureUploadDropzone: document.querySelector("#signature-upload-dropzone"),
-  signatureUploadInput: document.querySelector("#signature-upload-input"),
-  signatureUploadPreviewWrap: document.querySelector("#signature-upload-preview-wrap"),
-  signatureUploadPreview: document.querySelector("#signature-upload-preview"),
-  signatureUploadClear: document.querySelector("#signature-upload-clear"),
   finalContractFrame: document.querySelector("#final-contract-frame"),
   printFinalContract: document.querySelector("#print-final-contract"),
   toast: document.querySelector("#toast"),
 };
 
 let signatureHasInk = false;
-let signatureMode = "draw";
-let uploadedSignatureDataUrl = null;
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -281,63 +270,6 @@ function clearSignaturePad() {
   signatureHasInk = false;
 }
 
-function setSignatureMode(mode) {
-  signatureMode = mode;
-  const isDraw = mode === "draw";
-  els.signatureDrawPanel.hidden = !isDraw;
-  els.signatureUploadPanel.hidden = isDraw;
-  els.signatureModeDraw.classList.toggle("active", isDraw);
-  els.signatureModeDraw.setAttribute("aria-selected", String(isDraw));
-  els.signatureModeUpload.classList.toggle("active", !isDraw);
-  els.signatureModeUpload.setAttribute("aria-selected", String(!isDraw));
-}
-
-function clearSignatureUpload() {
-  uploadedSignatureDataUrl = null;
-  els.signatureUploadInput.value = "";
-  els.signatureUploadPreview.src = "";
-  els.signatureUploadPreviewWrap.hidden = true;
-  els.signatureUploadDropzone.hidden = false;
-}
-
-function handleSignatureUploadFile(file) {
-  if (!file) {
-    return;
-  }
-
-  if (!file.type.startsWith("image/")) {
-    showToast("Bitte eine Bilddatei auswählen (JPG oder PNG).");
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    const image = new Image();
-    image.onload = () => {
-      const maxWidth = 900;
-      const maxHeight = 260;
-      const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(image.width * scale);
-      canvas.height = Math.round(image.height * scale);
-      const context = canvas.getContext("2d");
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      uploadedSignatureDataUrl = canvas.toDataURL("image/png");
-      els.signatureUploadPreview.src = uploadedSignatureDataUrl;
-      els.signatureUploadPreviewWrap.hidden = false;
-      els.signatureUploadDropzone.hidden = true;
-    };
-    image.onerror = () => {
-      showToast("Bild konnte nicht gelesen werden. Bitte eine andere Datei wählen.");
-    };
-    image.src = reader.result;
-  };
-  reader.onerror = () => {
-    showToast("Bild konnte nicht gelesen werden. Bitte eine andere Datei wählen.");
-  };
-  reader.readAsDataURL(file);
-}
-
 function bindEvents() {
   els.card.addEventListener("click", (event) => {
     const yesNoButton = event.target.closest("[data-yesno]");
@@ -371,23 +303,7 @@ function bindEvents() {
 
   els.clearSignature.addEventListener("click", clearSignaturePad);
 
-  els.signatureModeDraw.addEventListener("click", () => setSignatureMode("draw"));
-  els.signatureModeUpload.addEventListener("click", () => setSignatureMode("upload"));
-  els.signatureUploadInput.addEventListener("change", (event) => {
-    handleSignatureUploadFile(event.target.files[0]);
-  });
-  els.signatureUploadClear.addEventListener("click", clearSignatureUpload);
-
   els.saveSignature.addEventListener("click", () => {
-    if (signatureMode === "upload") {
-      if (!uploadedSignatureDataUrl) {
-        showToast("Bitte zuerst ein Bild Ihrer Unterschrift hochladen.");
-        return;
-      }
-      handleAction("sign", { signatureDataUrl: uploadedSignatureDataUrl });
-      return;
-    }
-
     if (!signatureHasInk) {
       showToast("Bitte zuerst im Signaturfeld unterschreiben.");
       return;

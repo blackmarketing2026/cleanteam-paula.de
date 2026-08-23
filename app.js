@@ -1140,10 +1140,6 @@ function renderOfferCard(offer) {
         <i data-lucide="signature" aria-hidden="true"></i>
         Vertrag ansehen
       </button>
-      <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(offer.contractId)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
-        <i data-lucide="file-text" aria-hidden="true"></i>
-        Vertragsdokument
-      </a>
       <button class="ghost-button" type="button" data-action="reset-contract-link" data-id="${escapeHtml(offer.contractId)}">
         <i data-lucide="rotate-ccw" aria-hidden="true"></i>
         Link zurücksetzen
@@ -1331,6 +1327,18 @@ function renderContractRow(contract) {
   const selected = contract.id === state.selectedContractId ? " selected" : "";
   const badgeClass = contractBadgeClass(contract.status);
   const signedAt = contract.signedAt ? formatDate(contract.signedAt) : "Noch offen";
+  const documentActions = contract.status === "signiert"
+    ? `
+        <a class="primary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
+          <i data-lucide="file-check-2" aria-hidden="true"></i>
+          CleanTeam
+        </a>
+        <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=customer&format=pdf" target="_blank" rel="noopener">
+          <i data-lucide="file-text" aria-hidden="true"></i>
+          Kunde
+        </a>
+      `
+    : "";
   const authorizationButton = contract.hasAuthorizationDocument
     ? `
         <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=authorization&format=pdf" target="_blank" rel="noopener">
@@ -1365,14 +1373,7 @@ function renderContractRow(contract) {
       <td><span class="badge ${badgeClass}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span></td>
       <td>
         <div class="table-actions">
-          <a class="primary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
-            <i data-lucide="file-check-2" aria-hidden="true"></i>
-            CleanTeam
-          </a>
-          <a class="secondary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=customer&format=pdf" target="_blank" rel="noopener">
-            <i data-lucide="file-text" aria-hidden="true"></i>
-            Kunde
-          </a>
+          ${documentActions}
           ${authorizationButton}
           ${rejectionActions}
           <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
