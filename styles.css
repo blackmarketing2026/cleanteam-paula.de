@@ -891,6 +891,12 @@ button.compact-item.selected {
   border: 0;
 }
 
+@media (max-width: 720px) {
+  .contract-frame {
+    display: none;
+  }
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
