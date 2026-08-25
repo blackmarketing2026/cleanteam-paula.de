@@ -65,7 +65,7 @@ function ensure_email_signature_settings_table(PDO $pdo): void
           'Meisterbetrieb Gebaeudereinigung',
           'https://cleanteam-group.com',
           'Clean Team Group SRLS',
-          'Service Point: Ober der Muehle 30, 42699 Solingen',
+          '',
           'Sitz: Via Dorsale 11, 54100 Massa, Italien'
         )"
     );
@@ -141,7 +141,7 @@ function load_email_signature_settings(PDO $pdo): array
             'email' => '',
             'website' => CONTRACTOR['website'],
             'company_name' => CONTRACTOR['legal_name'],
-            'address_line1' => 'Service Point: ' . CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'],
+            'address_line1' => '',
             'address_line2' => 'Sitz: ' . CONTRACTOR['street'] . ', ' . CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city'] . ', ' . CONTRACTOR['country'],
             'extra_text' => '',
             'image_filename' => null,

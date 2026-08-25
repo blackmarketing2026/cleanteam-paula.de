@@ -206,7 +206,7 @@ INSERT IGNORE INTO email_signature_settings (
   'Meisterbetrieb Gebaeudereinigung',
   'https://cleanteam-group.com',
   'Clean Team Group SRLS',
-  'Service Point: Ober der Muehle 30, 42699 Solingen',
+  '',
   'Sitz: Via Dorsale 11, 54100 Massa, Italien'
 );
 
