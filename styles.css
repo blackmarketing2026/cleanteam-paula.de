@@ -1597,6 +1597,13 @@ button.compact-item.selected {
 }
 
 .delivery-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 168px;
+}
+
+.delivery-icons {
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -1609,7 +1616,6 @@ button.compact-item.selected {
   width: 20px;
   height: 20px;
   color: var(--line);
-  cursor: default;
 }
 
 .delivery-check svg {
@@ -1620,6 +1626,22 @@ button.compact-item.selected {
 
 .delivery-check.is-done {
   color: var(--success);
+}
+
+.delivery-details {
+  display: grid;
+  gap: 2px;
+}
+
+.delivery-detail {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.delivery-detail.is-done {
+  color: var(--success);
+  font-weight: 700;
 }
 
 .contractor-signature-layout {

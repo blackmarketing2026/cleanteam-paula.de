@@ -279,6 +279,22 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function formatDateTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  return (
+    new Intl.DateTimeFormat("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value)) + " Uhr"
+  );
+}
+
 function todayAsInputValue() {
   const now = new Date();
   const offsetDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
@@ -1332,23 +1348,35 @@ function contractBadgeClass(status) {
 
 function renderDeliveryStatus(offer) {
   const steps = [
-    { done: Boolean(offer.sentAt), label: "E-Mail versendet", at: offer.sentAt },
-    { done: Boolean(offer.emailOpenedAt), label: "E-Mail geöffnet", at: offer.emailOpenedAt },
-    { done: Boolean(offer.linkOpenedAt), label: "Vertragsprozess gestartet", at: offer.linkOpenedAt },
+    { done: Boolean(offer.sentAt), label: "Zugestellt", at: offer.sentAt },
+    { done: Boolean(offer.emailOpenedAt), label: "Geöffnet", at: offer.emailOpenedAt },
+    { done: Boolean(offer.linkOpenedAt), label: "Vertrag geöffnet", at: offer.linkOpenedAt },
   ];
 
   return `
     <div class="delivery-status">
-      ${steps
-        .map((step) => {
-          const tooltip = step.done ? `${step.label} am ${formatDate(step.at)}` : `${step.label} – noch nicht`;
-          return `
-            <span class="delivery-check${step.done ? " is-done" : ""}" title="${escapeHtml(tooltip)}">
-              <i data-lucide="check" aria-hidden="true"></i>
-            </span>
-          `;
-        })
-        .join("")}
+      <div class="delivery-icons">
+        ${steps
+          .map(
+            (step) => `
+              <span class="delivery-check${step.done ? " is-done" : ""}" aria-hidden="true">
+                <i data-lucide="check" aria-hidden="true"></i>
+              </span>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="delivery-details">
+        ${steps
+          .map(
+            (step) => `
+              <div class="delivery-detail${step.done ? " is-done" : ""}">
+                ${escapeHtml(step.label)}: ${step.done ? escapeHtml(formatDateTime(step.at)) : "noch nicht"}
+              </div>
+            `
+          )
+          .join("")}
+      </div>
     </div>
   `;
 }
