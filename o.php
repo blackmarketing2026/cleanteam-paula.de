@@ -135,12 +135,12 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </div>
 
         <div id="signer-check-step-name" hidden>
-          <h4>Ihr Name</h4>
+          <h4>Berechtigung zur Unterschrift</h4>
+          <p class="muted">Sind Sie berechtigt, diesen Vertrag zu unterschreiben?</p>
           <label class="modal-field">
             Bitte tragen Sie Ihren Namen ein
             <input id="signer-check-name" type="text" autocomplete="name" />
           </label>
-          <p class="muted">Sind Sie berechtigt, diesen Vertrag zu unterschreiben?</p>
           <div class="form-actions">
             <button id="signer-check-authorized-no" class="ghost-button" type="button">Nein</button>
             <button id="signer-check-authorized-yes" class="primary-button" type="button" disabled>Ja, ich bin berechtigt</button>
