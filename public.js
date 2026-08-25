@@ -19,9 +19,21 @@ const els = {
   finalContractFrame: document.querySelector("#final-contract-frame"),
   printFinalContract: document.querySelector("#print-final-contract"),
   toast: document.querySelector("#toast"),
+  signerCheckModal: document.querySelector("#signer-check-modal"),
+  signerCheckStepIdentity: document.querySelector("#signer-check-step-identity"),
+  signerCheckStepName: document.querySelector("#signer-check-step-name"),
+  signerCheckStepDenied: document.querySelector("#signer-check-step-denied"),
+  signerCheckQuestion: document.querySelector("#signer-check-question"),
+  signerCheckName: document.querySelector("#signer-check-name"),
+  signerCheckIdentityYes: document.querySelector("#signer-check-identity-yes"),
+  signerCheckIdentityNo: document.querySelector("#signer-check-identity-no"),
+  signerCheckAuthorizedYes: document.querySelector("#signer-check-authorized-yes"),
+  signerCheckAuthorizedNo: document.querySelector("#signer-check-authorized-no"),
+  signerCheckDeniedClose: document.querySelector("#signer-check-denied-close"),
 };
 
 let signatureHasInk = false;
+let pendingSignatureDataUrl = null;
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -270,6 +282,34 @@ function clearSignaturePad() {
   signatureHasInk = false;
 }
 
+function showSignerCheckStep(step) {
+  els.signerCheckStepIdentity.hidden = step !== "identity";
+  els.signerCheckStepName.hidden = step !== "name";
+  els.signerCheckStepDenied.hidden = step !== "denied";
+}
+
+function openSignerCheckModal(signatureDataUrl) {
+  pendingSignatureDataUrl = signatureDataUrl;
+  const customer = state.offer.customer;
+  els.signerCheckQuestion.textContent =
+    `Sind Sie ${contactName(customer)}, Geschäftsführer/in bzw. Inhaber/in von ${customer.name}?`;
+  els.signerCheckName.value = "";
+  els.signerCheckAuthorizedYes.disabled = true;
+  showSignerCheckStep("identity");
+  els.signerCheckModal.hidden = false;
+}
+
+function closeSignerCheckModal() {
+  els.signerCheckModal.hidden = true;
+  pendingSignatureDataUrl = null;
+}
+
+function completeSigning(extra) {
+  const signatureDataUrl = pendingSignatureDataUrl;
+  closeSignerCheckModal();
+  handleAction("sign", Object.assign({ signatureDataUrl }, extra || {}));
+}
+
 function bindEvents() {
   els.card.addEventListener("click", (event) => {
     const yesNoButton = event.target.closest("[data-yesno]");
@@ -308,8 +348,34 @@ function bindEvents() {
       showToast("Bitte zuerst im Signaturfeld unterschreiben.");
       return;
     }
-    handleAction("sign", { signatureDataUrl: els.signaturePad.toDataURL("image/png") });
+    openSignerCheckModal(els.signaturePad.toDataURL("image/png"));
   });
+
+  els.signerCheckIdentityYes.addEventListener("click", () => {
+    completeSigning();
+  });
+
+  els.signerCheckIdentityNo.addEventListener("click", () => {
+    showSignerCheckStep("name");
+  });
+
+  els.signerCheckName.addEventListener("input", () => {
+    els.signerCheckAuthorizedYes.disabled = els.signerCheckName.value.trim() === "";
+  });
+
+  els.signerCheckAuthorizedYes.addEventListener("click", () => {
+    const name = els.signerCheckName.value.trim();
+    if (!name) {
+      return;
+    }
+    completeSigning({ authorized: false, representationNote: name });
+  });
+
+  els.signerCheckAuthorizedNo.addEventListener("click", () => {
+    showSignerCheckStep("denied");
+  });
+
+  els.signerCheckDeniedClose.addEventListener("click", closeSignerCheckModal);
 }
 
 async function loadBranding() {

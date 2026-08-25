@@ -92,6 +92,21 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
     }
 }
 
+function ensure_contracts_authorized_signer_columns(PDO $pdo): void
+{
+    $columns = [
+        'authorized' => 'ALTER TABLE contracts ADD COLUMN authorized TINYINT(1) NULL AFTER interval_confirmed',
+        'representation_note' => 'ALTER TABLE contracts ADD COLUMN representation_note TEXT NULL AFTER authorized',
+    ];
+
+    foreach ($columns as $column => $sql) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM contracts LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
 function offer_is_expired(array $offer): bool
 {
     return strtotime($offer['expires_at'] . ' UTC') < time();
@@ -183,6 +198,7 @@ $offer = load_offer($pdo, $token);
 ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
+ensure_contracts_authorized_signer_columns($pdo);
 ensure_offers_link_opened_column($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
@@ -314,10 +330,20 @@ if ($method === 'POST' && $action === 'sign') {
         json_error('Ungültige Signatur.', 422);
     }
 
+    $authorized = array_key_exists('authorized', $body) && $body['authorized'] !== null
+        ? (int) (bool) $body['authorized']
+        : null;
+    $representationNote = trim((string) ($body['representationNote'] ?? ''));
+
     $stmt = $pdo->prepare(
-        "UPDATE contracts SET status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, current_step = 'fertig' WHERE id = :id"
+        "UPDATE contracts SET status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, authorized = :authorized, representation_note = :representation_note, current_step = 'fertig' WHERE id = :id"
     );
-    $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id']]);
+    $stmt->execute([
+        'signature' => $signatureDataUrl,
+        'authorized' => $authorized,
+        'representation_note' => $representationNote !== '' ? $representationNote : null,
+        'id' => $contract['id'],
+    ]);
     save_contract_pdfs($pdo, $contract['id'], true);
     notify_contract_created($pdo, $contract['id']);
     notify_customer_contract_signed($pdo, $contract['id']);
