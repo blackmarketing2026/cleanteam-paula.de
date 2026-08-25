@@ -19,21 +19,17 @@ const els = {
   finalContractFrame: document.querySelector("#final-contract-frame"),
   printFinalContract: document.querySelector("#print-final-contract"),
   toast: document.querySelector("#toast"),
-  signerCheckModal: document.querySelector("#signer-check-modal"),
-  signerCheckStepIdentity: document.querySelector("#signer-check-step-identity"),
-  signerCheckStepName: document.querySelector("#signer-check-step-name"),
-  signerCheckStepDenied: document.querySelector("#signer-check-step-denied"),
-  signerCheckQuestion: document.querySelector("#signer-check-question"),
-  signerCheckName: document.querySelector("#signer-check-name"),
-  signerCheckIdentityYes: document.querySelector("#signer-check-identity-yes"),
-  signerCheckIdentityNo: document.querySelector("#signer-check-identity-no"),
-  signerCheckAuthorizedYes: document.querySelector("#signer-check-authorized-yes"),
-  signerCheckAuthorizedNo: document.querySelector("#signer-check-authorized-no"),
-  signerCheckDeniedClose: document.querySelector("#signer-check-denied-close"),
+  identityCheckQuestion: document.querySelector("#identity-check-question"),
+  identityCheckStep1: document.querySelector("#identity-check-step-1"),
+  identityCheckStep2: document.querySelector("#identity-check-step-2"),
+  identityCheckYes: document.querySelector("#identity-check-yes"),
+  identityCheckNo: document.querySelector("#identity-check-no"),
+  identityCheckName: document.querySelector("#identity-check-name"),
+  identityCheckAuthorizedYes: document.querySelector("#identity-check-authorized-yes"),
+  identityCheckAuthorizedNo: document.querySelector("#identity-check-authorized-no"),
 };
 
 let signatureHasInk = false;
-let pendingSignatureDataUrl = null;
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -137,6 +133,16 @@ function renderServiceDetails() {
   `;
 }
 
+function renderIdentityCheck() {
+  const customer = state.offer.customer;
+  els.identityCheckQuestion.textContent =
+    `Sind Sie ${contactName(customer)}, Geschäftsführer/in bzw. Inhaber/in von ${customer.name}?`;
+  els.identityCheckName.value = "";
+  els.identityCheckAuthorizedYes.disabled = true;
+  els.identityCheckStep1.hidden = false;
+  els.identityCheckStep2.hidden = true;
+}
+
 function renderFinalContract() {
   // Zeigt dasselbe serverseitig erzeugte Kunden-PDF, das auch per E-Mail verschickt wird.
   const pdfUrl = `contract.php?token=${encodeURIComponent(token)}&format=pdf`;
@@ -173,7 +179,8 @@ function routeToState(data) {
   if (
     contract.status === "daten_abgelehnt" ||
     contract.status === "intervall_abgelehnt" ||
-    contract.status === "datenschutz_abgelehnt"
+    contract.status === "datenschutz_abgelehnt" ||
+    contract.status === "berechtigung_abgelehnt"
   ) {
     showScreen("abgelehnt");
     return;
@@ -187,6 +194,9 @@ function routeToState(data) {
       break;
     case "leistung":
       renderServiceDetails();
+      break;
+    case "identitaet":
+      renderIdentityCheck();
       break;
     default:
       break;
@@ -282,34 +292,6 @@ function clearSignaturePad() {
   signatureHasInk = false;
 }
 
-function showSignerCheckStep(step) {
-  els.signerCheckStepIdentity.hidden = step !== "identity";
-  els.signerCheckStepName.hidden = step !== "name";
-  els.signerCheckStepDenied.hidden = step !== "denied";
-}
-
-function openSignerCheckModal(signatureDataUrl) {
-  pendingSignatureDataUrl = signatureDataUrl;
-  const customer = state.offer.customer;
-  els.signerCheckQuestion.textContent =
-    `Sind Sie ${contactName(customer)}, Geschäftsführer/in bzw. Inhaber/in von ${customer.name}?`;
-  els.signerCheckName.value = "";
-  els.signerCheckAuthorizedYes.disabled = true;
-  showSignerCheckStep("identity");
-  els.signerCheckModal.hidden = false;
-}
-
-function closeSignerCheckModal() {
-  els.signerCheckModal.hidden = true;
-  pendingSignatureDataUrl = null;
-}
-
-function completeSigning(extra) {
-  const signatureDataUrl = pendingSignatureDataUrl;
-  closeSignerCheckModal();
-  handleAction("sign", Object.assign({ signatureDataUrl }, extra || {}));
-}
-
 function bindEvents() {
   els.card.addEventListener("click", (event) => {
     const yesNoButton = event.target.closest("[data-yesno]");
@@ -326,19 +308,44 @@ function bindEvents() {
 
     const nextButton = event.target.closest("[data-next]");
     if (nextButton) {
-      if (nextButton.dataset.next === "signatur" && !els.termsConfirmation.checked) {
+      if (nextButton.dataset.next === "identitaet" && !els.termsConfirmation.checked) {
         showToast("Bitte bestätigen Sie zuerst den Auftrag.");
         return;
       }
       handleAction("advance", {
         step: nextButton.dataset.next,
-        termsAccepted: nextButton.dataset.next === "signatur" ? els.termsConfirmation.checked : undefined,
+        termsAccepted: nextButton.dataset.next === "identitaet" ? els.termsConfirmation.checked : undefined,
       });
     }
   });
 
   els.termsConfirmation.addEventListener("change", () => {
     els.termsContinue.disabled = !els.termsConfirmation.checked;
+  });
+
+  els.identityCheckYes.addEventListener("click", () => {
+    handleAction("confirm-identity", { confirmed: true });
+  });
+
+  els.identityCheckNo.addEventListener("click", () => {
+    els.identityCheckStep1.hidden = true;
+    els.identityCheckStep2.hidden = false;
+  });
+
+  els.identityCheckName.addEventListener("input", () => {
+    els.identityCheckAuthorizedYes.disabled = els.identityCheckName.value.trim() === "";
+  });
+
+  els.identityCheckAuthorizedYes.addEventListener("click", () => {
+    const name = els.identityCheckName.value.trim();
+    if (!name) {
+      return;
+    }
+    handleAction("confirm-identity", { confirmed: false, authorized: true, representationNote: name });
+  });
+
+  els.identityCheckAuthorizedNo.addEventListener("click", () => {
+    handleAction("confirm-identity", { confirmed: false, authorized: false });
   });
 
   els.clearSignature.addEventListener("click", clearSignaturePad);
@@ -348,34 +355,8 @@ function bindEvents() {
       showToast("Bitte zuerst im Signaturfeld unterschreiben.");
       return;
     }
-    openSignerCheckModal(els.signaturePad.toDataURL("image/png"));
+    handleAction("sign", { signatureDataUrl: els.signaturePad.toDataURL("image/png") });
   });
-
-  els.signerCheckIdentityYes.addEventListener("click", () => {
-    completeSigning();
-  });
-
-  els.signerCheckIdentityNo.addEventListener("click", () => {
-    showSignerCheckStep("name");
-  });
-
-  els.signerCheckName.addEventListener("input", () => {
-    els.signerCheckAuthorizedYes.disabled = els.signerCheckName.value.trim() === "";
-  });
-
-  els.signerCheckAuthorizedYes.addEventListener("click", () => {
-    const name = els.signerCheckName.value.trim();
-    if (!name) {
-      return;
-    }
-    completeSigning({ authorized: false, representationNote: name });
-  });
-
-  els.signerCheckAuthorizedNo.addEventListener("click", () => {
-    showSignerCheckStep("denied");
-  });
-
-  els.signerCheckDeniedClose.addEventListener("click", closeSignerCheckModal);
 }
 
 async function loadBranding() {

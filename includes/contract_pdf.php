@@ -923,7 +923,13 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     } else {
         $pdf->keyValue('CleanTeam-Unterschrift', 'Noch nicht in den Einstellungen hinterlegt.');
     }
-    $pdf->keyValue('Kunde', (string) $customer['city'] . ', ' . $signedAt . ' | Vertragsunterzeichnung durch: ' . $signatoryName);
+    $signBlockLabel = $authorized === false && $representationNote
+        ? 'Unterschrieben durch eine berechtigte Person'
+        : 'Vertragsunterzeichnung durch';
+    $signBlockName = $authorized === false && $representationNote
+        ? $representationNote . ' (i. V. ' . $signatoryName . ')'
+        : $signatoryName;
+    $pdf->keyValue('Kunde', (string) $customer['city'] . ', ' . $signedAt . ' | ' . $signBlockLabel . ': ' . $signBlockName);
     if ($isSigned) {
         $pdf->keyValue('Elektronische Signatur', 'Signaturdaten wurden elektronisch erfasst.');
         if (!$pdf->signatureImage($contract['signature_data'] ?? null)) {

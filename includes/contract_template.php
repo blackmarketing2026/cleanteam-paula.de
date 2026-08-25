@@ -619,6 +619,12 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $customerZipCity = h(($customerZip !== '' ? 'D-' . $customerZip : '') . ' ' . $customer['city']);
     $customerFullAddressInline = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . $customerZipCity, ', ');
     $authorityInline = $authorized === false && $representationNote ? ' (' . $authorityText . ')' : '';
+    $signBlockLabel = $authorized === false && $representationNote
+        ? 'Unterschrieben durch eine berechtigte Person:'
+        : 'Vertragsunterzeichnung durch:';
+    $signBlockName = $authorized === false && $representationNote
+        ? h($representationNote) . ' (i. V. ' . $signatoryName . ')'
+        : $signatoryName;
 
     $statusLabel = $contract === null
         ? 'Entwurf (noch nicht gestartet)'
@@ -674,7 +680,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
   </div>
   <div class="sign-col">
     <div>{$customerCity}, {$signedAt}</div>
-    <div style="margin-top:12px;">Vertragsunterzeichnung durch:<br>{$signatoryName}</div>
+    <div style="margin-top:12px;">{$signBlockLabel}<br>{$signBlockName}</div>
     {$signatureImage}
   </div>
 </div>

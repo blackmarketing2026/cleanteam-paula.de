@@ -14,7 +14,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=signer-identity-check-20260825-1" />
+    <link rel="stylesheet" href="styles.css?v=signer-identity-step-20260825-1" />
   </head>
   <body data-token="<?php echo $token; ?>">
     <main class="public-shell">
@@ -56,7 +56,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </section>
 
         <section id="screen-daten" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 2 von 4</p>
+          <p class="step-indicator">Schritt 2 von 5</p>
           <h2>Sind diese Angaben korrekt?</h2>
           <dl id="data-check-list" class="data-check"></dl>
           <div class="form-actions">
@@ -66,7 +66,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </section>
 
         <section id="screen-leistung" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 3 von 4</p>
+          <p class="step-indicator">Schritt 3 von 5</p>
           <h2>Leistungsumfang</h2>
           <div id="service-details" class="public-service-summary"></div>
           <div class="form-actions">
@@ -75,7 +75,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </section>
 
         <section id="screen-bedingungen" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 4 von 4</p>
+          <p class="step-indicator">Schritt 4 von 5</p>
           <h2>Vertragsbedingungen</h2>
           <div class="terms-text">
             <p>Bitte best&auml;tigen Sie den Auftrag, bevor Sie zur Unterschrift weitergehen.</p>
@@ -88,7 +88,28 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
             </label>
           </div>
           <div class="form-actions">
-            <button id="terms-continue" class="primary-button" data-next="signatur" type="button" disabled>Weiter zur Unterschrift</button>
+            <button id="terms-continue" class="primary-button" data-next="identitaet" type="button" disabled>Weiter</button>
+          </div>
+        </section>
+
+        <section id="screen-identitaet" class="public-screen wizard-screen">
+          <p class="step-indicator">Schritt 5 von 5</p>
+          <h2 id="identity-check-question">Sind Sie die im Vertrag genannte Person?</h2>
+          <div id="identity-check-step-1" class="form-actions">
+            <button id="identity-check-no" class="ghost-button" type="button">Nein</button>
+            <button id="identity-check-yes" class="primary-button" type="button">Ja, das bin ich</button>
+          </div>
+
+          <div id="identity-check-step-2" hidden>
+            <p class="muted">Wer sind Sie? Sind Sie berechtigt, diesen Vertrag zu unterschreiben?</p>
+            <label class="modal-field">
+              Bitte tragen Sie Ihren Namen ein
+              <input id="identity-check-name" type="text" autocomplete="name" />
+            </label>
+            <div class="form-actions">
+              <button id="identity-check-authorized-no" class="ghost-button" type="button">Nein</button>
+              <button id="identity-check-authorized-yes" class="primary-button" type="button" disabled>Ja, ich bin berechtigt</button>
+            </div>
           </div>
         </section>
 
@@ -123,45 +144,8 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
       </div>
     </main>
 
-    <div id="signer-check-modal" class="modal-overlay" hidden>
-      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="signer-check-heading">
-        <div id="signer-check-step-identity">
-          <h4 id="signer-check-heading">Bevor Sie unterschreiben</h4>
-          <p class="muted" id="signer-check-question"></p>
-          <div class="form-actions">
-            <button id="signer-check-identity-no" class="ghost-button" type="button">Nein</button>
-            <button id="signer-check-identity-yes" class="primary-button" type="button">Ja, das bin ich</button>
-          </div>
-        </div>
-
-        <div id="signer-check-step-name" hidden>
-          <h4>Berechtigung zur Unterschrift</h4>
-          <p class="muted">Sind Sie berechtigt, diesen Vertrag zu unterschreiben?</p>
-          <label class="modal-field">
-            Bitte tragen Sie Ihren Namen ein
-            <input id="signer-check-name" type="text" autocomplete="name" />
-          </label>
-          <div class="form-actions">
-            <button id="signer-check-authorized-no" class="ghost-button" type="button">Nein</button>
-            <button id="signer-check-authorized-yes" class="primary-button" type="button" disabled>Ja, ich bin berechtigt</button>
-          </div>
-        </div>
-
-        <div id="signer-check-step-denied" hidden>
-          <h4>Unterschrift nicht m&ouml;glich</h4>
-          <p class="muted">
-            Sie sind nicht berechtigt, den Vertrag zu unterschreiben. Bitte lassen Sie den Vertrag von einer
-            berechtigten Person (z.&nbsp;B. Gesch&auml;ftsf&uuml;hrer/in oder Inhaber/in) unterschreiben.
-          </p>
-          <div class="form-actions">
-            <button id="signer-check-denied-close" class="primary-button" type="button">Schlie&szlig;en</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=signer-identity-check-20260825-1"></script>
+    <script src="public.js?v=signer-identity-step-20260825-1"></script>
   </body>
 </html>

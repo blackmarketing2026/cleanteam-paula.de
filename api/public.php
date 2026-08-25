@@ -14,8 +14,8 @@ if ($token === '') {
     json_error('Kein Vertragslink angegeben.', 404);
 }
 
-const STEP_ORDER = ['datenschutz', 'daten', 'leistung', 'bedingungen', 'signatur', 'fertig'];
-const TERMINAL_STATUSES = ['daten_abgelehnt', 'intervall_abgelehnt', 'datenschutz_abgelehnt'];
+const STEP_ORDER = ['datenschutz', 'daten', 'leistung', 'bedingungen', 'identitaet', 'signatur', 'fertig'];
+const TERMINAL_STATUSES = ['daten_abgelehnt', 'intervall_abgelehnt', 'datenschutz_abgelehnt', 'berechtigung_abgelehnt'];
 
 // Alte, inzwischen entfernte Schrittnamen (Vollmacht-Funktion) auf den naechsten
 // noch gueltigen Schritt abbilden, damit laengst laufende, noch nicht unterschriebene
@@ -307,7 +307,7 @@ if ($method === 'POST' && $action === 'advance') {
         json_error('Ungültiger Schrittwechsel.', 422);
     }
 
-    if ($currentStep === 'bedingungen' && $targetStep === 'signatur') {
+    if ($currentStep === 'bedingungen' && $targetStep === 'identitaet') {
         if (empty($body['termsAccepted'])) {
             json_error('Bitte bestaetigen Sie zuerst den Auftrag.', 422);
         }
@@ -316,6 +316,29 @@ if ($method === 'POST' && $action === 'advance') {
     } else {
         $pdo->prepare('UPDATE contracts SET current_step = :step WHERE id = :id')
             ->execute(['step' => $targetStep, 'id' => $contract['id']]);
+    }
+
+    json_response(public_state($offer, load_contract($pdo, $offer['id'])));
+}
+
+if ($method === 'POST' && $action === 'confirm-identity') {
+    $contract = require_active_contract(load_contract($pdo, $offer['id']));
+    $body = read_json_body();
+    $confirmed = (bool) ($body['confirmed'] ?? false);
+
+    if ($confirmed) {
+        $pdo->prepare("UPDATE contracts SET current_step = 'signatur' WHERE id = :id")
+            ->execute(['id' => $contract['id']]);
+    } elseif (!empty($body['authorized'])) {
+        $representationNote = trim((string) ($body['representationNote'] ?? ''));
+        if ($representationNote === '') {
+            json_error('Bitte tragen Sie Ihren Namen ein.', 422);
+        }
+        $pdo->prepare("UPDATE contracts SET current_step = 'signatur', authorized = 0, representation_note = :note WHERE id = :id")
+            ->execute(['note' => $representationNote, 'id' => $contract['id']]);
+    } else {
+        $pdo->prepare("UPDATE contracts SET status = 'berechtigung_abgelehnt' WHERE id = :id")
+            ->execute(['id' => $contract['id']]);
     }
 
     json_response(public_state($offer, load_contract($pdo, $offer['id'])));
@@ -330,20 +353,10 @@ if ($method === 'POST' && $action === 'sign') {
         json_error('Ungültige Signatur.', 422);
     }
 
-    $authorized = array_key_exists('authorized', $body) && $body['authorized'] !== null
-        ? (int) (bool) $body['authorized']
-        : null;
-    $representationNote = trim((string) ($body['representationNote'] ?? ''));
-
     $stmt = $pdo->prepare(
-        "UPDATE contracts SET status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, authorized = :authorized, representation_note = :representation_note, current_step = 'fertig' WHERE id = :id"
+        "UPDATE contracts SET status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, current_step = 'fertig' WHERE id = :id"
     );
-    $stmt->execute([
-        'signature' => $signatureDataUrl,
-        'authorized' => $authorized,
-        'representation_note' => $representationNote !== '' ? $representationNote : null,
-        'id' => $contract['id'],
-    ]);
+    $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id']]);
     save_contract_pdfs($pdo, $contract['id'], true);
     notify_contract_created($pdo, $contract['id']);
     notify_customer_contract_signed($pdo, $contract['id']);
