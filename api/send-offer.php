@@ -54,10 +54,10 @@ $contactName = $offer['c_salutation'] . ' ' . $offer['c_contact_last_name'];
 
 $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
     . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individueller Vertrag steht ab sofort online bereit.</p>'
+    . '<p style="color:#51657d;font-size:13px;">Hinweis: Der Link zur Vertragsunterzeichnung kann aus Datenschutzgründen nur einmal verwendet werden. Klicken Sie bitte nur darauf, wenn Sie den Vertrag auch tatsächlich abschließen möchten. Wurde er versehentlich schon einmal geöffnet, muss er erst wieder von uns freigegeben werden, bevor er erneut funktioniert.</p>'
     . '<p>Bitte schließen Sie den Vertrag jetzt online ab – klicken Sie dazu einfach auf den folgenden Button:</p>'
     . '<p style="margin:18px 0;"><a href="' . email_h($publicUrl) . '" style="display:inline-block;padding:12px 20px;background:#0a4f91;color:#ffffff;text-decoration:none;border-radius:7px;font-weight:700;">Jetzt Vertrag online abschließen</a></p>'
-    . '<p>Der Link ist ' . $validityDays . ' Tage lang gültig, also bis zum ' . email_h($validUntil) . '. Danach verfällt er automatisch und kann nicht mehr verwendet werden.</p>'
-    . '<p style="color:#51657d;font-size:13px;">Hinweis: Dieser Link ist nur einmalig gültig. Klicken Sie bitte nur darauf, wenn Sie den Vertrag auch tatsächlich abschließen möchten. Wurde er versehentlich schon einmal geöffnet, muss er aus Datenschutzgründen erst wieder von uns freigegeben werden, bevor er erneut funktioniert.</p>';
+    . '<p>Der Link ist ' . $validityDays . ' Tage lang gültig, also bis zum ' . email_h($validUntil) . '. Danach verfällt er automatisch und kann nicht mehr verwendet werden.</p>';
 $message = render_email_template_message($pdo, $bodyContent, [
     'title' => 'Ihr Vertrag von CleanTeam',
     'preheader' => 'Bitte schließen Sie Ihren Vertrag jetzt online ab.',
