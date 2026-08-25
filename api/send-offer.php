@@ -93,4 +93,8 @@ try {
 
 $pdo->prepare('UPDATE offers SET sent_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $offerId]);
 
+// Damit der Vertrag ab dem Versand in der Vertragsliste sichtbar ist (mit Zustellungsstatus),
+// statt erst, wenn der Kunde den Link zum ersten Mal oeffnet.
+ensure_contract_for_offer($pdo, $offer);
+
 json_response(['ok' => true, 'sentAt' => now_iso(), 'sentTo' => $toEmail]);

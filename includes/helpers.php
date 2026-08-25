@@ -65,6 +65,56 @@ function format_contract_number(int $year, int $sequence): string
     return sprintf('CT-%d-%03d', $year, $sequence);
 }
 
+function next_contract_number(PDO $pdo): string
+{
+    ensure_contract_number_settings_table($pdo);
+
+    $pdo->beginTransaction();
+    try {
+        $row = $pdo->query('SELECT year, next_number FROM contract_number_settings WHERE id = 1 FOR UPDATE')->fetch();
+        $year = (int) $row['year'];
+        $sequence = (int) $row['next_number'];
+        $pdo->prepare('UPDATE contract_number_settings SET next_number = next_number + 1 WHERE id = 1')->execute();
+        $pdo->commit();
+    } catch (Throwable $exception) {
+        $pdo->rollBack();
+        throw $exception;
+    }
+
+    return format_contract_number($year, $sequence);
+}
+
+// Legt den Vertrag (contracts-Zeile) fuer ein Angebot an, falls noch keiner existiert - damit ein
+// Vertrag schon direkt nach dem Versand in der Vertragsliste auftaucht (statt erst, wenn der Kunde
+// den Link zum ersten Mal oeffnet), und gibt die (neue oder bestehende) Zeile zurueck.
+function ensure_contract_for_offer(PDO $pdo, array $offer): array
+{
+    $stmt = $pdo->prepare('SELECT * FROM contracts WHERE offer_id = :offer_id');
+    $stmt->execute(['offer_id' => $offer['id']]);
+    $contract = $stmt->fetch();
+
+    if ($contract) {
+        return $contract;
+    }
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO contracts (id, offer_id, customer_id, number, status, current_step, created_at)
+         VALUES (:id, :offer_id, :customer_id, :number, :status, :current_step, UTC_TIMESTAMP())'
+    );
+    $stmt->execute([
+        'id' => generate_id('contract'),
+        'offer_id' => $offer['id'],
+        'customer_id' => $offer['customer_id'],
+        'number' => next_contract_number($pdo),
+        'status' => 'entwurf',
+        'current_step' => 'datenschutz',
+    ]);
+
+    $stmt = $pdo->prepare('SELECT * FROM contracts WHERE offer_id = :offer_id');
+    $stmt->execute(['offer_id' => $offer['id']]);
+    return $stmt->fetch();
+}
+
 function ensure_offers_interval_label_length(PDO $pdo): void
 {
     $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'interval_label'");

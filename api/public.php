@@ -158,25 +158,6 @@ function public_state(array $offer, ?array $contract): array
     ];
 }
 
-function next_contract_number(PDO $pdo): string
-{
-    ensure_contract_number_settings_table($pdo);
-
-    $pdo->beginTransaction();
-    try {
-        $row = $pdo->query('SELECT year, next_number FROM contract_number_settings WHERE id = 1 FOR UPDATE')->fetch();
-        $year = (int) $row['year'];
-        $sequence = (int) $row['next_number'];
-        $pdo->prepare('UPDATE contract_number_settings SET next_number = next_number + 1 WHERE id = 1')->execute();
-        $pdo->commit();
-    } catch (Throwable $exception) {
-        $pdo->rollBack();
-        throw $exception;
-    }
-
-    return format_contract_number($year, $sequence);
-}
-
 function require_active_contract(?array $contract): array
 {
     if ($contract === null) {
@@ -224,25 +205,7 @@ if (offer_is_expired($offer) && $method === 'POST') {
 }
 
 if ($method === 'POST' && $action === 'start') {
-    $contract = load_contract($pdo, $offer['id']);
-
-    if ($contract === null) {
-        $id = generate_id('contract');
-        $stmt = $pdo->prepare(
-            'INSERT INTO contracts (id, offer_id, customer_id, number, status, current_step, created_at)
-             VALUES (:id, :offer_id, :customer_id, :number, :status, :current_step, UTC_TIMESTAMP())'
-        );
-        $stmt->execute([
-            'id' => $id,
-            'offer_id' => $offer['id'],
-            'customer_id' => $offer['customer_id'],
-            'number' => next_contract_number($pdo),
-            'status' => 'entwurf',
-            'current_step' => 'datenschutz',
-        ]);
-        $contract = load_contract($pdo, $offer['id']);
-    }
-
+    $contract = ensure_contract_for_offer($pdo, $offer);
     json_response(public_state($offer, $contract));
 }
 
