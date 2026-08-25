@@ -108,6 +108,7 @@ ensure_offers_vat_column($pdo);
 ensure_offers_agb_snapshot_columns($pdo);
 ensure_offers_validity_days_column($pdo);
 ensure_offers_link_opened_column($pdo);
+ensure_offers_email_opened_at_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
 
 if ($method === 'GET') {
@@ -316,7 +317,9 @@ if ($method === 'PATCH') {
 
     // Neuen Token vergeben, damit der alte (bereits verschickte/geoeffnete) Link endgueltig
     // ungueltig bleibt; "Link kopieren"/"Vertrag senden" verwenden danach automatisch den neuen Link.
-    $pdo->prepare('UPDATE offers SET link_opened_at = NULL, token = :token WHERE id = :id')
+    // sent_at/email_opened_at ebenfalls zuruecksetzen, sonst zeigt die Vertragsliste beim naechsten
+    // Versand faelschlich schon "zugestellt"/"geoeffnet" fuer den laengst ungueltigen alten Link an.
+    $pdo->prepare('UPDATE offers SET link_opened_at = NULL, sent_at = NULL, email_opened_at = NULL, token = :token WHERE id = :id')
         ->execute(['token' => generate_token(), 'id' => $id]);
 
     $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');

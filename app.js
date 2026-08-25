@@ -214,6 +214,25 @@ const titles = {
 
 const hiddenViews = new Set(["settings-smtp"]);
 
+const CURRENT_VIEW_STORAGE_KEY = "cleanteam-current-view";
+
+function loadPersistedView() {
+  try {
+    const view = localStorage.getItem(CURRENT_VIEW_STORAGE_KEY);
+    return Object.prototype.hasOwnProperty.call(titles, view) ? view : "overview";
+  } catch (error) {
+    return "overview";
+  }
+}
+
+function persistCurrentView(view) {
+  try {
+    localStorage.setItem(CURRENT_VIEW_STORAGE_KEY, view);
+  } catch (error) {
+    // Kein Speicherzugriff (z. B. privater Modus) - Ansicht wird dann nicht gemerkt.
+  }
+}
+
 let currentLogoUrl = null;
 let emailSignatureImageUrl = "";
 let pendingEmailSignatureImageFile = null;
@@ -430,7 +449,7 @@ function showApp(session) {
   }
   els.loginScreen.hidden = true;
   els.appShell.hidden = false;
-  loadAll();
+  switchView(loadPersistedView());
 }
 
 function setSettingsGroupExpanded(expanded) {
@@ -479,6 +498,7 @@ function switchView(view) {
   }
 
   state.currentView = view;
+  persistCurrentView(view);
   els.viewTitle.textContent = titles[view];
 
   els.navLinks.forEach((button) => {
