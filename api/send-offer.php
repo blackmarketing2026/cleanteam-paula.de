@@ -57,7 +57,8 @@ $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName
     . '<p style="color:#51657d;font-size:13px;">Hinweis: Der Link zur Vertragsunterzeichnung kann aus Datenschutzgründen nur einmal verwendet werden. Klicken Sie bitte nur darauf, wenn Sie den Vertrag auch tatsächlich abschließen möchten. Wurde er versehentlich schon einmal geöffnet, muss er erst wieder von uns freigegeben werden, bevor er erneut funktioniert.</p>'
     . '<p>Bitte schließen Sie den Vertrag jetzt online ab – klicken Sie dazu einfach auf den folgenden Button:</p>'
     . '<p style="margin:18px 0;"><a href="' . email_h($publicUrl) . '" style="display:inline-block;padding:12px 20px;background:#0a4f91;color:#ffffff;text-decoration:none;border-radius:7px;font-weight:700;">Jetzt Vertrag online abschließen</a></p>'
-    . '<p>Der Link ist ' . $validityDays . ' Tage lang gültig, also bis zum ' . email_h($validUntil) . '. Danach verfällt er automatisch und kann nicht mehr verwendet werden.</p>';
+    . '<p>Der Link ist ' . $validityDays . ' Tage lang gültig, also bis zum ' . email_h($validUntil) . '. Danach verfällt er automatisch und kann nicht mehr verwendet werden.</p>'
+    . '<img src="' . email_h(base_url() . '/api/track-open.php?token=' . $offer['token']) . '" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />';
 $message = render_email_template_message($pdo, $bodyContent, [
     'title' => 'Ihr Vertrag von CleanTeam',
     'preheader' => 'Bitte schließen Sie Ihren Vertrag jetzt online ab.',

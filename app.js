@@ -1224,7 +1224,7 @@ function renderContracts() {
 
   els.contractList.innerHTML = contracts.length
     ? contracts.map(renderContractRow).join("")
-    : `<tr><td colspan="7" class="table-empty">Keine Verträge für diese Auswahl gefunden.</td></tr>`;
+    : `<tr><td colspan="8" class="table-empty">Keine Verträge für diese Auswahl gefunden.</td></tr>`;
 }
 
 function filteredContracts() {
@@ -1330,6 +1330,29 @@ function contractBadgeClass(status) {
   return "warning";
 }
 
+function renderDeliveryStatus(offer) {
+  const steps = [
+    { done: Boolean(offer.sentAt), label: "E-Mail versendet", at: offer.sentAt },
+    { done: Boolean(offer.emailOpenedAt), label: "E-Mail geöffnet", at: offer.emailOpenedAt },
+    { done: Boolean(offer.linkOpenedAt), label: "Vertragsprozess gestartet", at: offer.linkOpenedAt },
+  ];
+
+  return `
+    <div class="delivery-status">
+      ${steps
+        .map((step) => {
+          const tooltip = step.done ? `${step.label} am ${formatDate(step.at)}` : `${step.label} – noch nicht`;
+          return `
+            <span class="delivery-check${step.done ? " is-done" : ""}" title="${escapeHtml(tooltip)}">
+              <i data-lucide="check" aria-hidden="true"></i>
+            </span>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function renderContractRow(contract) {
   const selected = contract.id === state.selectedContractId ? " selected" : "";
   const badgeClass = contractBadgeClass(contract.status);
@@ -1389,6 +1412,7 @@ function renderContractRow(contract) {
           </button>
         </div>
       </td>
+      <td>${renderDeliveryStatus(contract.offer)}</td>
     </tr>
   `;
 }

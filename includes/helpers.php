@@ -90,6 +90,14 @@ function ensure_offers_link_opened_column(PDO $pdo): void
     }
 }
 
+function ensure_offers_email_opened_at_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'email_opened_at'");
+    if (!$stmt->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD COLUMN email_opened_at DATETIME NULL AFTER sent_at');
+    }
+}
+
 function ensure_offers_customer_obligations_column(PDO $pdo): void
 {
     $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'customer_obligations_note'");

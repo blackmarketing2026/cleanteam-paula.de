@@ -1596,6 +1596,32 @@ button.compact-item.selected {
   color: var(--danger);
 }
 
+.delivery-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.delivery-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--line);
+  cursor: default;
+}
+
+.delivery-check svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 3;
+}
+
+.delivery-check.is-done {
+  color: var(--success);
+}
+
 .contractor-signature-layout {
   display: grid;
   gap: 14px;

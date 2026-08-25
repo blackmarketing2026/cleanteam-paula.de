@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS offers (
   validity_days SMALLINT UNSIGNED NOT NULL DEFAULT 14,
   link_opened_at DATETIME NULL,
   sent_at DATETIME NULL,
+  email_opened_at DATETIME NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uniq_offers_token (token),
   KEY idx_offers_customer (customer_id),
