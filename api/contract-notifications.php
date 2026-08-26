@@ -46,7 +46,7 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
     $pdf = save_contract_pdf($pdo, $context['contract']['id'], 'cleanteam', false);
     $messageContent = '<p style="margin:0 0 14px 0;">Dies ist eine Test-E-Mail für Vertragsbenachrichtigungen.</p>'
         . '<p style="margin:0;">Im Anhang befindet sich die CleanTeam-Ausfertigung als PDF.</p>';
-    $subject = '[Test] Vertragsbenachrichtigung – ' . ($context['contract']['number'] ?? $context['customer']['name']);
+    $subject = '[Test] Vertragsbenachrichtigung – ' . $context['customer']['name'];
     $message = render_email_template_message($pdo, $messageContent, [
         'title' => 'Test: Vertragsbenachrichtigung',
         'preheader' => 'Test-E-Mail für Vertragsbenachrichtigungen.',

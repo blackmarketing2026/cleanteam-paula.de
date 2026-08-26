@@ -256,7 +256,6 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
     $privacyAcceptedDisplay = $privacyAcceptedAt !== null ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt';
     $privacyAcceptedTime = contract_format_datetime($privacyAcceptedAt);
     $signedAtDisplay = contract_format_datetime($signedAt);
-    $contractNumber = h($contract['number'] ?? 'Entwurf');
     $customerName = h(contract_customer_display_name($customer));
     $signatoryName = h(contract_signatory_display($customer));
     $offerCreatedAt = contract_format_datetime($offer['created_at'] ?? null);
@@ -291,7 +290,6 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
     sowie die Zustimmung zu den Vertragsbedingungen und Allgemeinen Geschäftsbedingungen.
   </p>
   <dl class="protocol-grid">
-    <dt>Vertragsnummer</dt><dd>{$contractNumber}</dd>
     <dt>Kunde</dt><dd>{$customerName}</dd>
     <dt>Unterzeichner</dt><dd>{$signatoryName}</dd>
     <dt>Vertragsentwurf erstellt</dt><dd>{$offerCreatedAt}</dd>
@@ -492,7 +490,6 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
         : 'ohne gesonderte Vertretungsangabe';
 
     $values = [
-        'vertragsnummer' => (string) ($contract['number'] ?? 'Entwurf'),
         'beginn_datum' => $effectiveDate,
         'leistungsort' => $customerFullAddress,
         'leistungsort_strasse' => $customerAddress,
@@ -584,7 +581,6 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $audience = ($options['audience'] ?? 'customer') === 'cleanteam' ? 'cleanteam' : 'customer';
     $isCleanTeamCopy = $audience === 'cleanteam';
 
-    $contractNumber = h($contract['number'] ?? 'Entwurf');
     $createdAt = contract_format_date($offer['created_at']);
     $customerCity = h($customer['city']);
 
@@ -643,7 +639,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<title>Gebäudereinigungsvertrag {$contractNumber}</title>
+<title>Gebäudereinigungsvertrag</title>
 <style>
 {$styleCss}
 </style>
@@ -651,7 +647,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 <body>
 
 {$logoHtml}
-<div class="doc-meta">{$documentLabel} &nbsp;·&nbsp; Vertragsnummer {$contractNumber} &nbsp;·&nbsp; Status: {$statusLabel} &nbsp;·&nbsp; Erstellt: {$createdAt}</div>
+<div class="doc-meta">{$documentLabel} &nbsp;·&nbsp; Status: {$statusLabel} &nbsp;·&nbsp; Erstellt: {$createdAt}</div>
 
 <h1>Gebäudereinigungsvertrag</h1>
 

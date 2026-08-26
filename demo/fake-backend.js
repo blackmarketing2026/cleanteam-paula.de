@@ -163,7 +163,6 @@ function demoContractJson(data, contract) {
   return {
     id: contract.id,
     offerId: contract.offerId,
-    number: contract.number,
     status: contract.status,
     currentStep: contract.currentStep,
     dataConfirmed: contract.dataConfirmed,
@@ -211,7 +210,6 @@ function demoPublicState(data, offer, contract) {
           intervalConfirmed: contract.intervalConfirmed,
           authorized: contract.authorized,
           representationNote: contract.representationNote,
-          number: contract.number,
           signedAt: contract.signedAt,
           signatureDataUrl: contract.signatureDataUrl,
         }
@@ -422,7 +420,6 @@ const FakeAPI = {
         id: demoId("contract"),
         offerId: offer.id,
         customerId: offer.customerId,
-        number: `CT-${new Date().getFullYear()}-${String(data.contracts.length + 1).padStart(3, "0")}`,
         status: "entwurf",
         currentStep: "daten",
         dataConfirmed: false,

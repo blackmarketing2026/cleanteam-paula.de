@@ -40,48 +40,14 @@ function generate_id(string $prefix): string
     return $prefix . '-' . bin2hex(random_bytes(12));
 }
 
-function ensure_contract_number_settings_table(PDO $pdo): void
+function ensure_contracts_number_column_dropped(PDO $pdo): void
 {
-    $pdo->exec(
-        'CREATE TABLE IF NOT EXISTS contract_number_settings (
-            id TINYINT UNSIGNED NOT NULL,
-            year SMALLINT UNSIGNED NOT NULL DEFAULT ' . (int) gmdate('Y') . ',
-            next_number INT UNSIGNED NOT NULL DEFAULT 1,
-            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
-    );
-
-    $stmt = $pdo->query("SHOW COLUMNS FROM contract_number_settings LIKE 'year'");
-    if (!$stmt->fetch()) {
-        $pdo->exec('ALTER TABLE contract_number_settings ADD COLUMN year SMALLINT UNSIGNED NOT NULL DEFAULT ' . (int) gmdate('Y') . ' AFTER id');
+    $stmt = $pdo->query("SHOW COLUMNS FROM contracts LIKE 'number'");
+    if ($stmt->fetch()) {
+        $pdo->exec('ALTER TABLE contracts DROP COLUMN number');
     }
 
-    $pdo->exec('INSERT IGNORE INTO contract_number_settings (id, year, next_number) VALUES (1, ' . (int) gmdate('Y') . ', 1)');
-}
-
-function format_contract_number(int $year, int $sequence): string
-{
-    return sprintf('CT-%d-%03d', $year, $sequence);
-}
-
-function next_contract_number(PDO $pdo): string
-{
-    ensure_contract_number_settings_table($pdo);
-
-    $pdo->beginTransaction();
-    try {
-        $row = $pdo->query('SELECT year, next_number FROM contract_number_settings WHERE id = 1 FOR UPDATE')->fetch();
-        $year = (int) $row['year'];
-        $sequence = (int) $row['next_number'];
-        $pdo->prepare('UPDATE contract_number_settings SET next_number = next_number + 1 WHERE id = 1')->execute();
-        $pdo->commit();
-    } catch (Throwable $exception) {
-        $pdo->rollBack();
-        throw $exception;
-    }
-
-    return format_contract_number($year, $sequence);
+    $pdo->exec('DROP TABLE IF EXISTS contract_number_settings');
 }
 
 // Legt den Vertrag (contracts-Zeile) fuer ein Angebot an, falls noch keiner existiert - damit ein
@@ -89,6 +55,8 @@ function next_contract_number(PDO $pdo): string
 // den Link zum ersten Mal oeffnet), und gibt die (neue oder bestehende) Zeile zurueck.
 function ensure_contract_for_offer(PDO $pdo, array $offer): array
 {
+    ensure_contracts_number_column_dropped($pdo);
+
     $stmt = $pdo->prepare('SELECT * FROM contracts WHERE offer_id = :offer_id');
     $stmt->execute(['offer_id' => $offer['id']]);
     $contract = $stmt->fetch();
@@ -98,14 +66,13 @@ function ensure_contract_for_offer(PDO $pdo, array $offer): array
     }
 
     $stmt = $pdo->prepare(
-        'INSERT INTO contracts (id, offer_id, customer_id, number, status, current_step, created_at)
-         VALUES (:id, :offer_id, :customer_id, :number, :status, :current_step, UTC_TIMESTAMP())'
+        'INSERT INTO contracts (id, offer_id, customer_id, status, current_step, created_at)
+         VALUES (:id, :offer_id, :customer_id, :status, :current_step, UTC_TIMESTAMP())'
     );
     $stmt->execute([
         'id' => generate_id('contract'),
         'offer_id' => $offer['id'],
         'customer_id' => $offer['customer_id'],
-        'number' => next_contract_number($pdo),
         'status' => 'entwurf',
         'current_step' => 'datenschutz',
     ]);

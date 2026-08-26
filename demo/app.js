@@ -481,9 +481,8 @@ function renderContractCard(contract) {
     <article class="record-item${selected}">
       <div class="record-main">
         <div>
-          <div class="record-title">${escapeHtml(contract.number)}</div>
+          <div class="record-title">${escapeHtml(contract.customer.name)}</div>
           <div class="record-meta">
-            <span>${escapeHtml(contract.customer.name)}</span>
             <span>${escapeHtml(contract.offer.service)} · ${contract.offer.squareMeters} m²</span>
           </div>
         </div>
@@ -563,7 +562,6 @@ function renderContractDocument(contract) {
         <div>
           <span class="doc-brand">CleanTeam</span>
           <h3>Reinigungsvertrag</h3>
-          <p class="muted">Vertragsnummer ${escapeHtml(contract.number)}</p>
         </div>
         <span class="badge ${badgeClass}">${escapeHtml(statusLabel)}</span>
       </header>

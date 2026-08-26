@@ -151,7 +151,6 @@ function public_state(array $offer, ?array $contract): array
             'currentStep' => $currentStep,
             'dataConfirmed' => (bool) $contract['data_confirmed'],
             'intervalConfirmed' => (bool) $contract['interval_confirmed'],
-            'number' => $contract['number'],
             'signedAt' => to_iso($contract['signed_at']),
             'signatureDataUrl' => $contract['signature_data'],
         ],

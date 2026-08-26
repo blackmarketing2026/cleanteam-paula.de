@@ -171,7 +171,6 @@ function renderFinalContract() {
         <div>
           <span class="doc-brand">CleanTeam</span>
           <h3>Reinigungsvertrag</h3>
-          <p class="muted">Vertragsnummer ${escapeHtml(contract.number)}</p>
         </div>
         <span class="badge success">Signiert</span>
       </header>

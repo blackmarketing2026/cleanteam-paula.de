@@ -757,18 +757,17 @@ function contract_pdf_context(PDO $pdo, string $contractId): ?array
     return ['contract' => $contract, 'offer' => $offer, 'customer' => $customer];
 }
 
-function contract_pdf_filename(array $contract, string $audience): string
+function contract_pdf_filename(string $customerName, string $audience): string
 {
-    $number = (string) ($contract['number'] ?? 'Vertrag');
-    $safeNumber = preg_replace('/[^A-Za-z0-9\-_]+/', '-', $number) ?: 'Vertrag';
+    $safeName = trim(preg_replace('/[^A-Za-z0-9\-_]+/', '-', $customerName) ?: '', '-') ?: 'CleanTeam';
     if ($audience === 'authorization') {
-        return 'Vollmacht-' . trim($safeNumber, '-') . '.pdf';
+        return 'Vollmacht-' . $safeName . '.pdf';
     }
     if ($audience === 'customer') {
         return 'Vertrag-CleanTeam-Group.pdf';
     }
 
-    return 'Vertrag-' . trim($safeNumber, '-') . '-CleanTeam.pdf';
+    return 'Vertrag-' . $safeName . '-CleanTeam.pdf';
 }
 
 function normalize_contract_pdf_audience(string $audience): string
@@ -818,7 +817,6 @@ function render_authorization_pdf(array $offer, array $customer, array $contract
     }
 
     $pdf = new SimplePdfDocument();
-    $contractNumber = (string) ($contract['number'] ?? 'Entwurf');
     $createdAt = contract_format_date($contract['created_at'] ?? ($offer['created_at'] ?? null));
     $customerName = contract_customer_display_name($customer);
     $signatoryName = contract_signatory_display($customer);
@@ -828,11 +826,10 @@ function render_authorization_pdf(array $offer, array $customer, array $contract
     $companyAddress = contract_authorization_company_address($contract);
 
     $pdf->title('Vollmacht zum Gebäudereinigungsvertrag');
-    $pdf->label('Vollmacht zum Vertrag ' . $contractNumber);
+    $pdf->label('Vollmacht zum Gebäudereinigungsvertrag');
     $pdf->meta('Erstellt am: ' . $createdAt . ' | Auftraggeber: ' . $customerName);
 
     $pdf->heading('Vertragsdaten');
-    $pdf->keyValue('Vertragsnummer', $contractNumber);
     $pdf->keyValue('Auftragnehmer', CONTRACTOR['legal_name']);
     $pdf->keyValue('Auftraggeber', $customerName);
     $pdf->keyValue('Auftraggeber-Adresse', trim($customerAddress . ', ' . $customerZipCity, ' ,'));
@@ -848,8 +845,8 @@ function render_authorization_pdf(array $offer, array $customer, array $contract
 
     $pdf->heading('Erklärung');
     $pdf->paragraph(
-        'Hiermit bevollmächtigt die oben genannte Person die bevollmächtigte Person, den Gebäudereinigungsvertrag '
-        . $contractNumber . ' mit ' . CONTRACTOR['legal_name'] . ' für den Auftraggeber rechtsverbindlich zu unterzeichnen.'
+        'Hiermit bevollmächtigt die oben genannte Person die bevollmächtigte Person, den Gebäudereinigungsvertrag'
+        . ' mit ' . CONTRACTOR['legal_name'] . ' für den Auftraggeber rechtsverbindlich zu unterzeichnen.'
     );
     $pdf->paragraph(
         'Dieses Dokument wurde aus den Angaben im digitalen Vertragsassistenten vorbereitet und dient als Vollmachtsdokument '
@@ -870,7 +867,6 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $isCleanTeamCopy = $audience === 'cleanteam';
     $pdf = new SimplePdfDocument();
 
-    $contractNumber = (string) ($contract['number'] ?? 'Entwurf');
     $createdAt = contract_format_date($offer['created_at']);
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '-';
@@ -893,7 +889,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $contractorSignatureName = contract_contractor_signature_name();
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
-    $pdf->meta($documentLabel . ' | Vertragsnummer: ' . $contractNumber . ' | Status: ' . $statusLabel . ' | Erstellt: ' . $createdAt);
+    $pdf->meta($documentLabel . ' | Status: ' . $statusLabel . ' | Erstellt: ' . $createdAt);
     $pdf->title('Gebäudereinigungsvertrag');
     $pdf->centeredText('zwischen');
 
@@ -948,7 +944,6 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $termsAccepted = $termsAcceptedAt !== null || $isSigned;
         $termsAcceptedTime = contract_format_datetime($termsAcceptedAt ?: ($isSigned ? ($contract['signed_at'] ?? null) : null));
         $signedAtDisplay = contract_format_datetime($contract['signed_at'] ?? null);
-        $pdf->protocolKeyValue('Vertragsnummer', $contractNumber);
         $pdf->protocolKeyValue('Kunde', $customerName);
         $pdf->protocolKeyValue('Unterzeichner', $signatoryName);
         $pdf->protocolKeyValue('Vertragsentwurf erstellt', contract_format_datetime($offer['created_at'] ?? null));
@@ -1019,7 +1014,7 @@ function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool 
     } else {
         $content = render_contract_pdf($context['offer'], $context['customer'], $context['contract'], ['audience' => $audience]);
     }
-    $filename = contract_pdf_filename($context['contract'], $audience);
+    $filename = contract_pdf_filename(contract_customer_display_name($context['customer']), $audience);
     $sha256 = hash('sha256', $content);
     $id = generate_id('contract-document');
 

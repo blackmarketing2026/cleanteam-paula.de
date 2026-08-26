@@ -1280,7 +1280,6 @@ function filteredContracts() {
 
 function contractSearchText(contract) {
   return [
-    contract.number,
     contract.customer.name,
     contactName(contract.customer),
     contract.customer.email,
@@ -1349,10 +1348,6 @@ function contractSortValue(contract, key) {
     const date = new Date(contract[key] || 0);
     return Number.isNaN(date.getTime()) ? 0 : date.getTime();
   }
-  if (key === "number") {
-    return contract.number;
-  }
-
   return contract.customer.name;
 }
 
@@ -1441,7 +1436,6 @@ function renderContractRow(contract) {
   return `
     <tr class="${selected}">
       <td>
-        <strong>${escapeHtml(contract.number)}</strong>
         ${contract.offer.squareMeters > 0 ? `<span>${contract.offer.squareMeters} m²</span>` : ""}
       </td>
       <td>${escapeHtml(contract.customer.name)}</td>
@@ -1901,7 +1895,7 @@ async function releaseContract(id) {
     return;
   }
 
-  const confirmed = window.confirm(`Vertrag "${contract.number}" wieder freigeben, damit der Kunde ihn erneut abschließen kann?`);
+  const confirmed = window.confirm(`Vertrag von "${contract.customer.name}" wieder freigeben, damit der Kunde ihn erneut abschließen kann?`);
   if (!confirmed) {
     return;
   }
@@ -1981,7 +1975,7 @@ async function resetContractLink(offerId) {
 async function deleteContract(id) {
   const contract = getContract(id);
   const contractLabel = contract
-    ? `${contract.number} f\u00fcr ${contract.customer.name}`
+    ? `von ${contract.customer.name}`
     : "diesen Vertrag";
   const firstConfirmed = window.confirm(
     `Vertrag ${contractLabel} wirklich l\u00f6schen? Die gespeicherten Vertragsdokumente werden ebenfalls entfernt.`,

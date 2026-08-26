@@ -60,7 +60,6 @@ function contract_row_to_json(array $row): array
     return [
         'id' => $row['id'],
         'offerId' => $row['offer_id'],
-        'number' => $row['number'],
         'status' => $row['status'],
         'currentStep' => $row['current_step'],
         'dataConfirmed' => (bool) $row['data_confirmed'],
@@ -110,6 +109,7 @@ function contract_row_to_json(array $row): array
 ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
+ensure_contracts_number_column_dropped($pdo);
 ensure_offers_interval_label_length($pdo);
 ensure_offers_vat_column($pdo);
 ensure_offers_customer_obligations_column($pdo);

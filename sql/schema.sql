@@ -64,7 +64,6 @@ CREATE TABLE IF NOT EXISTS contracts (
   id VARCHAR(64) NOT NULL,
   offer_id VARCHAR(64) NOT NULL,
   customer_id VARCHAR(64) NOT NULL,
-  number VARCHAR(40) NOT NULL,
   -- status: entwurf | daten_abgelehnt | intervall_abgelehnt | datenschutz_abgelehnt | signiert
   status VARCHAR(30) NOT NULL DEFAULT 'entwurf',
   -- current_step: datenschutz | daten | intervall | vollmacht | vertragspartner | leistung | bedingungen | signatur | fertig
