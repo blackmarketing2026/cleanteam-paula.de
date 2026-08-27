@@ -83,7 +83,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
               <input id="terms-confirmation" type="checkbox" />
               <span>
                 Alles passt &ndash; ich best&auml;tige den Auftrag und stimme den
-                <a href="https://cleanteam-solingen.de/agb/" target="_blank" rel="noopener">Vertragsbedingungen</a> zu.
+                Vertragsbedingungen zu.
               </span>
             </label>
           </div>
