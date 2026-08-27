@@ -192,7 +192,8 @@ if ($method === 'GET' && $action === 'offer') {
         );
     }
 
-    if ($offer['link_opened_at'] === null) {
+    $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    if ($offer['link_opened_at'] === null && !is_automated_email_scanner($userAgent)) {
         $pdo->prepare('UPDATE offers SET link_opened_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $offer['id']]);
     }
 

@@ -1363,8 +1363,13 @@ function contractBadgeClass(status) {
 
 function renderDeliveryStatus(offer) {
   const steps = [
-    { done: Boolean(offer.sentAt), label: "Zugestellt", at: offer.sentAt },
-    { done: Boolean(offer.emailOpenedAt), label: "Geöffnet", at: offer.emailOpenedAt },
+    { done: Boolean(offer.sentAt), label: "Gesendet", at: offer.sentAt },
+    {
+      done: Boolean(offer.emailOpenedAt),
+      label: "Geöffnet",
+      at: offer.emailOpenedAt,
+      hint: "Technisches Signal (Ladepixel). Kann auch durch Sicherheits-Scanner oder E-Mail-Anbieter ausgelöst werden, bevor ein Mensch die Mail gesehen hat – keine Garantie, dass sie wirklich gelesen wurde.",
+    },
     { done: Boolean(offer.linkOpenedAt), label: "Vertrag geöffnet", at: offer.linkOpenedAt },
   ];
 
@@ -1374,7 +1379,7 @@ function renderDeliveryStatus(offer) {
         ${steps
           .map(
             (step) => `
-              <span class="delivery-check${step.done ? " is-done" : ""}" aria-hidden="true">
+              <span class="delivery-check${step.done ? " is-done" : ""}"${step.hint ? ` title="${escapeHtml(step.hint)}"` : ""} aria-hidden="true">
                 <i data-lucide="check" aria-hidden="true"></i>
               </span>
             `
@@ -1385,7 +1390,7 @@ function renderDeliveryStatus(offer) {
         ${steps
           .map(
             (step) => `
-              <div class="delivery-detail${step.done ? " is-done" : ""}">
+              <div class="delivery-detail${step.done ? " is-done" : ""}${step.hint ? " has-hint" : ""}"${step.hint ? ` title="${escapeHtml(step.hint)}"` : ""}>
                 ${escapeHtml(step.label)}: ${step.done ? escapeHtml(formatDateTime(step.at)) : "noch nicht"}
               </div>
             `

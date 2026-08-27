@@ -1644,6 +1644,16 @@ button.compact-item.selected {
   font-weight: 700;
 }
 
+.delivery-detail.has-hint {
+  width: fit-content;
+  cursor: help;
+  border-bottom: 1px dashed currentColor;
+}
+
+.delivery-check[title] {
+  cursor: help;
+}
+
 .contractor-signature-layout {
   display: grid;
   gap: 14px;

@@ -40,6 +40,35 @@ function generate_id(string $prefix): string
     return $prefix . '-' . bin2hex(random_bytes(12));
 }
 
+const EMAIL_SCANNER_USER_AGENT_SIGNATURES = [
+    'proofpoint', 'mimecast', 'barracuda', 'messagelabs', 'symantec', 'forcepoint',
+    'ironport', 'trendmicro', 'trend micro', 'fireeye', 'sophos', 'zscaler', 'bitdefender',
+    'mailscanner', 'mailcontrol', 'safelinks', 'atp scanner', 'defender',
+    'headlesschrome', 'phantomjs', 'puppeteer', 'playwright', 'selenium',
+    'bot', 'crawler', 'spider', 'scanner', 'monitor', 'uptime', 'preview',
+];
+
+// Erkennt bekannte Sicherheits-Gateways und Sandbox-Renderer, die E-Mails/Links automatisch
+// vorladen, bevor ein Mensch sie sieht. Kein vollstaendiger Schutz (z.B. Apple Mail Privacy
+// Protection ist per User-Agent nicht zuverlaessig erkennbar), aber filtert die haeufigsten
+// Fehlalarme bei den "Geoeffnet"-Signalen heraus.
+function is_automated_email_scanner(string $userAgent): bool
+{
+    $normalized = mb_strtolower($userAgent);
+
+    if ($normalized === '') {
+        return true;
+    }
+
+    foreach (EMAIL_SCANNER_USER_AGENT_SIGNATURES as $signature) {
+        if (str_contains($normalized, $signature)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function ensure_contracts_number_column_dropped(PDO $pdo): void
 {
     $stmt = $pdo->query("SHOW COLUMNS FROM contracts LIKE 'number'");
