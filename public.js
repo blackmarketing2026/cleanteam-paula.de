@@ -11,7 +11,6 @@ const els = {
   errorMessage: document.querySelector("#error-message"),
   dataCheckList: document.querySelector("#data-check-list"),
   serviceDetails: document.querySelector("#service-details"),
-  termsConfirmation: document.querySelector("#terms-confirmation"),
   termsContinue: document.querySelector("#terms-continue"),
   signaturePad: document.querySelector("#signature-pad"),
   clearSignature: document.querySelector("#clear-signature"),
@@ -308,19 +307,11 @@ function bindEvents() {
 
     const nextButton = event.target.closest("[data-next]");
     if (nextButton) {
-      if (nextButton.dataset.next === "identitaet" && !els.termsConfirmation.checked) {
-        showToast("Bitte bestätigen Sie zuerst den Auftrag.");
-        return;
-      }
       handleAction("advance", {
         step: nextButton.dataset.next,
-        termsAccepted: nextButton.dataset.next === "identitaet" ? els.termsConfirmation.checked : undefined,
+        termsAccepted: nextButton.dataset.next === "identitaet" ? true : undefined,
       });
     }
-  });
-
-  els.termsConfirmation.addEventListener("change", () => {
-    els.termsContinue.disabled = !els.termsConfirmation.checked;
   });
 
   els.identityCheckYes.addEventListener("click", () => {

@@ -79,16 +79,9 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
           <h2>Vertragsbedingungen</h2>
           <div class="terms-text">
             <p>Bitte best&auml;tigen Sie den Auftrag, bevor Sie zur Unterschrift weitergehen.</p>
-            <label class="public-confirm-check">
-              <input id="terms-confirmation" type="checkbox" />
-              <span>
-                Alles passt &ndash; ich best&auml;tige den Auftrag und stimme den
-                Vertragsbedingungen zu.
-              </span>
-            </label>
           </div>
           <div class="form-actions">
-            <button id="terms-continue" class="primary-button" data-next="identitaet" type="button" disabled>Weiter</button>
+            <button id="terms-continue" class="primary-button" data-next="identitaet" type="button">Weiter</button>
           </div>
         </section>
 
@@ -146,6 +139,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=signer-identity-step-20260825-1"></script>
+    <script src="public.js?v=terms-autoconfirm-20260827-1"></script>
   </body>
 </html>
