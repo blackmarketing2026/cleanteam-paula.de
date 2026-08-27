@@ -23,4 +23,11 @@ return [
     // Optional: eigene oeffentlich erreichbare Basis-URL nur fuer Bilder in
     // E-Mails. Leer lassen, wenn sie der base_url entspricht.
     // 'email_asset_base_url' => 'https://www.example.de/paula',
+
+    // Zufaelligen Schluessel erzeugen, z. B. mit:
+    // php -r "echo bin2hex(random_bytes(32));"
+    // Schuetzt api/cron-reminders.php vor fremden Aufrufen (kein Login moeglich,
+    // da der Cronjob von aussen kommt). Ohne diesen Schluessel lehnt der
+    // Endpunkt jeden Aufruf ab.
+    'cron_secret' => 'BITTE_ZUFAELLIGEN_SCHLUESSEL_EINTRAGEN',
 ];

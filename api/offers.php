@@ -110,6 +110,7 @@ ensure_offers_validity_days_column($pdo);
 ensure_offers_link_opened_column($pdo);
 ensure_offers_email_opened_at_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
+ensure_offers_reminder_columns($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();

@@ -152,6 +152,21 @@ function ensure_offers_customer_obligations_column(PDO $pdo): void
     }
 }
 
+function ensure_offers_reminder_columns(PDO $pdo): void
+{
+    $columns = [
+        'reminder1_sent_at' => 'ALTER TABLE offers ADD COLUMN reminder1_sent_at DATETIME NULL AFTER email_opened_at',
+        'reminder2_sent_at' => 'ALTER TABLE offers ADD COLUMN reminder2_sent_at DATETIME NULL AFTER reminder1_sent_at',
+    ];
+
+    foreach ($columns as $column => $statement) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($statement);
+        }
+    }
+}
+
 function format_service_text(string $text): string
 {
     $text = str_replace(["\r\n", "\r"], "\n", $text);

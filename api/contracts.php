@@ -115,6 +115,7 @@ ensure_offers_vat_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
 ensure_offers_link_opened_column($pdo);
 ensure_offers_email_opened_at_column($pdo);
+ensure_offers_reminder_columns($pdo);
 
 function contract_documents_table_exists(PDO $pdo): bool
 {
