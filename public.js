@@ -11,7 +11,6 @@ const els = {
   errorMessage: document.querySelector("#error-message"),
   dataCheckList: document.querySelector("#data-check-list"),
   serviceDetails: document.querySelector("#service-details"),
-  termsContinue: document.querySelector("#terms-continue"),
   signaturePad: document.querySelector("#signature-pad"),
   clearSignature: document.querySelector("#clear-signature"),
   saveSignature: document.querySelector("#save-signature"),

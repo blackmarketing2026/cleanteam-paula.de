@@ -56,7 +56,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </section>
 
         <section id="screen-daten" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 2 von 5</p>
+          <p class="step-indicator">Schritt 2 von 4</p>
           <h2>Sind diese Angaben korrekt?</h2>
           <dl id="data-check-list" class="data-check"></dl>
           <div class="form-actions">
@@ -66,27 +66,16 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </section>
 
         <section id="screen-leistung" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 3 von 5</p>
+          <p class="step-indicator">Schritt 3 von 4</p>
           <h2>Leistungsumfang</h2>
           <div id="service-details" class="public-service-summary"></div>
           <div class="form-actions">
-            <button class="primary-button" data-next="bedingungen" type="button">Weiter</button>
-          </div>
-        </section>
-
-        <section id="screen-bedingungen" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 4 von 5</p>
-          <h2>Vertragsbedingungen</h2>
-          <div class="terms-text">
-            <p>Bitte best&auml;tigen Sie den Auftrag, bevor Sie zur Unterschrift weitergehen.</p>
-          </div>
-          <div class="form-actions">
-            <button id="terms-continue" class="primary-button" data-next="identitaet" type="button">Weiter</button>
+            <button class="primary-button" data-next="identitaet" type="button">Weiter</button>
           </div>
         </section>
 
         <section id="screen-identitaet" class="public-screen wizard-screen">
-          <p class="step-indicator">Schritt 5 von 5</p>
+          <p class="step-indicator">Schritt 4 von 4</p>
           <h2 id="identity-check-question">Sind Sie die im Vertrag genannte Person?</h2>
           <div id="identity-check-step-1" class="form-actions">
             <button id="identity-check-no" class="ghost-button" type="button">Nein</button>
@@ -139,6 +128,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=terms-autoconfirm-20260827-1"></script>
+    <script src="public.js?v=skip-terms-step-20260827-1"></script>
   </body>
 </html>

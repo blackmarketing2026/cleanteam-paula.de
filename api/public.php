@@ -14,7 +14,7 @@ if ($token === '') {
     json_error('Kein Vertragslink angegeben.', 404);
 }
 
-const STEP_ORDER = ['datenschutz', 'daten', 'leistung', 'bedingungen', 'identitaet', 'signatur', 'fertig'];
+const STEP_ORDER = ['datenschutz', 'daten', 'leistung', 'identitaet', 'signatur', 'fertig'];
 const TERMINAL_STATUSES = ['daten_abgelehnt', 'intervall_abgelehnt', 'datenschutz_abgelehnt', 'berechtigung_abgelehnt'];
 
 // Alte, inzwischen entfernte Schrittnamen (Vollmacht-Funktion) auf den naechsten
@@ -24,6 +24,10 @@ function normalize_current_step(string $step): string
 {
     if (in_array($step, ['intervall', 'vollmacht', 'vertragspartner'], true)) {
         return 'leistung';
+    }
+
+    if ($step === 'bedingungen') {
+        return 'identitaet';
     }
 
     return $step;
@@ -270,7 +274,7 @@ if ($method === 'POST' && $action === 'advance') {
         json_error('Ungültiger Schrittwechsel.', 422);
     }
 
-    if ($currentStep === 'bedingungen' && $targetStep === 'identitaet') {
+    if ($currentStep === 'leistung' && $targetStep === 'identitaet') {
         if (empty($body['termsAccepted'])) {
             json_error('Bitte bestaetigen Sie zuerst den Auftrag.', 422);
         }
