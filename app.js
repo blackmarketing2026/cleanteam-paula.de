@@ -100,7 +100,7 @@ const els = {
   emailSettingsContractEnabled: document.querySelector("#email-settings-contract-enabled"),
   emailSettingsInternalContractEnabled: document.querySelector("#email-settings-internal-contract-enabled"),
   emailPreviewCheckboxes: document.querySelectorAll(
-    "#email-settings-offer-enabled-2, #email-settings-reminder1-enabled, #email-settings-reminder2-enabled",
+    "#email-settings-offer-enabled-2, #email-settings-reminder1-enabled, #email-settings-reminder2-enabled, #email-settings-reminder3-enabled",
   ),
   emailPreviewContractCheckbox: document.querySelector("#email-settings-contract-enabled-2"),
   emailSignatureForm: document.querySelector("#email-signature-form"),

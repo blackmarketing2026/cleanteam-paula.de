@@ -38,9 +38,9 @@ switch ($type) {
 
     case 'reminder1':
         $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($sampleContact) . ',</p>'
-            . '<p>Sie haben Ihren Vertrag von CleanTeam vor Kurzem erhalten – bisher wurde er noch nicht unterschrieben. Falls Sie das noch nicht geschafft haben, holen Sie es gern jetzt nach:</p>'
+            . '<p>Ihr Vertrag mit CleanTeam für <strong>' . email_h($sampleName) . '</strong> liegt bereit, wurde bisher aber noch nicht digital unterschrieben. Wir würden uns freuen, wenn Sie den Vertragsabschluss zeitnah nachholen:</p>'
             . email_button_html($sampleLink, 'Jetzt Vertrag online abschließen')
-            . '<p>Der Link ist gültig bis zum ' . email_h($sampleValidUntil) . '.</p>';
+            . '<p>Der Link ist noch bis zum ' . email_h($sampleValidUntil) . ' gültig.</p>';
         $title = 'Erinnerung an Ihren Vertrag';
         $preheader = 'Bitte schließen Sie Ihren Vertrag jetzt online ab.';
         $signatureContext = 'offer';
@@ -48,9 +48,19 @@ switch ($type) {
 
     case 'reminder2':
         $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($sampleContact) . ',</p>'
-            . '<p>Ihr Vertrag von CleanTeam wartet weiterhin auf Ihre Unterschrift. Dies ist unsere letzte automatische Erinnerung – bitte schließen Sie den Vertrag zeitnah ab, damit der Link nicht verfällt:</p>'
+            . '<p>Wir möchten Sie freundlich daran erinnern, dass der Vertrag für <strong>' . email_h($sampleName) . '</strong> noch auf Ihre digitale Unterschrift wartet. Damit alles reibungslos weitergeht, bitten wir Sie, den Abschluss zeitnah vorzunehmen:</p>'
             . email_button_html($sampleLink, 'Jetzt Vertrag online abschließen')
-            . '<p>Der Link ist gültig bis zum ' . email_h($sampleValidUntil) . '.</p>';
+            . '<p>Der Link ist noch bis zum ' . email_h($sampleValidUntil) . ' gültig, danach verfällt er automatisch.</p>';
+        $title = 'Erinnerung an Ihren Vertrag';
+        $preheader = 'Bitte schließen Sie Ihren Vertrag jetzt online ab.';
+        $signatureContext = 'offer';
+        break;
+
+    case 'reminder3':
+        $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($sampleContact) . ',</p>'
+            . '<p>Dies ist unsere letzte Erinnerung: Der Vertrag für <strong>' . email_h($sampleName) . '</strong> kann nur noch bis zum ' . email_h($sampleValidUntil) . ' digital unterschrieben werden. Bitte schließen Sie ihn bis dahin ab, damit der Link nicht verfällt:</p>'
+            . email_button_html($sampleLink, 'Jetzt Vertrag online abschließen')
+            . '<p>Gültig letztmalig bis zum ' . email_h($sampleValidUntil) . '.</p>';
         $title = 'Letzte Erinnerung an Ihren Vertrag';
         $preheader = 'Bitte schließen Sie Ihren Vertrag jetzt online ab.';
         $signatureContext = 'offer';

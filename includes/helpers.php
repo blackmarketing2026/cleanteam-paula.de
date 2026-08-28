@@ -157,6 +157,7 @@ function ensure_offers_reminder_columns(PDO $pdo): void
     $columns = [
         'reminder1_sent_at' => 'ALTER TABLE offers ADD COLUMN reminder1_sent_at DATETIME NULL AFTER email_opened_at',
         'reminder2_sent_at' => 'ALTER TABLE offers ADD COLUMN reminder2_sent_at DATETIME NULL AFTER reminder1_sent_at',
+        'reminder3_sent_at' => 'ALTER TABLE offers ADD COLUMN reminder3_sent_at DATETIME NULL AFTER reminder2_sent_at',
     ];
 
     foreach ($columns as $column => $statement) {

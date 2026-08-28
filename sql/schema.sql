@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS offers (
   email_opened_at DATETIME NULL,
   reminder1_sent_at DATETIME NULL,
   reminder2_sent_at DATETIME NULL,
+  reminder3_sent_at DATETIME NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uniq_offers_token (token),
   KEY idx_offers_customer (customer_id),
