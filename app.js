@@ -1440,9 +1440,6 @@ function renderContractRow(contract) {
 
   return `
     <tr class="${selected}">
-      <td>
-        ${contract.offer.squareMeters > 0 ? `<span>${contract.offer.squareMeters} m²</span>` : ""}
-      </td>
       <td>${escapeHtml(contract.customer.name)}</td>
       <td>${escapeHtml(contactName(contract.customer))}</td>
       <td>${escapeHtml(formatDate(contract.createdAt))}</td>
