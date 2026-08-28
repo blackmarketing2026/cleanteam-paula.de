@@ -595,7 +595,6 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $signatureImage = $isSigned && !empty($contract['signature_data'])
         ? '<img src="' . h($contract['signature_data']) . '" alt="Unterschrift" style="max-height:70px;">'
         : '<span class="sign-placeholder">noch nicht unterschrieben</span>';
-    $contractorSignatureName = h(contract_contractor_signature_name());
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
     $contractorSignatureImage = $contractorSignatureDataUrl !== null
         ? '<img src="' . h($contractorSignatureDataUrl) . '" alt="Unterschrift Thomas Mündlein" style="max-height:70px;">'
@@ -671,7 +670,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 <div class="sign-block">
   <div class="sign-col">
     <div>{$contractorServicePointCity}, {$createdAt}</div>
-    <div style="margin-top:12px;">Im Namen von CleanTeam:<br>{$contractorSignatureName}</div>
+    <div style="margin-top:12px;">Im Namen von CleanTeam Geschäftsführer:<br>{$managingDirectorsInline}</div>
     {$contractorSignatureImage}
   </div>
   <div class="sign-col">

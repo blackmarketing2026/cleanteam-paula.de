@@ -886,7 +886,6 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $managingDirectors = implode(', ', CONTRACTOR['managing_directors']);
     $contractorZipCity = CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city'];
     $contractorServicePoint = CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'];
-    $contractorSignatureName = contract_contractor_signature_name();
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
     $pdf->meta($documentLabel . ' | Status: ' . $statusLabel . ' | Erstellt: ' . $createdAt);
@@ -911,7 +910,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     contract_template_html_to_pdf($pdf, $templateBodyHtml);
 
     $pdf->heading('Unterschriften');
-    $pdf->keyValue('CleanTeam', CONTRACTOR['service_point_city'] . ', ' . $createdAt . ' | Im Namen von CleanTeam: ' . $contractorSignatureName);
+    $pdf->keyValue('CleanTeam', CONTRACTOR['service_point_city'] . ', ' . $createdAt . ' | Im Namen von CleanTeam Geschäftsführer: ' . $managingDirectors);
     if ($contractorSignatureDataUrl !== null) {
         if (!$pdf->signatureImage($contractorSignatureDataUrl)) {
             $pdf->paragraph('Die CleanTeam-Unterschrift konnte nicht eingebettet werden.', 9.5, 170.0);
