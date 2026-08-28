@@ -107,6 +107,10 @@
               <i data-lucide="shield-check" aria-hidden="true"></i>
               <span>User & Rollen</span>
             </button>
+            <button class="nav-link" type="button" data-view="settings-ftp">
+              <i data-lucide="folder-up" aria-hidden="true"></i>
+              <span>FTP</span>
+            </button>
           </div>
         </nav>
         <button id="logout-button" class="ghost-button sidebar-logout" type="button">
@@ -914,6 +918,75 @@
             <div id="user-list" class="user-management-list"></div>
           </section>
         </section>
+
+        <section id="settings-ftp-view" class="view" aria-label="FTP">
+          <div class="section-heading">
+            <div>
+              <p class="muted">Sobald ein Vertrag digital unterschrieben wird, wird er zus&auml;tzlich automatisch per FTP exportiert (Ordner &bdquo;Cleanteam Vertr&auml;ge&ldquo; &rarr; Firmenname &rarr; CleanTeam-Vertrag mit Anhang + Kundenvertrag).</p>
+            </div>
+          </div>
+
+          <section class="panel form-panel" aria-labelledby="ftp-settings-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="ftp-settings-heading">FTP-Server</h4>
+              </div>
+            </div>
+            <form id="ftp-settings-form" class="form-grid">
+              <div class="span-2">
+                <label class="checkbox-row">
+                  <input id="ftp-enabled" type="checkbox" />
+                  FTP-Export aktivieren
+                </label>
+                <small class="muted">Solange deaktiviert, wird nichts per FTP hochgeladen.</small>
+              </div>
+              <label class="span-2">
+                Server-Host *
+                <input id="ftp-host" type="text" placeholder="ftp.beispiel.de" />
+              </label>
+              <label>
+                Port
+                <input id="ftp-port" type="number" min="1" max="65535" placeholder="21" />
+              </label>
+              <label>
+                Verschl&uuml;sselung
+                <select id="ftp-use-ssl">
+                  <option value="0">Kein SSL (FTP)</option>
+                  <option value="1">FTPS (SSL/TLS)</option>
+                </select>
+              </label>
+              <label>
+                Benutzername *
+                <input id="ftp-username" type="text" placeholder="ftp-benutzer" />
+              </label>
+              <label>
+                Passwort
+                <input id="ftp-password" type="password" placeholder="Unverändert lassen = altes Passwort behalten" autocomplete="new-password" />
+              </label>
+              <label class="span-2">
+                Basispfad (optional)
+                <input id="ftp-base-path" type="text" placeholder="z. B. /export" />
+                <small class="muted">Wird vor den Ordner &bdquo;Cleanteam Vertr&auml;ge&ldquo; gesetzt, falls angegeben.</small>
+              </label>
+              <div class="span-2">
+                <label class="checkbox-row">
+                  <input id="ftp-passive-mode" type="checkbox" checked />
+                  Passiver Modus (empfohlen, meist notwendig hinter Firewalls)
+                </label>
+              </div>
+              <div class="form-actions span-2">
+                <button class="primary-button" type="submit">
+                  <i data-lucide="save" aria-hidden="true"></i>
+                  Einstellungen speichern
+                </button>
+                <button class="secondary-button" type="button" id="ftp-test-button">
+                  <i data-lucide="plug-zap" aria-hidden="true"></i>
+                  Verbindung testen
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
       </section>
 
       <nav class="app-bottom-nav" aria-label="Hauptnavigation (App-Ansicht)">
@@ -1140,6 +1213,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=reminder-stage3-20260828-1"></script>
+    <script src="app.js?v=ftp-export-20260828-1"></script>
   </body>
 </html>

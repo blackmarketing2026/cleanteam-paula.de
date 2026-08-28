@@ -103,6 +103,16 @@ const els = {
     "#email-settings-offer-enabled-2, #email-settings-reminder1-enabled, #email-settings-reminder2-enabled, #email-settings-reminder3-enabled",
   ),
   emailPreviewContractCheckbox: document.querySelector("#email-settings-contract-enabled-2"),
+  ftpSettingsForm: document.querySelector("#ftp-settings-form"),
+  ftpEnabled: document.querySelector("#ftp-enabled"),
+  ftpHost: document.querySelector("#ftp-host"),
+  ftpPort: document.querySelector("#ftp-port"),
+  ftpUseSsl: document.querySelector("#ftp-use-ssl"),
+  ftpUsername: document.querySelector("#ftp-username"),
+  ftpPassword: document.querySelector("#ftp-password"),
+  ftpBasePath: document.querySelector("#ftp-base-path"),
+  ftpPassiveMode: document.querySelector("#ftp-passive-mode"),
+  ftpTestButton: document.querySelector("#ftp-test-button"),
   emailSignatureForm: document.querySelector("#email-signature-form"),
   emailSignatureName: document.querySelector("#email-signature-name"),
   emailSignatureRole: document.querySelector("#email-signature-role"),
@@ -214,6 +224,7 @@ const titles = {
   "settings-logo": "Logo-Einstellungen",
   "settings-signature": "Signatur",
   "settings-users": "User & Rollen",
+  "settings-ftp": "FTP",
 };
 
 const hiddenViews = new Set(["settings-smtp"]);
@@ -546,6 +557,10 @@ function switchView(view) {
 
   if (view === "settings-signature") {
     loadContractorSignature();
+  }
+
+  if (view === "settings-ftp") {
+    loadFtpSettings();
   }
 
   if (view === "offers-new") {
@@ -2082,6 +2097,57 @@ async function handleEmailSettingsSubmit(event) {
   }
 }
 
+async function loadFtpSettings() {
+  try {
+    const settings = await apiGet("api/ftp-settings.php");
+    els.ftpEnabled.checked = settings.enabled;
+    els.ftpHost.value = settings.host || "";
+    els.ftpPort.value = settings.port || 21;
+    els.ftpUseSsl.value = settings.useSsl ? "1" : "0";
+    els.ftpUsername.value = settings.username || "";
+    els.ftpPassword.value = "";
+    els.ftpPassword.placeholder = settings.hasPassword
+      ? "Unverändert lassen = altes Passwort behalten"
+      : "Passwort eingeben";
+    els.ftpBasePath.value = settings.basePath || "";
+    els.ftpPassiveMode.checked = settings.passiveMode;
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function handleFtpSettingsSubmit(event) {
+  event.preventDefault();
+
+  const payload = {
+    enabled: els.ftpEnabled.checked,
+    host: els.ftpHost.value.trim(),
+    port: Number(els.ftpPort.value) || 21,
+    useSsl: els.ftpUseSsl.value === "1",
+    username: els.ftpUsername.value.trim(),
+    password: els.ftpPassword.value,
+    basePath: els.ftpBasePath.value.trim(),
+    passiveMode: els.ftpPassiveMode.checked,
+  };
+
+  try {
+    await apiPost("api/ftp-settings.php", payload);
+    showToast("FTP-Einstellungen wurden gespeichert.");
+    await loadFtpSettings();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function testFtpConnection() {
+  try {
+    await apiPost("api/ftp-settings.php?action=test", {});
+    showToast("FTP-Verbindung erfolgreich.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function emailSignaturePayload() {
   return {
     senderName: els.emailSignatureName.value.trim(),
@@ -3068,6 +3134,12 @@ function bindEvents() {
   els.smtpForm.addEventListener("submit", handleSmtpSubmit);
   els.sendTestMail.addEventListener("click", sendTestMail);
   els.emailSettingsForm.addEventListener("submit", handleEmailSettingsSubmit);
+  if (els.ftpSettingsForm) {
+    els.ftpSettingsForm.addEventListener("submit", handleFtpSettingsSubmit);
+  }
+  if (els.ftpTestButton) {
+    els.ftpTestButton.addEventListener("click", testFtpConnection);
+  }
   if (els.emailSignatureForm) {
     els.emailSignatureForm.addEventListener("submit", handleEmailSignatureSubmit);
     els.emailSignatureForm.addEventListener("input", () => {

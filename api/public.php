@@ -4,6 +4,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/contract_notify.php';
 require_once __DIR__ . '/../includes/contract_pdf.php';
+require_once __DIR__ . '/../includes/ftp_export.php';
 
 $pdo = db();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -327,6 +328,7 @@ if ($method === 'POST' && $action === 'sign') {
     save_contract_pdfs($pdo, $contract['id'], true);
     notify_contract_created($pdo, $contract['id']);
     notify_customer_contract_signed($pdo, $contract['id']);
+    export_contract_to_ftp($pdo, $contract['id']);
 
     json_response(public_state($offer, load_contract($pdo, $offer['id'])));
 }
