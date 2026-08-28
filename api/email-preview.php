@@ -25,12 +25,13 @@ $sampleValidUntil = (new DateTimeImmutable('+14 days'))->format('d.m.Y');
 switch ($type) {
     case 'offer':
         $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($sampleContact) . ',</p>'
-            . '<p>vielen Dank für Ihr Interesse an CleanTeam. Ihr individueller Vertrag steht ab sofort online bereit.</p>'
-            . '<p style="color:#51657d;font-size:13px;">Hinweis: Der Link zur Vertragsunterzeichnung kann aus Datenschutzgründen nur einmal verwendet werden. Klicken Sie bitte nur darauf, wenn Sie den Vertrag auch tatsächlich abschließen möchten. Wurde er versehentlich schon einmal geöffnet, muss er erst wieder von uns freigegeben werden, bevor er erneut funktioniert.</p>'
-            . '<p>Bitte schließen Sie den Vertrag jetzt online ab – klicken Sie dazu einfach auf den folgenden Button:</p>'
+            . '<p>mein Name ist Frau Seidler, ich bin Ihre Ansprechpartnerin bei CleanTeam. Vielen Dank für Ihr Interesse an unserem Angebot für ' . email_h($sampleName) . '.</p>'
+            . '<p>Ihr Vertrag wird komplett online abgeschlossen. Sobald Sie unterschrieben haben, erhalten Sie den fertigen Vertrag automatisch als PDF per E-Mail.</p>'
+            . '<h2 style="margin:24px 0 10px 0;color:#08325f;font-size:17px;">Online-Prozess</h2>'
+            . '<p>Alle Informationen zum weiteren Ablauf finden Sie im Online-Prozess. Klicken Sie dazu einfach auf den folgenden Button:</p>'
             . email_button_html($sampleLink, 'Jetzt Vertrag online abschließen')
-            . '<p>Der Link ist 14 Tage lang gültig, also bis zum ' . email_h($sampleValidUntil) . '. Danach verfällt er automatisch und kann nicht mehr verwendet werden.</p>';
-        $title = 'Ihr Vertrag von CleanTeam';
+            . '<p style="color:#51657d;font-size:13px;">Der Button ist aus Datenschutzgründen nur einmal nutzbar und 14 Tage lang gültig, also bis zum ' . email_h($sampleValidUntil) . '. Danach verfällt er automatisch. Wurde er versehentlich schon einmal geöffnet, muss er erst wieder von uns freigegeben werden, bevor er erneut funktioniert.</p>';
+        $title = 'Ihr Angebot von CleanTeam';
         $preheader = 'Bitte schließen Sie Ihren Vertrag jetzt online ab.';
         $signatureContext = 'offer';
         break;
