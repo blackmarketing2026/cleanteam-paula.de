@@ -759,15 +759,9 @@ function contract_pdf_context(PDO $pdo, string $contractId): ?array
 
 function contract_pdf_filename(string $customerName, string $audience): string
 {
-    $safeName = trim(preg_replace('/[^A-Za-z0-9\-_]+/', '-', $customerName) ?: '', '-') ?: 'CleanTeam';
-    if ($audience === 'authorization') {
-        return 'Vollmacht-' . $safeName . '.pdf';
-    }
-    if ($audience === 'customer') {
-        return 'Vertrag-CleanTeam-Group.pdf';
-    }
+    $safeName = trim(preg_replace('/[\/\\\\:*?"<>|]+/', '-', $customerName) ?: '') ?: 'Kunde';
 
-    return 'Vertrag-' . $safeName . '-CleanTeam.pdf';
+    return 'cleanteam Vertrag - ' . $safeName . '.pdf';
 }
 
 function normalize_contract_pdf_audience(string $audience): string
