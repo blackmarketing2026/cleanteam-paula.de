@@ -933,9 +933,6 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->title('Signaturprotokoll / Nachweis für CleanTeam');
         $pdf->paragraph('Dieses Protokoll dokumentiert die elektronische Unterzeichnung der CleanTeam-Ausfertigung sowie die Zustimmung zu den Vertragsbedingungen und Allgemeinen Geschäftsbedingungen.');
 
-        $termsAcceptedAt = $contract['terms_accepted_at'] ?? null;
-        $termsAccepted = $termsAcceptedAt !== null || $isSigned;
-        $termsAcceptedTime = contract_format_datetime($termsAcceptedAt ?: ($isSigned ? ($contract['signed_at'] ?? null) : null));
         $signedAtDisplay = contract_format_datetime($contract['signed_at'] ?? null);
         $pdf->protocolKeyValue('Kunde', $customerName);
         $pdf->protocolKeyValue('Unterzeichner', $signatoryName);
@@ -945,8 +942,6 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $privacyAcceptedAt = $contract['privacy_accepted_at'] ?? null;
         $pdf->protocolKeyValue('Datenschutz-Zustimmung erteilt', $privacyAcceptedAt !== null ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt');
         $pdf->protocolKeyValue('Zeitpunkt der Datenschutz-Zustimmung', contract_format_datetime($privacyAcceptedAt));
-        $pdf->protocolKeyValue('AGB / Vertragsbedingungen zugestimmt', $termsAccepted ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt');
-        $pdf->protocolKeyValue('Zeitpunkt der Zustimmung', $termsAcceptedTime);
         $pdf->protocolKeyValue('AGB-Fassung', LEGAL['agb_version']);
         $pdf->protocolKeyValue('AGB-Quelle', LEGAL['agb_url']);
         if ($contract !== null && contract_has_authorization_details($contract)) {

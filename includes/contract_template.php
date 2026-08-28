@@ -248,12 +248,7 @@ function render_additional_obligations_items_html(?string $customerObligationsNo
 
 function render_signature_protocol_html(array $offer, array $customer, ?array $contract): string
 {
-    $isSigned = $contract !== null && $contract['status'] === 'signiert';
     $signedAt = $contract['signed_at'] ?? null;
-    $termsAcceptedAt = $contract['terms_accepted_at'] ?? null;
-    $termsAccepted = $termsAcceptedAt !== null || $isSigned;
-    $termsAcceptedDisplay = $termsAccepted ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt';
-    $termsAcceptedTime = contract_format_datetime($termsAcceptedAt ?: ($isSigned ? $signedAt : null));
     $privacyAcceptedAt = $contract['privacy_accepted_at'] ?? null;
     $privacyAcceptedDisplay = $privacyAcceptedAt !== null ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt';
     $privacyAcceptedTime = contract_format_datetime($privacyAcceptedAt);
@@ -299,8 +294,6 @@ function render_signature_protocol_html(array $offer, array $customer, ?array $c
     <dt>Vertrag elektronisch signiert</dt><dd>{$signedAtDisplay}</dd>
     <dt>Datenschutz-Zustimmung erteilt</dt><dd>{$privacyAcceptedDisplay}</dd>
     <dt>Zeitpunkt der Datenschutz-Zustimmung</dt><dd>{$privacyAcceptedTime}</dd>
-    <dt>AGB / Vertragsbedingungen zugestimmt</dt><dd>{$termsAcceptedDisplay}</dd>
-    <dt>Zeitpunkt der Zustimmung</dt><dd>{$termsAcceptedTime}</dd>
     <dt>AGB-Fassung</dt><dd>{$agbVersion}</dd>
     <dt>AGB-Quelle</dt><dd>{$agbUrl}</dd>
     {$authorizationRows}
