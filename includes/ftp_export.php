@@ -290,6 +290,7 @@ function export_contract_to_ftp(PDO $pdo, string $contractId): void
 
         $companyName = ftp_export_sanitize_path_segment(trim((string) ($context['customer']['name'] ?? '')));
         $rootFolder = ftp_export_root_folder($settings);
+        $signedDate = date('d.m.Y');
 
         $connection = ftp_export_connect($settings);
         try {
@@ -301,8 +302,8 @@ function export_contract_to_ftp(PDO $pdo, string $contractId): void
             }
             ftp_export_ensure_dir($connection, $companyFolder);
 
-            ftp_export_upload_string($connection, $companyFolder . '/CleanTeam Vertrag mit Anhang.pdf', (string) $cleanteamPdf['content']);
-            ftp_export_upload_string($connection, $companyFolder . '/Kundenvertrag.pdf', (string) $customerPdf['content']);
+            ftp_export_upload_string($connection, $companyFolder . '/Cleanteam Vertrag - ' . $companyName . ' ' . $signedDate . '.pdf', (string) $cleanteamPdf['content']);
+            ftp_export_upload_string($connection, $companyFolder . '/Cleanteam Vertrag - ' . $companyName . '.pdf', (string) $customerPdf['content']);
         } finally {
             ftp_close($connection);
         }
