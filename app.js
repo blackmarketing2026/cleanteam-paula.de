@@ -156,6 +156,10 @@ const els = {
   linkModalInput: document.querySelector("#link-modal-input"),
   linkModalCopy: document.querySelector("#link-modal-copy"),
   linkModalClose: document.querySelector("#link-modal-close"),
+  emailTemplateModal: document.querySelector("#email-template-modal"),
+  emailTemplateModalText: document.querySelector("#email-template-modal-text"),
+  emailTemplateModalCopy: document.querySelector("#email-template-modal-copy"),
+  emailTemplateModalClose: document.querySelector("#email-template-modal-close"),
   contractCorrectionModal: document.querySelector("#contract-correction-modal"),
   contractCorrectionForm: document.querySelector("#contract-correction-form"),
   contractCorrectionId: document.querySelector("#contract-correction-id"),
@@ -1259,6 +1263,10 @@ function renderOfferCard(offer) {
           <i data-lucide="link" aria-hidden="true"></i>
           Link kopieren
         </button>
+        <button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
+          <i data-lucide="mail" aria-hidden="true"></i>
+          E-Mail-Vorlage
+        </button>
         ${contractActions}
         ${resetLinkButton}
         <button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
@@ -1749,6 +1757,60 @@ async function copyLinkModalValue() {
     els.linkModalInput.select();
     document.execCommand("copy");
     showToast("Link wurde kopiert.");
+  }
+}
+
+function buildOfferEmailTemplateText(offer) {
+  const salutation = (offer.customer.salutation || "").trim().toLowerCase();
+  const lastName = (offer.customer.contactLastName || "").trim();
+  let greeting = "Sehr geehrte Damen und Herren,";
+  if (salutation === "frau" && lastName) {
+    greeting = `Sehr geehrte Frau ${lastName},`;
+  } else if (salutation === "herr" && lastName) {
+    greeting = `Sehr geehrter Herr ${lastName},`;
+  }
+
+  return [
+    greeting,
+    "",
+    "anbei übersenden wir Ihnen den Link zum digitalen Vertragsabschluss.",
+    "",
+    "Über diesen Link können Sie die Vertragsunterlagen einsehen und den Vertrag rechtsverbindlich online abschließen.",
+    "",
+    `Link: ${offer.publicUrl || ""}`,
+    "",
+    "Für Rückfragen stehen wir Ihnen gerne zur Verfügung.",
+    "",
+    "Mit freundlichen Grüßen",
+    "CleanTeam Group",
+  ].join("\n");
+}
+
+function openEmailTemplateModal(id) {
+  const offer = getOffer(id);
+  if (!offer) {
+    return;
+  }
+
+  els.emailTemplateModalText.value = buildOfferEmailTemplateText(offer);
+  els.emailTemplateModal.hidden = false;
+  els.emailTemplateModalText.focus();
+  els.emailTemplateModalText.select();
+}
+
+function closeEmailTemplateModal() {
+  els.emailTemplateModal.hidden = true;
+}
+
+async function copyEmailTemplateModalValue() {
+  const text = els.emailTemplateModalText.value;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Text wurde kopiert.");
+  } catch (error) {
+    els.emailTemplateModalText.select();
+    document.execCommand("copy");
+    showToast("Text wurde kopiert.");
   }
 }
 
@@ -3104,6 +3166,10 @@ function handleRecordAction(event) {
     copyOfferLink(id);
   }
 
+  if (action === "open-email-template") {
+    openEmailTemplateModal(id);
+  }
+
   if (action === "open-offer-contract-link") {
     openOfferContractLink(id);
   }
@@ -3310,6 +3376,14 @@ function bindEvents() {
     }
   });
 
+  els.emailTemplateModalCopy.addEventListener("click", copyEmailTemplateModalValue);
+  els.emailTemplateModalClose.addEventListener("click", closeEmailTemplateModal);
+  els.emailTemplateModal.addEventListener("click", (event) => {
+    if (event.target === els.emailTemplateModal) {
+      closeEmailTemplateModal();
+    }
+  });
+
   els.contractCorrectionForm.addEventListener("submit", handleContractCorrectionSubmit);
   els.contractCorrectionCancel.addEventListener("click", closeContractCorrectionModal);
   els.contractCorrectionModal.addEventListener("click", (event) => {
@@ -3328,6 +3402,10 @@ function bindEvents() {
     }
     if (event.key === "Escape" && !els.linkModal.hidden) {
       closeLinkModal();
+      return;
+    }
+    if (event.key === "Escape" && !els.emailTemplateModal.hidden) {
+      closeEmailTemplateModal();
       return;
     }
     if (event.key === "Escape" && !els.contractCorrectionModal.hidden) {

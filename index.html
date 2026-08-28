@@ -1078,6 +1078,21 @@
       </div>
     </div>
 
+    <div id="email-template-modal" class="modal-overlay" hidden>
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="email-template-modal-heading">
+        <h4 id="email-template-modal-heading">E-Mail-Vorlage</h4>
+        <p class="muted">Fertiger Text inkl. Vertragslink zum manuellen Versand aus dem eigenen Postfach.</p>
+        <textarea id="email-template-modal-text" class="email-template-textarea" readonly rows="12"></textarea>
+        <div class="form-actions">
+          <button id="email-template-modal-copy" class="primary-button" type="button">
+            <i data-lucide="copy" aria-hidden="true"></i>
+            Kompletten Text kopieren
+          </button>
+          <button id="email-template-modal-close" class="ghost-button" type="button">Schließen</button>
+        </div>
+      </div>
+    </div>
+
     <div id="contract-correction-modal" class="modal-overlay" hidden>
       <form id="contract-correction-form" class="modal-box" role="dialog" aria-modal="true" aria-labelledby="contract-correction-modal-heading">
         <h4 id="contract-correction-modal-heading">Daten korrigieren</h4>
@@ -1239,6 +1254,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=ftp-browser-20260828-1"></script>
+    <script src="app.js?v=email-template-modal-20260828-1"></script>
   </body>
 </html>
