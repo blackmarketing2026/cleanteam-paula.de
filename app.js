@@ -1487,6 +1487,14 @@ function renderContractRow(contract) {
           ${documentActions}
           ${authorizationButton}
           ${rejectionActions}
+          ${contract.status === "signiert"
+            ? `
+              <button class="secondary-button" type="button" data-action="backup-contract-ftp" data-id="${escapeHtml(contract.id)}">
+                <i data-lucide="upload-cloud" aria-hidden="true"></i>
+                Backup
+              </button>
+            `
+            : ""}
           <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
             <i data-lucide="trash-2" aria-hidden="true"></i>
             Löschen
@@ -2217,6 +2225,23 @@ async function testFtpConnection() {
     showToast("FTP-Verbindung erfolgreich.");
   } catch (error) {
     showToast(error.message);
+  }
+}
+
+async function backupContractToFtp(id, button) {
+  if (button) {
+    button.disabled = true;
+  }
+
+  try {
+    await apiPost(`api/ftp-export-contract.php?id=${encodeURIComponent(id)}`, {});
+    showToast("Vertrag wurde per FTP gesichert.");
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+    }
   }
 }
 
@@ -3219,6 +3244,10 @@ function handleRecordAction(event) {
 
   if (action === "delete-contract") {
     deleteContract(id);
+  }
+
+  if (action === "backup-contract-ftp") {
+    backupContractToFtp(id, button);
   }
 
   if (action === "correct-contract") {
