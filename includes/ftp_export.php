@@ -183,6 +183,91 @@ function ftp_export_sanitize_path_segment(string $name): string
     return $safe !== '' ? $safe : 'Kunde';
 }
 
+function ftp_export_root_folder(array $settings): string
+{
+    $rootFolder = trim((string) $settings['base_path'], '/');
+
+    return ($rootFolder !== '' ? '/' . $rootFolder : '') . '/Cleanteam Verträge';
+}
+
+// Validiert einen vom Browser mitgegebenen relativen Pfad (z. B. "Firma GmbH/Kundenvertrag.pdf")
+// und gibt ihn normalisiert zurueck. Wirft, wenn er versucht, den Wurzelordner zu verlassen
+// (z. B. per "..") - der Ordner-Browser darf ausschliesslich innerhalb von "Cleanteam Vertraege" lesen.
+function ftp_browse_sanitize_relative_path(string $relativePath): string
+{
+    $relativePath = str_replace('\\', '/', $relativePath);
+    $segments = array_filter(explode('/', $relativePath), fn($segment) => $segment !== '' && $segment !== '.');
+
+    foreach ($segments as $segment) {
+        if ($segment === '..') {
+            throw new RuntimeException('Ungültiger Pfad.');
+        }
+    }
+
+    return implode('/', $segments);
+}
+
+/**
+ * @param resource|\FTP\Connection $connection
+ */
+function ftp_browse_list($connection, string $absolutePath): array
+{
+    $lines = @ftp_rawlist($connection, $absolutePath) ?: [];
+    $items = [];
+
+    foreach ($lines as $line) {
+        $parts = preg_split('/\s+/', trim($line), 9);
+        if (count($parts) < 9) {
+            continue;
+        }
+
+        [$perms, , , , $size, $month, $day, $yearOrTime, $name] = $parts;
+        if ($name === '.' || $name === '..') {
+            continue;
+        }
+
+        $type = $perms[0] === 'd' ? 'dir' : ($perms[0] === '-' ? 'file' : 'other');
+        if ($type === 'other') {
+            continue;
+        }
+
+        $items[] = [
+            'name' => $name,
+            'type' => $type,
+            'size' => (int) $size,
+            'modified' => trim($month . ' ' . $day . ' ' . $yearOrTime),
+        ];
+    }
+
+    usort($items, function (array $a, array $b): int {
+        if ($a['type'] !== $b['type']) {
+            return $a['type'] === 'dir' ? -1 : 1;
+        }
+        return strcasecmp($a['name'], $b['name']);
+    });
+
+    return $items;
+}
+
+/**
+ * @param resource|\FTP\Connection $connection
+ */
+function ftp_browse_download_to_string($connection, string $absolutePath): string
+{
+    $stream = fopen('php://temp', 'r+b');
+    $ok = ftp_fget($connection, $stream, $absolutePath, FTP_BINARY);
+    if (!$ok) {
+        fclose($stream);
+        throw new RuntimeException('Datei konnte nicht geladen werden.');
+    }
+
+    rewind($stream);
+    $content = stream_get_contents($stream);
+    fclose($stream);
+
+    return $content === false ? '' : $content;
+}
+
 // Exportiert den unterschriebenen Vertrag (CleanTeam-Ausfertigung inkl. Anhang und
 // Kundenausfertigung) zusaetzlich per FTP in die Ordnerstruktur
 // "Cleanteam Vertraege / <Firmenname> / ...". Best effort - Fehler duerfen den
@@ -204,8 +289,7 @@ function export_contract_to_ftp(PDO $pdo, string $contractId): void
         $customerPdf = save_contract_pdf($pdo, $contractId, 'customer', false);
 
         $companyName = ftp_export_sanitize_path_segment(trim((string) ($context['customer']['name'] ?? '')));
-        $rootFolder = trim((string) $settings['base_path'], '/');
-        $rootFolder = ($rootFolder !== '' ? '/' . $rootFolder : '') . '/Cleanteam Verträge';
+        $rootFolder = ftp_export_root_folder($settings);
 
         $connection = ftp_export_connect($settings);
         try {

@@ -111,6 +111,10 @@
               <i data-lucide="folder-up" aria-hidden="true"></i>
               <span>FTP</span>
             </button>
+            <button class="nav-link" type="button" data-view="settings-ftp-browser">
+              <i data-lucide="folder-open" aria-hidden="true"></i>
+              <span>Ordner</span>
+            </button>
           </div>
         </nav>
         <button id="logout-button" class="ghost-button sidebar-logout" type="button">
@@ -987,6 +991,28 @@
             </form>
           </section>
         </section>
+
+        <section id="settings-ftp-browser-view" class="view" aria-label="Ordner">
+          <div class="section-heading">
+            <div>
+              <p class="muted">Reine Ansicht des FTP-Exportordners &bdquo;Cleanteam Vertr&auml;ge&ldquo; &ndash; Dateien k&ouml;nnen ge&ouml;ffnet und heruntergeladen, aber nicht gel&ouml;scht werden.</p>
+            </div>
+          </div>
+
+          <section class="panel form-panel" aria-labelledby="ftp-browser-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="ftp-browser-heading">Cleanteam Vertr&auml;ge</h4>
+                <div id="ftp-browser-breadcrumb" class="ftp-browser-breadcrumb"></div>
+              </div>
+              <button class="secondary-button" type="button" id="ftp-browser-refresh">
+                <i data-lucide="refresh-cw" aria-hidden="true"></i>
+                Aktualisieren
+              </button>
+            </div>
+            <div id="ftp-browser-list" class="ftp-browser-list"></div>
+          </section>
+        </section>
       </section>
 
       <nav class="app-bottom-nav" aria-label="Hauptnavigation (App-Ansicht)">
@@ -1213,6 +1239,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=ftp-export-20260828-1"></script>
+    <script src="app.js?v=ftp-browser-20260828-1"></script>
   </body>
 </html>

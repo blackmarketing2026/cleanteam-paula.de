@@ -29,6 +29,7 @@ const state = {
     sortKey: "customerName",
     sortDirection: "asc",
   },
+  ftpBrowserPath: "",
 };
 
 const els = {
@@ -113,6 +114,9 @@ const els = {
   ftpBasePath: document.querySelector("#ftp-base-path"),
   ftpPassiveMode: document.querySelector("#ftp-passive-mode"),
   ftpTestButton: document.querySelector("#ftp-test-button"),
+  ftpBrowserBreadcrumb: document.querySelector("#ftp-browser-breadcrumb"),
+  ftpBrowserList: document.querySelector("#ftp-browser-list"),
+  ftpBrowserRefresh: document.querySelector("#ftp-browser-refresh"),
   emailSignatureForm: document.querySelector("#email-signature-form"),
   emailSignatureName: document.querySelector("#email-signature-name"),
   emailSignatureRole: document.querySelector("#email-signature-role"),
@@ -225,6 +229,7 @@ const titles = {
   "settings-signature": "Signatur",
   "settings-users": "User & Rollen",
   "settings-ftp": "FTP",
+  "settings-ftp-browser": "Ordner",
 };
 
 const hiddenViews = new Set(["settings-smtp"]);
@@ -561,6 +566,10 @@ function switchView(view) {
 
   if (view === "settings-ftp") {
     loadFtpSettings();
+  }
+
+  if (view === "settings-ftp-browser") {
+    loadFtpBrowserPath(state.ftpBrowserPath || "");
   }
 
   if (view === "offers-new") {
@@ -2148,6 +2157,88 @@ async function testFtpConnection() {
   }
 }
 
+function ftpBrowserFileIcon(name) {
+  return name.toLowerCase().endsWith(".pdf") ? "file-text" : "file";
+}
+
+function renderFtpBrowserBreadcrumb(path) {
+  const segments = path ? path.split("/").filter(Boolean) : [];
+  let accumulated = "";
+  const crumbs = [`<button type="button" data-path="">Cleanteam Verträge</button>`];
+
+  segments.forEach((segment) => {
+    accumulated = accumulated ? `${accumulated}/${segment}` : segment;
+    crumbs.push(`<span>/</span><button type="button" data-path="${escapeHtml(accumulated)}">${escapeHtml(segment)}</button>`);
+  });
+
+  els.ftpBrowserBreadcrumb.innerHTML = crumbs.join(" ");
+  els.ftpBrowserBreadcrumb.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => loadFtpBrowserPath(button.dataset.path || ""));
+  });
+}
+
+function renderFtpBrowserList(items, path) {
+  if (items.length === 0) {
+    els.ftpBrowserList.innerHTML = `<div class="empty-state">Dieser Ordner ist leer.</div>`;
+    return;
+  }
+
+  els.ftpBrowserList.innerHTML = items
+    .map((item) => {
+      const itemPath = path ? `${path}/${item.name}` : item.name;
+      if (item.type === "dir") {
+        return `
+          <div class="ftp-browser-row is-dir">
+            <button type="button" class="ftp-browser-name" data-path="${escapeHtml(itemPath)}" data-type="dir">
+              <i data-lucide="folder" aria-hidden="true"></i>
+              ${escapeHtml(item.name)}
+            </button>
+          </div>
+        `;
+      }
+
+      const downloadUrl = `api/ftp-browse.php?action=download&path=${encodeURIComponent(itemPath)}`;
+      return `
+        <div class="ftp-browser-row">
+          <button type="button" class="ftp-browser-name" data-path="${escapeHtml(itemPath)}" data-type="file">
+            <i data-lucide="${ftpBrowserFileIcon(item.name)}" aria-hidden="true"></i>
+            ${escapeHtml(item.name)}
+          </button>
+          <span class="ftp-browser-meta">${item.modified ? escapeHtml(item.modified) : ""}</span>
+          <a class="ghost-button" href="${downloadUrl}&mode=attachment" target="_blank" rel="noopener" title="Herunterladen">
+            <i data-lucide="download" aria-hidden="true"></i>
+          </a>
+        </div>
+      `;
+    })
+    .join("");
+
+  els.ftpBrowserList.querySelectorAll("button.ftp-browser-name").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.type === "dir") {
+        loadFtpBrowserPath(button.dataset.path);
+      } else {
+        window.open(`api/ftp-browse.php?action=download&path=${encodeURIComponent(button.dataset.path)}`, "_blank");
+      }
+    });
+  });
+
+  refreshIcons();
+}
+
+async function loadFtpBrowserPath(path) {
+  state.ftpBrowserPath = path || "";
+  els.ftpBrowserList.innerHTML = `<div class="empty-state">Lade…</div>`;
+  renderFtpBrowserBreadcrumb(state.ftpBrowserPath);
+
+  try {
+    const result = await apiGet(`api/ftp-browse.php?action=list&path=${encodeURIComponent(state.ftpBrowserPath)}`);
+    renderFtpBrowserList(result.items || [], state.ftpBrowserPath);
+  } catch (error) {
+    els.ftpBrowserList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+  }
+}
+
 function emailSignaturePayload() {
   return {
     senderName: els.emailSignatureName.value.trim(),
@@ -3139,6 +3230,9 @@ function bindEvents() {
   }
   if (els.ftpTestButton) {
     els.ftpTestButton.addEventListener("click", testFtpConnection);
+  }
+  if (els.ftpBrowserRefresh) {
+    els.ftpBrowserRefresh.addEventListener("click", () => loadFtpBrowserPath(state.ftpBrowserPath));
   }
   if (els.emailSignatureForm) {
     els.emailSignatureForm.addEventListener("submit", handleEmailSignatureSubmit);
