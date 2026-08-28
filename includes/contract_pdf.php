@@ -910,7 +910,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     contract_template_html_to_pdf($pdf, $templateBodyHtml);
 
     $pdf->heading('Unterschriften');
-    $pdf->keyValue('CleanTeam', CONTRACTOR['service_point_city'] . ', ' . $createdAt . ' | Im Namen von CleanTeam Geschäftsführer: ' . $managingDirectors);
+    $pdf->keyValue('CleanTeam', SIGNING_LOCATION . ', ' . $createdAt . ' | Im Namen von CleanTeam Geschäftsführer: ' . $managingDirectors);
     if ($contractorSignatureDataUrl !== null) {
         if (!$pdf->signatureImage($contractorSignatureDataUrl)) {
             $pdf->paragraph('Die CleanTeam-Unterschrift konnte nicht eingebettet werden.', 9.5, 170.0);
@@ -996,9 +996,15 @@ function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool 
     $audience = normalize_contract_pdf_audience($audience);
     ensure_contract_documents_table($pdo);
 
-    if (!$force) {
-        $existing = load_contract_pdf($pdo, $contractId, $audience);
-        if ($existing !== null) {
+    $existing = load_contract_pdf($pdo, $contractId, $audience);
+    if ($existing !== null) {
+        $stmt = $pdo->prepare('SELECT status FROM contracts WHERE id = :id');
+        $stmt->execute(['id' => $contractId]);
+        $contractStatus = $stmt->fetchColumn();
+
+        // Signed contracts are legally final: once a PDF exists for them, it must never be
+        // regenerated or overwritten, no matter who calls this with $force = true.
+        if ($contractStatus === 'signiert' || !$force) {
             return $existing;
         }
     }

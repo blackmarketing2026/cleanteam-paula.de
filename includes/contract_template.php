@@ -14,6 +14,8 @@ const CONTRACTOR = [
     'website' => 'https://cleanteam-group.com',
 ];
 
+const SIGNING_LOCATION = 'Linz, Österreich';
+
 const LEGAL = [
     'jurisdiction_city' => 'Solingen',
     'agb_version' => 'Stand 28.07.2020',
@@ -605,7 +607,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $contractorTrade = h(CONTRACTOR['trade_description']);
     $contractorStreetZipCity = h(CONTRACTOR['street'] . ' ' . CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city']);
     $contractorServicePoint = h(CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city']);
-    $contractorServicePointCity = h(CONTRACTOR['service_point_city']);
+    $contractorSigningLocation = h(SIGNING_LOCATION);
 
     $customerName = h(contract_customer_display_name($customer));
     $signatoryName = h(contract_signatory_display($customer));
@@ -669,7 +671,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 
 <div class="sign-block">
   <div class="sign-col">
-    <div>{$contractorServicePointCity}, {$createdAt}</div>
+    <div>{$contractorSigningLocation}, {$createdAt}</div>
     <div style="margin-top:12px;">Im Namen von CleanTeam Geschäftsführer:<br>{$managingDirectorsInline}</div>
     {$contractorSignatureImage}
   </div>
