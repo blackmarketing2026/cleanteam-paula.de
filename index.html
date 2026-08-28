@@ -571,6 +571,58 @@
               </div>
             </form>
           </section>
+
+          <section class="panel form-panel" aria-labelledby="email-preview-heading">
+            <div class="panel-header">
+              <div>
+                <h4 id="email-preview-heading">E-Mails an den Kunden</h4>
+                <p class="muted">Jede automatische Kunden-E-Mail einzeln, mit Vorschau, wie sie final beim Kunden ankommt.</p>
+              </div>
+            </div>
+            <div class="email-preview-list">
+              <div class="email-preview-row">
+                <label class="checkbox-row">
+                  <input id="email-settings-offer-enabled-2" type="checkbox" disabled />
+                  Vertragslink vor der Unterschrift
+                </label>
+                <a class="secondary-button" href="api/email-preview.php?type=offer" target="_blank" rel="noopener">
+                  <i data-lucide="eye" aria-hidden="true"></i>
+                  Vorschau ansehen
+                </a>
+              </div>
+              <div class="email-preview-row">
+                <label class="checkbox-row">
+                  <input id="email-settings-reminder1-enabled" type="checkbox" disabled />
+                  Erinnerung 1 (automatisch)
+                </label>
+                <a class="secondary-button" href="api/email-preview.php?type=reminder1" target="_blank" rel="noopener">
+                  <i data-lucide="eye" aria-hidden="true"></i>
+                  Vorschau ansehen
+                </a>
+              </div>
+              <div class="email-preview-row">
+                <label class="checkbox-row">
+                  <input id="email-settings-reminder2-enabled" type="checkbox" disabled />
+                  Letzte Erinnerung (automatisch)
+                </label>
+                <a class="secondary-button" href="api/email-preview.php?type=reminder2" target="_blank" rel="noopener">
+                  <i data-lucide="eye" aria-hidden="true"></i>
+                  Vorschau ansehen
+                </a>
+              </div>
+              <div class="email-preview-row">
+                <label class="checkbox-row">
+                  <input id="email-settings-contract-enabled-2" type="checkbox" disabled />
+                  Vertrag nach der Unterschrift
+                </label>
+                <a class="secondary-button" href="api/email-preview.php?type=contract_customer" target="_blank" rel="noopener">
+                  <i data-lucide="eye" aria-hidden="true"></i>
+                  Vorschau ansehen
+                </a>
+              </div>
+              <p class="muted" style="margin-top:4px;">Die ersten drei E-Mails werden gemeinsam &uuml;ber &bdquo;Vertragslink vor der Unterschrift per E-Mail senden&ldquo; oben ein-/ausgeschaltet, die letzte &uuml;ber &bdquo;Vertrag an Kunden senden&ldquo;.</p>
+            </div>
+          </section>
         </section>
 
         <section id="settings-email-signature-view" class="view" aria-label="E-Mail-Signatur">
@@ -1078,6 +1130,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=contract-list-remove-vertrag-col-20260828-1"></script>
+    <script src="app.js?v=email-preview-list-20260828-1"></script>
   </body>
 </html>

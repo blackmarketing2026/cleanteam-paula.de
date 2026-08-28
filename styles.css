@@ -1156,6 +1156,27 @@ button.compact-item.selected {
   margin: 2px 0 0 28px;
 }
 
+.email-preview-list {
+  display: grid;
+  gap: 12px;
+}
+
+.email-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.email-preview-row .checkbox-row {
+  pointer-events: none;
+}
+
 .email-list {
   display: grid;
   gap: 10px;

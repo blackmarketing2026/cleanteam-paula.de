@@ -82,7 +82,8 @@ function email_inline_upload_image_html(
     int $width,
     string $style,
     array &$inlineImages,
-    string $fallbackUrl = ''
+    string $fallbackUrl = '',
+    bool $preview = false
 ): string {
     $filename = trim((string) $filename);
     if ($filename === '') {
@@ -90,7 +91,7 @@ function email_inline_upload_image_html(
     }
 
     $path = __DIR__ . '/../uploads/' . basename($filename);
-    if (is_file($path)) {
+    if (is_file($path) && !$preview) {
         $cid = 'ct-' . sha1($filename . '|' . filesize($path) . '|' . filemtime($path)) . '@cleanteam';
         $inlineImages[$cid] = [
             'cid' => $cid,
@@ -128,7 +129,7 @@ function email_brand_logo_filename(PDO $pdo): ?string
     return $filename !== '' ? $filename : null;
 }
 
-function email_logo_html(PDO $pdo, array &$inlineImages = []): string
+function email_logo_html(PDO $pdo, array &$inlineImages = [], bool $preview = false): string
 {
     $filename = email_brand_logo_filename($pdo);
     if ($filename !== null) {
@@ -138,7 +139,8 @@ function email_logo_html(PDO $pdo, array &$inlineImages = []): string
             168,
             'display:block;max-width:168px;max-height:68px;width:auto;height:auto;border:0;',
             $inlineImages,
-            email_asset_base_url() . '/uploads/' . rawurlencode($filename)
+            email_asset_base_url() . '/uploads/' . rawurlencode($filename),
+            $preview
         );
         if ($imageHtml !== '') {
             return $imageHtml;
@@ -150,6 +152,7 @@ function email_logo_html(PDO $pdo, array &$inlineImages = []): string
 
 function email_signature_html(PDO $pdo, array $options = [], array &$inlineImages = []): string
 {
+    $preview = (bool) ($options['preview'] ?? false);
     $settings = load_email_signature_settings($pdo);
     $context = trim((string) ($options['signatureContext'] ?? ''));
     if ($context !== '' && !email_signature_should_apply($settings, $context)) {
@@ -190,10 +193,11 @@ function email_signature_html(PDO $pdo, array $options = [], array &$inlineImage
             156,
             'display:block;max-width:156px;max-height:86px;width:auto;height:auto;border:0;',
             $inlineImages,
-            (string) ($settings['imageUrl'] ?? '')
+            (string) ($settings['imageUrl'] ?? ''),
+            $preview
         )
         : '';
-    $imageHtml = $imageHtml !== '' ? $imageHtml : email_logo_html($pdo, $inlineImages);
+    $imageHtml = $imageHtml !== '' ? $imageHtml : email_logo_html($pdo, $inlineImages, $preview);
     $roleHtml = $senderRole !== ''
         ? '<p style="margin:0 0 10px 0;color:#51657d;font-size:13px;">' . email_h($senderRole) . '</p>'
         : '';
@@ -252,6 +256,7 @@ function render_email_template(PDO $pdo, string $contentHtml, array $options = [
 function render_email_template_message(PDO $pdo, string $contentHtml, array $options = []): array
 {
     $inlineImages = [];
+    $preview = (bool) ($options['preview'] ?? false);
     $title = trim((string) ($options['title'] ?? ''));
     $preheader = trim((string) ($options['preheader'] ?? $title));
     $signatureText = (string) ($options['signatureText'] ?? '');
@@ -287,13 +292,14 @@ function render_email_template_message(PDO $pdo, string $contentHtml, array $opt
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="email-card" style="max-width:680px;background:#ffffff;border:1px solid #d7e4f2;border-radius:12px;box-shadow:0 12px 30px rgba(8,50,95,0.08);overflow:hidden;">
             <tr>
               <td class="email-card-body" style="padding:26px 28px 22px 28px;border-top:5px solid #0a4f91;">
-                ' . email_logo_html($pdo, $inlineImages) . '
+                ' . email_logo_html($pdo, $inlineImages, $preview) . '
                 ' . $titleHtml . '
                 <div style="color:#26384d;font-size:15px;line-height:1.65;">' . $contentHtml . '</div>
                 ' . email_signature_html($pdo, [
                     'fromName' => $fromName,
                     'signatureText' => $signatureText,
                     'signatureContext' => (string) ($options['signatureContext'] ?? ''),
+                    'preview' => $preview,
                 ], $inlineImages) . '
               </td>
             </tr>

@@ -99,6 +99,10 @@ const els = {
   emailSettingsOfferEnabled: document.querySelector("#email-settings-offer-enabled"),
   emailSettingsContractEnabled: document.querySelector("#email-settings-contract-enabled"),
   emailSettingsInternalContractEnabled: document.querySelector("#email-settings-internal-contract-enabled"),
+  emailPreviewCheckboxes: document.querySelectorAll(
+    "#email-settings-offer-enabled-2, #email-settings-reminder1-enabled, #email-settings-reminder2-enabled",
+  ),
+  emailPreviewContractCheckbox: document.querySelector("#email-settings-contract-enabled-2"),
   emailSignatureForm: document.querySelector("#email-signature-form"),
   emailSignatureName: document.querySelector("#email-signature-name"),
   emailSignatureRole: document.querySelector("#email-signature-role"),
@@ -2051,6 +2055,10 @@ async function loadEmailSettings() {
     els.emailSettingsOfferEnabled.checked = settings.offerEmailsEnabled;
     els.emailSettingsContractEnabled.checked = settings.contractEmailsEnabled;
     els.emailSettingsInternalContractEnabled.checked = settings.internalContractNotificationsEnabled;
+    els.emailPreviewCheckboxes.forEach((checkbox) => {
+      checkbox.checked = settings.offerEmailsEnabled;
+    });
+    els.emailPreviewContractCheckbox.checked = settings.contractEmailsEnabled;
   } catch (error) {
     showToast(error.message);
   }
