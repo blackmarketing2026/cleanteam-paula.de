@@ -117,6 +117,7 @@ const els = {
   ftpBrowserBreadcrumb: document.querySelector("#ftp-browser-breadcrumb"),
   ftpBrowserList: document.querySelector("#ftp-browser-list"),
   ftpBrowserRefresh: document.querySelector("#ftp-browser-refresh"),
+  ftpBackfillButton: document.querySelector("#ftp-backfill-button"),
   emailSignatureForm: document.querySelector("#email-signature-form"),
   emailSignatureName: document.querySelector("#email-signature-name"),
   emailSignatureRole: document.querySelector("#email-signature-role"),
@@ -2219,6 +2220,29 @@ async function testFtpConnection() {
   }
 }
 
+async function runFtpBackfillExport() {
+  const confirmed = window.confirm(
+    "Alle bereits digital unterschriebenen Verträge jetzt zusätzlich per FTP exportieren? Das kann je nach Anzahl etwas dauern.",
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  els.ftpBackfillButton.disabled = true;
+  try {
+    const result = await apiPost("api/ftp-export-backfill.php", {});
+    if (result.failed > 0) {
+      showToast(`${result.exported} von ${result.total} Verträgen exportiert, ${result.failed} fehlgeschlagen.`);
+    } else {
+      showToast(`${result.exported} von ${result.total} Verträgen erfolgreich exportiert.`);
+    }
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    els.ftpBackfillButton.disabled = false;
+  }
+}
+
 function ftpBrowserFileIcon(name) {
   return name.toLowerCase().endsWith(".pdf") ? "file-text" : "file";
 }
@@ -3299,6 +3323,9 @@ function bindEvents() {
   }
   if (els.ftpBrowserRefresh) {
     els.ftpBrowserRefresh.addEventListener("click", () => loadFtpBrowserPath(state.ftpBrowserPath));
+  }
+  if (els.ftpBackfillButton) {
+    els.ftpBackfillButton.addEventListener("click", runFtpBackfillExport);
   }
   if (els.emailSignatureForm) {
     els.emailSignatureForm.addEventListener("submit", handleEmailSignatureSubmit);

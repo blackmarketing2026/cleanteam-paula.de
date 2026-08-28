@@ -268,6 +268,45 @@ function ftp_browse_download_to_string($connection, string $absolutePath): strin
     return $content === false ? '' : $content;
 }
 
+// Kernlogik des FTP-Exports - wirft bei Fehlern, damit Aufrufer (automatischer Export beim
+// Signieren vs. manueller Nachtrags-Export) selbst entscheiden koennen, wie mit Fehlern
+// umgegangen wird.
+function export_contract_to_ftp_or_throw(PDO $pdo, string $contractId): void
+{
+    $settings = load_ftp_settings($pdo);
+    if (!ftp_export_is_allowed($settings)) {
+        return;
+    }
+
+    $context = load_contract_context($pdo, $contractId);
+    if ($context === null) {
+        throw new RuntimeException('Vertrag konnte nicht geladen werden.');
+    }
+
+    $cleanteamPdf = save_contract_pdf($pdo, $contractId, 'cleanteam', false);
+    $customerPdf = save_contract_pdf($pdo, $contractId, 'customer', false);
+
+    $companyName = ftp_export_sanitize_path_segment(trim((string) ($context['customer']['name'] ?? '')));
+    $rootFolder = ftp_export_root_folder($settings);
+    $signedDate = date('d.m.Y');
+
+    $connection = ftp_export_connect($settings);
+    try {
+        ftp_export_ensure_dir($connection, $rootFolder);
+
+        $companyFolder = $rootFolder . '/' . $companyName;
+        if (ftp_export_dir_exists($connection, $companyFolder)) {
+            $companyFolder = $rootFolder . '/' . $companyName . ' ' . date('Y-m-d');
+        }
+        ftp_export_ensure_dir($connection, $companyFolder);
+
+        ftp_export_upload_string($connection, $companyFolder . '/Cleanteam Vertrag - ' . $companyName . ' ' . $signedDate . '.pdf', (string) $cleanteamPdf['content']);
+        ftp_export_upload_string($connection, $companyFolder . '/Cleanteam Vertrag - ' . $companyName . '.pdf', (string) $customerPdf['content']);
+    } finally {
+        ftp_close($connection);
+    }
+}
+
 // Exportiert den unterschriebenen Vertrag (CleanTeam-Ausfertigung inkl. Anhang und
 // Kundenausfertigung) zusaetzlich per FTP in die Ordnerstruktur
 // "Cleanteam Vertraege / <Firmenname> / ...". Best effort - Fehler duerfen den
@@ -275,38 +314,7 @@ function ftp_browse_download_to_string($connection, string $absolutePath): strin
 function export_contract_to_ftp(PDO $pdo, string $contractId): void
 {
     try {
-        $settings = load_ftp_settings($pdo);
-        if (!ftp_export_is_allowed($settings)) {
-            return;
-        }
-
-        $context = load_contract_context($pdo, $contractId);
-        if ($context === null) {
-            return;
-        }
-
-        $cleanteamPdf = save_contract_pdf($pdo, $contractId, 'cleanteam', false);
-        $customerPdf = save_contract_pdf($pdo, $contractId, 'customer', false);
-
-        $companyName = ftp_export_sanitize_path_segment(trim((string) ($context['customer']['name'] ?? '')));
-        $rootFolder = ftp_export_root_folder($settings);
-        $signedDate = date('d.m.Y');
-
-        $connection = ftp_export_connect($settings);
-        try {
-            ftp_export_ensure_dir($connection, $rootFolder);
-
-            $companyFolder = $rootFolder . '/' . $companyName;
-            if (ftp_export_dir_exists($connection, $companyFolder)) {
-                $companyFolder = $rootFolder . '/' . $companyName . ' ' . date('Y-m-d');
-            }
-            ftp_export_ensure_dir($connection, $companyFolder);
-
-            ftp_export_upload_string($connection, $companyFolder . '/Cleanteam Vertrag - ' . $companyName . ' ' . $signedDate . '.pdf', (string) $cleanteamPdf['content']);
-            ftp_export_upload_string($connection, $companyFolder . '/Cleanteam Vertrag - ' . $companyName . '.pdf', (string) $customerPdf['content']);
-        } finally {
-            ftp_close($connection);
-        }
+        export_contract_to_ftp_or_throw($pdo, $contractId);
     } catch (Throwable $exception) {
         error_log('FTP-Vertragsexport fehlgeschlagen (' . $contractId . '): ' . $exception->getMessage());
     }
