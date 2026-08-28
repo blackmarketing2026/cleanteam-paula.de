@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/crypto.php';
 require_once __DIR__ . '/SmtpMailer.php';
 require_once __DIR__ . '/contract_pdf.php';
@@ -35,7 +36,7 @@ function load_contract_context(PDO $pdo, string $contractId): ?array
     $stmt = $pdo->prepare(
         'SELECT
             c.*,
-            o.id as offer_id_alias, o.customer_id, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes, o.price, o.created_at AS offer_created_at,
+            o.id as offer_id_alias, o.customer_id, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes, o.price, o.created_at AS offer_created_at, o.token AS offer_token,
             cust.id as customer_id_alias, cust.name, cust.email, cust.phone, cust.salutation, cust.contact_last_name, cust.address, cust.house_number, cust.zip, cust.city
         FROM contracts c
         JOIN offers o ON c.offer_id = o.id
@@ -51,11 +52,12 @@ function load_contract_context(PDO $pdo, string $contractId): ?array
 
     // Manuell die Arrays für Vertrag, Angebot und Kunde zusammenstellen,
     // um die gleiche Struktur wie vorher zu haben.
-    $contract = array_filter($row, fn($key) => !in_array($key, ['offer_id_alias', 'customer_id_alias', 'name', 'email', 'phone', 'salutation', 'contact_last_name', 'address', 'house_number', 'zip', 'city', 'square_meters', 'interval_label', 'service', 'start_date', 'offer_notes', 'price', 'offer_created_at']), ARRAY_FILTER_USE_KEY);
+    $contract = array_filter($row, fn($key) => !in_array($key, ['offer_id_alias', 'customer_id_alias', 'name', 'email', 'phone', 'salutation', 'contact_last_name', 'address', 'house_number', 'zip', 'city', 'square_meters', 'interval_label', 'service', 'start_date', 'offer_notes', 'price', 'offer_created_at', 'offer_token']), ARRAY_FILTER_USE_KEY);
     $offer = array_intersect_key($row, array_flip(['id', 'customer_id', 'square_meters', 'interval_label', 'service', 'start_date', 'notes', 'price', 'created_at']));
     $offer['id'] = $row['offer_id_alias']; // 'id' kommt von contracts, also überschreiben
     $offer['notes'] = $row['offer_notes'];
     $offer['created_at'] = $row['offer_created_at'];
+    $offer['token'] = $row['offer_token'];
     $customer = array_intersect_key($row, array_flip(['id', 'name', 'email', 'phone', 'salutation', 'contact_last_name', 'address', 'house_number', 'zip', 'city']));
     $customer['id'] = $row['customer_id_alias'];
 
@@ -190,9 +192,15 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             ? trim((string) $signatureSettings['senderName'])
             : 'Ihr CleanTeam-Team';
 
+        $downloadToken = trim((string) ($context['offer']['token'] ?? ''));
+        $downloadUrl = $downloadToken !== ''
+            ? base_url() . '/contract.php?token=' . rawurlencode($downloadToken) . '&format=pdf&download=1'
+            : '';
+
         $messageContent = '<p style="margin:0 0 14px 0;">Willkommen bei CleanTeam!</p>'
             . '<p>Mein Name ist ' . email_h($senderName) . '. Ich bin Ihr Ansprechpartner f&uuml;r Ihren Vertrag.</p>'
-            . '<p>Sie finden Ihren unterschriebenen Vertrag im Anhang.</p>'
+            . '<p>Sie finden Ihren unterschriebenen Vertrag im Anhang dieser E-Mail. Alternativ k&ouml;nnen Sie ihn auch jederzeit &uuml;ber den folgenden Button herunterladen:</p>'
+            . ($downloadUrl !== '' ? email_button_html($downloadUrl, 'Vertrag herunterladen') : '')
             . '<p>Bei Fragen stehe ich Ihnen gerne zur Verf&uuml;gung &ndash; per E-Mail oder direkt telefonisch im B&uuml;ro.</p>';
         $message = render_email_template_message($pdo, $messageContent, [
             'title' => 'Willkommen bei CleanTeam',

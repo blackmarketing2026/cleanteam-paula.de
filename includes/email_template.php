@@ -231,6 +231,18 @@ function email_signature_html(PDO $pdo, array $options = [], array &$inlineImage
       </table>';
 }
 
+function email_button_html(string $url, string $label): string
+{
+    return '
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px auto 4px auto;">
+        <tr>
+          <td class="email-button-cell" align="center" style="border-radius:8px;background:#0a4f91;">
+            <a href="' . email_h($url) . '" target="_blank" style="display:inline-block;padding:13px 26px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;font-family:Arial,sans-serif;">' . email_h($label) . '</a>
+          </td>
+        </tr>
+      </table>';
+}
+
 function render_email_template(PDO $pdo, string $contentHtml, array $options = []): string
 {
     $message = render_email_template_message($pdo, $contentHtml, $options);
@@ -257,15 +269,24 @@ function render_email_template_message(PDO $pdo, string $contentHtml, array $opt
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>' . email_h($title !== '' ? $title : CONTRACTOR['legal_name']) . '</title>
+    <style>
+      @media only screen and (max-width:480px) {
+        .email-card { border-radius:0 !important; }
+        .email-card-body { padding:20px 18px 18px 18px !important; }
+        .email-button-cell { padding:6px 0 !important; display:block !important; width:100% !important; }
+        .email-button-cell table { width:100% !important; }
+        .email-button-cell a { display:block !important; }
+      }
+    </style>
   </head>
   <body style="margin:0;padding:0;background:#eef5fb;color:#1c2733;font-family:Arial,sans-serif;">
     ' . $preheaderHtml . '
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef5fb;">
       <tr>
         <td align="center" style="padding:28px 14px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;background:#ffffff;border:1px solid #d7e4f2;border-radius:12px;box-shadow:0 12px 30px rgba(8,50,95,0.08);overflow:hidden;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="email-card" style="max-width:680px;background:#ffffff;border:1px solid #d7e4f2;border-radius:12px;box-shadow:0 12px 30px rgba(8,50,95,0.08);overflow:hidden;">
             <tr>
-              <td style="padding:26px 28px 22px 28px;border-top:5px solid #0a4f91;">
+              <td class="email-card-body" style="padding:26px 28px 22px 28px;border-top:5px solid #0a4f91;">
                 ' . email_logo_html($pdo, $inlineImages) . '
                 ' . $titleHtml . '
                 <div style="color:#26384d;font-size:15px;line-height:1.65;">' . $contentHtml . '</div>
