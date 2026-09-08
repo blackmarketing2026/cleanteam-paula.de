@@ -4,7 +4,6 @@ require_once __DIR__ . '/recurring_email.php';
 require_once __DIR__ . '/recurring_email_sender.php';
 require_once __DIR__ . '/SmtpMailer.php';
 require_once __DIR__ . '/email_template.php';
-require_once __DIR__ . '/email_settings.php';
 
 function run_recurring_emails(PDO $pdo): array
 {
@@ -21,7 +20,6 @@ function run_recurring_emails(PDO $pdo): array
     if ($candidates === []) {
         return $result;
     }
-    $delivery = load_email_delivery_settings($pdo);
     $smtp = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1')->fetch();
     $started = microtime(true);
     foreach ($candidates as $id) {
@@ -54,10 +52,6 @@ function run_recurring_emails(PDO $pdo): array
             }
             if (!$customer || $customer['deleted_at'] !== null || !$customer['eligible']) {
                 throw new RuntimeException('Kunde ist nicht mehr aktiv oder hat keinen unterschriebenen Vertrag.');
-            }
-            if (!$delivery['customerEmailsEnabled'] || !$delivery['contractEmailsEnabled']) {
-                $result['skipped']++;
-                continue;
             }
             if (!$smtp || empty($smtp['host']) || empty($smtp['username']) || empty($smtp['password_encrypted'])) {
                 throw new RuntimeException('Bitte das E-Mail-Versandkonto in den Einstellungen einrichten.');

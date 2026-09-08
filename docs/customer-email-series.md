@@ -28,8 +28,8 @@ Der Editor zeigt an, wann der neue Versandlauf zuletzt erreichbar war.
 
 Die Tabellen werden beim ersten API-/Cron-Aufruf automatisch angelegt. Es werden
 keine Serien automatisch aktiviert und beim Deployment keine Kunden angeschrieben.
-SMTP-Einstellungen und die bestehenden Schalter für Kunden- und Vertrags-E-Mails
-werden berücksichtigt.
+Die SMTP-Einstellungen werden verwendet. Der automatische Versand wird ausschliesslich
+durch den Aktivierungsschalter der jeweiligen Serie gesteuert.
 
 ## Zeitplan und Fehlerbehandlung
 
@@ -58,15 +58,16 @@ Kundenadresse verwendet.
 Anhang einmalig an die sichtbar ausgewaehlte Adresse. Auch eine neu ausgewaehlte,
 noch nicht gespeicherte Datei wird verwendet. Der Betreff beginnt mit `[Test]`.
 Serienentwurf, Aktivierung, naechster Termin und Versandverlauf bleiben unveraendert.
-Testversand beruecksichtigt die Test-, Kunden- und Vertrags-Versandschalter und
-benoetigt keinen Cronjob. Zwischen Tests gilt eine Wartezeit von 30 Sekunden je
+Testversand ist unabhaengig von der Serienaktivierung und den globalen
+Versandfreigaben moeglich und benoetigt keinen Cronjob. Zwischen Tests gilt eine Wartezeit von 30 Sekunden je
 Kunde/Sitzung. Bei unklarem Versandresultat zuerst die Zustellung pruefen.
 
-## Versandfreigaben im Editor
+## Ein Schalter je Kunde
 
-Drei Schiebeschalter zeigen Kunden-, Vertrags- und Test-E-Mail-Freigaben.
-Admins koennen diese globalen Einstellungen direkt im Editor aendern; andere
-Rollen sehen den Zustand ohne Aenderungsrecht. Jede Aenderung wird sofort
-gespeichert, ohne den Entwurf, Anhang oder Zeitplan zu veraendern.
-Der Testbutton ist nur bei allen drei Freigaben verfuegbar. Das Einschalten
-kann bereits aktive Serien wieder freigeben; es sendet selbst keine Testmail.
+Im Editor steuert nur noch **Automatische E-Mail-Serie fuer diesen Kunden** den
+wiederkehrenden Versand. Die Auswahl wird mit **Speichern** uebernommen. Aus speichert
+einen pausierten Entwurf, Ein aktiviert die Serie zum naechsten Termin. Der Schalter
+veraendert keine globalen E-Mail-Einstellungen und keine anderen Kundenserien.
+Test-E-Mails sind auch bei ausgeschalteter Serie und ausgeschalteten globalen
+Versandfreigaben moeglich. Gueltiger Empfaenger, Betreff, Inhalt und konfiguriertes
+SMTP-Konto bleiben erforderlich. Tests speichern oder aktivieren die Serie nicht.

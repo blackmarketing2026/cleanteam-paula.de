@@ -24,16 +24,13 @@ dialog.close = () => { dialog.open = false; };
 const document = { querySelector: node, createElement: node, addEventListener(name, callback) { this[name] = callback; } };
 const calls = [];
 const fixture = { csrfToken: 'local-test', series: null, customer: {name: 'Fixture', email: 'contract@example.invalid'}, eligible: true, runs: [],
-  deliverySettings: {customerEmailsEnabled: true, contractEmailsEnabled: true, testEmailsEnabled: true}, canManageDelivery: true };
+  deliverySettings: {customerEmailsEnabled: false, contractEmailsEnabled: false, testEmailsEnabled: false}, canManageDelivery: true };
 const context = {
   document, Intl, Date,
   FormData: class extends Map { constructor() { super(Object.entries(form.elements).map(([name, control]) => [name, control.value])); } },
   fetch: async (url, options) => {
     calls.push(options);
-    if (options.body?.get('action') === 'delivery') {
-      fixture.deliverySettings[options.body.get('setting')] = options.body.get('enabled') === '1';
-      return {ok: true, json: async () => fixture};
-    }
+
     return {ok: true, json: async () => options.method === 'POST' ? {...fixture, testSent: true, recipient: options.body.get('recipientEmail')} : fixture};
   },
 };
@@ -64,16 +61,21 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(form.elements.body.value, 'Unsaved body');
   assert.match(node('#series-test-status').textContent, /manual@example.invalid/);
   assert.equal(node('#email-series-fields').disabled, false);
-  const toggle = {dataset: {deliverySetting: 'testEmailsEnabled'}, checked: false};
-  await node('#series-delivery-controls').events.change({target: {closest: () => toggle}});
-  assert.equal(node('#series-test').disabled, true);
-  assert.equal(resets, before, 'Delivery settings must preserve unsaved input');
-  assert.equal(calls.at(-1).body.get('action'), 'delivery');
-  assert.equal(calls.at(-1).body.get('enabled'), '0');
+  const toggle = node('#series-enabled');
+  assert.equal(toggle.checked, false);
+  assert.equal(node('#series-test').disabled, false, 'Paused series and global restrictions must not block tests');
   toggle.checked = true;
-  await node('#series-delivery-controls').events.change({target: {closest: () => toggle}});
+  toggle.events.change();
+  assert.equal(calls.length, 2, 'Switch is persisted only when saving');
+  assert.equal(resets, before);
+  assert.equal(node('#series-enabled-label').textContent, 'Ein');
+  await form.events.submit({preventDefault() {}, submitter: {value: 'save'}});
+  assert.equal(calls.at(-1).body.get('action'), 'activate');
+  toggle.checked = false;
+  toggle.events.change();
+  await form.events.submit({preventDefault() {}, submitter: {value: 'save'}});
+  assert.equal(calls.at(-1).body.get('action'), 'draft');
   assert.equal(node('#series-test').disabled, false);
-  assert.equal(form.elements.body.value, 'Unsaved body');
-  console.log('PASS: recipient toggle, invalid address, test payload and unsaved form preservation');
-  console.log('PASS: delivery toggles immediately update test availability without resetting the editor');
+  console.log('PASS: recipient validation and unsaved test input preserved');
+  console.log('PASS: one per-customer switch, save activation/pause, tests allowed with global restrictions off');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1277,15 +1277,11 @@
         <p id="email-series-customer" class="muted"></p>
         <p id="email-series-status" role="status"></p>
         <p id="email-series-error" class="series-error" role="alert"></p>
-        <fieldset id="series-delivery-controls" class="series-delivery-controls" disabled>
-          <legend>Versand aktivieren / deaktivieren</legend>
-          <p class="muted">Diese Freigaben gelten f&uuml;r alle Kunden. Das Einschalten verschickt keine Testmail und aktiviert keine neue Serie. Bereits aktive Serien k&ouml;nnen wieder versendet werden.</p>
-          <label class="series-delivery-switch"><input type="checkbox" role="switch" data-delivery-setting="customerEmailsEnabled" /><span>Kunden-E-Mails</span><strong data-delivery-label="customerEmailsEnabled">Aus</strong></label>
-          <label class="series-delivery-switch"><input type="checkbox" role="switch" data-delivery-setting="contractEmailsEnabled" /><span>Vertrags-E-Mails und Serien</span><strong data-delivery-label="contractEmailsEnabled">Aus</strong></label>
-          <label class="series-delivery-switch"><input type="checkbox" role="switch" data-delivery-setting="testEmailsEnabled" /><span>Test-E-Mails</span><strong data-delivery-label="testEmailsEnabled">Aus</strong></label>
-        </fieldset>
-        <p id="series-delivery-status" class="muted" role="status"></p>
         <fieldset id="email-series-fields">
+          <div class="series-delivery-controls">
+            <label class="series-delivery-switch"><input id="series-enabled" type="checkbox" role="switch" /><span>Automatische E-Mail-Serie f&uuml;r diesen Kunden</span><strong id="series-enabled-label">Aus</strong></label>
+            <p id="series-delivery-status" class="muted" role="status"></p>
+          </div>
           <p class="muted">Eine Serie pro Kunde. Betreff, Inhalt und Anhang werden bei jeder Wiederholung erneut versendet.</p>
           <label class="modal-field">Empf&auml;nger
             <select name="recipientMode">
@@ -1328,9 +1324,7 @@
           </div>
           <div class="form-actions">
             <button id="series-test" class="secondary-button" type="submit" value="test" formnovalidate>Test-E-Mail senden</button>
-            <button id="series-pause" class="ghost-button" type="submit" value="pause" formnovalidate hidden>Serie pausieren</button>
-            <button id="series-draft" class="secondary-button" type="submit" value="draft">Entwurf speichern</button>
-            <button id="series-activate" class="primary-button" type="submit" value="activate">Speichern und aktivieren</button>
+            <button id="series-save" class="primary-button" type="submit" value="save">Speichern</button>
           </div>
         </fieldset>
         <p id="series-test-status" role="status"></p>
@@ -1341,6 +1335,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="app.js?v=email-series-20260908-1"></script>
-    <script src="customer-email-series.js?v=20260908-3"></script>
+    <script src="customer-email-series.js?v=20260908-4"></script>
   </body>
 </html>
