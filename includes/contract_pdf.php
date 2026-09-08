@@ -928,6 +928,13 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->keyValue('Elektronische Signatur', 'Noch nicht unterschrieben.');
     }
 
+    if ($isSigned && !empty($contract['second_signature_data'])) {
+        $pdf->keyValue('Zweite unterzeichnende Person', $contract['second_signer_name']);
+        $pdf->keyValue('Gemeinsam elektronisch signiert', contract_format_datetime($contract['second_signed_at']));
+        $pdf->keyValue('Bestaetigung zweite Person', 'Berechtigung, Auftrag, Vertragsbedingungen und Datenverarbeitung bestaetigt.');
+        $pdf->signatureImage($contract['second_signature_data']);
+    }
+
     if ($isCleanTeamCopy) {
         $pdf->addPage();
         $pdf->title('Signaturprotokoll / Nachweis für CleanTeam');

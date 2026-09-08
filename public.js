@@ -27,7 +27,9 @@ const els = {
   identityCheckAuthorizedNo: document.querySelector("#identity-check-authorized-no"),
 };
 
-let signatureHasInk = false;
+const signatureInk = new WeakSet();
+const secondPad = document.querySelector("#second-signature-pad");
+const twoSigners = document.querySelector("#two-signers");
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -227,8 +229,7 @@ async function handleAction(action, body) {
   }
 }
 
-function setupSignaturePad() {
-  const canvas = els.signaturePad;
+function setupSignaturePad(canvas) {
   const context = canvas.getContext("2d");
   let drawing = false;
 
@@ -253,7 +254,7 @@ function setupSignaturePad() {
     context.moveTo(point.x, point.y);
     context.lineTo(point.x + 0.01, point.y + 0.01);
     context.stroke();
-    signatureHasInk = true;
+    signatureInk.add(canvas);
   });
 
   canvas.addEventListener("pointermove", (event) => {
@@ -263,7 +264,7 @@ function setupSignaturePad() {
     const point = positionFromEvent(event);
     context.lineTo(point.x, point.y);
     context.stroke();
-    signatureHasInk = true;
+    signatureInk.add(canvas);
   });
 
   function stopDrawing(event) {
@@ -283,11 +284,10 @@ function setupSignaturePad() {
   canvas.addEventListener("pointerleave", stopDrawing);
 }
 
-function clearSignaturePad() {
-  const canvas = els.signaturePad;
+function clearSignaturePad(canvas = els.signaturePad) {
   const context = canvas.getContext("2d");
   context.clearRect(0, 0, canvas.width, canvas.height);
-  signatureHasInk = false;
+  signatureInk.delete(canvas);
 }
 
 function bindEvents() {
@@ -338,14 +338,34 @@ function bindEvents() {
     handleAction("confirm-identity", { confirmed: false, authorized: false });
   });
 
-  els.clearSignature.addEventListener("click", clearSignaturePad);
+  els.clearSignature.addEventListener("click", () => clearSignaturePad());
+  document.querySelector("#clear-second-signature").addEventListener("click", () => clearSignaturePad(secondPad));
+  twoSigners.addEventListener("change", () => {
+    document.querySelector("#second-signer-fields").hidden = !twoSigners.checked;
+    els.saveSignature.textContent = twoSigners.checked ? "Vertrag mit beiden Unterschriften abschlie\u00dfen" : "Vertrag jetzt unterschreiben";
+  });
 
-  els.saveSignature.addEventListener("click", () => {
-    if (!signatureHasInk) {
+  els.saveSignature.addEventListener("click", async () => {
+    if (!signatureInk.has(els.signaturePad)) {
       showToast("Bitte zuerst im Signaturfeld unterschreiben.");
       return;
     }
-    handleAction("sign", { signatureDataUrl: els.signaturePad.toDataURL("image/png") });
+    const secondSignerName = document.querySelector("#second-signer-name").value.trim();
+    const secondSignerConfirmed = document.querySelector("#second-signer-confirmed").checked;
+    if (twoSigners.checked && (!secondSignerName || !secondSignerConfirmed || !signatureInk.has(secondPad))) {
+      showToast("Bitte Namen, Berechtigung und Unterschrift der zweiten Person angeben.");
+      return;
+    }
+    els.saveSignature.disabled = true;
+    try {
+      await handleAction("sign", {
+        signatureDataUrl: els.signaturePad.toDataURL("image/png"),
+        twoSigners: twoSigners.checked, secondSignerName, secondSignerConfirmed,
+        secondSignatureDataUrl: twoSigners.checked ? secondPad.toDataURL("image/png") : null,
+      });
+    } finally {
+      els.saveSignature.disabled = false;
+    }
   });
 }
 
@@ -371,7 +391,8 @@ function init() {
   }
 
   bindEvents();
-  setupSignaturePad();
+  setupSignaturePad(els.signaturePad);
+  setupSignaturePad(secondPad);
   loadBranding();
   loadOffer();
 }

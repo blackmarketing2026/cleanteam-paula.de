@@ -75,6 +75,9 @@ function contract_row_to_json(array $row): array
         'termsAcceptedAt' => to_iso($row['terms_accepted_at'] ?? null),
         'signedAt' => to_iso($row['signed_at']),
         'signatureDataUrl' => $row['signature_data'],
+        'secondSignerName' => $row['second_signer_name'] ?? null,
+        'secondSignatureDataUrl' => $row['second_signature_data'] ?? null,
+        'secondSignedAt' => to_iso($row['second_signed_at'] ?? null),
         'createdAt' => to_iso($row['created_at']),
         'customer' => [
             'id' => $row['customer_id'],

@@ -1909,7 +1909,8 @@ button.compact-item.selected {
   gap: 12px;
 }
 
-#signature-pad {
+#signature-pad,
+#second-signature-pad {
   width: 100%;
   aspect-ratio: 900 / 260;
   height: auto;

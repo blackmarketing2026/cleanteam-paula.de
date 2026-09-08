@@ -6,7 +6,10 @@ require_once __DIR__ . '/../includes/contract_notify.php';
 require_once __DIR__ . '/../includes/contract_pdf.php';
 require_once __DIR__ . '/../includes/ftp_export.php';
 
+require_once __DIR__ . '/../includes/contract_signers.php';
+
 $pdo = db();
+ensure_contracts_second_signer_columns($pdo);
 $method = $_SERVER['REQUEST_METHOD'];
 $action = (string) ($_GET['action'] ?? '');
 $token = trim((string) ($_GET['token'] ?? ''));
@@ -317,14 +320,33 @@ if ($method === 'POST' && $action === 'sign') {
     $body = read_json_body();
     $signatureDataUrl = (string) ($body['signatureDataUrl'] ?? '');
 
-    if (strpos($signatureDataUrl, 'data:image/png;base64,') !== 0) {
+    if (!validate_contract_signature($signatureDataUrl)) {
         json_error('Ungültige Signatur.', 422);
     }
 
+    if (normalize_current_step($contract['current_step']) !== 'signatur'
+        || empty($contract['privacy_accepted_at']) || empty($contract['terms_accepted_at'])
+        || empty($contract['data_confirmed'])) {
+        json_error('Bitte schliessen Sie zuerst die vorherigen Schritte ab.', 409);
+    }
+    $twoSigners = ($body['twoSigners'] ?? false) === true;
+    $secondName = $twoSigners ? trim((string) ($body['secondSignerName'] ?? '')) : null;
+    $secondSignature = $twoSigners ? (string) ($body['secondSignatureDataUrl'] ?? '') : null;
+    if ($twoSigners && ($secondName === '' || mb_strlen($secondName) > 190
+        || ($body['secondSignerConfirmed'] ?? false) !== true
+        || !validate_contract_signature($secondSignature))) {
+        json_error('Bitte Namen, Berechtigung und Unterschrift der zweiten Person angeben.', 422);
+    }
+
     $stmt = $pdo->prepare(
-        "UPDATE contracts SET status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, current_step = 'fertig' WHERE id = :id"
+        "UPDATE contracts SET second_signer_name = :second_name, second_signature_data = :second_signature,
+        second_signed_at = CASE WHEN :two_signers = 1 THEN UTC_TIMESTAMP() ELSE NULL END, status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, current_step = 'fertig' WHERE id = :id AND status <> 'signiert' AND current_step = 'signatur'"
     );
-    $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id']]);
+    $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id'],
+        'second_name' => $secondName, 'second_signature' => $secondSignature, 'two_signers' => (int) $twoSigners]);
+    if ($stmt->rowCount() !== 1) {
+        json_error('Der Vertrag wurde bereits abgeschlossen oder der Schritt hat sich geaendert.', 409);
+    }
     save_contract_pdfs($pdo, $contract['id'], true);
     notify_contract_created($pdo, $contract['id']);
     notify_customer_contract_signed($pdo, $contract['id']);

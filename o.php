@@ -14,7 +14,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=signer-identity-step-20260825-1" />
+    <link rel="stylesheet" href="styles.css?v=two-signers-20260908-1" />
   </head>
   <body data-token="<?php echo $token; ?>">
     <main class="public-shell">
@@ -98,10 +98,24 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         <section id="screen-signatur" class="public-screen wizard-screen">
           <h2>Vertrag unterschreiben</h2>
           <p class="muted">Unterschreiben Sie digital mit dem Finger, Stift oder der Maus.</p>
+          <label><input id="two-signers" type="checkbox" /> Zwei Personen unterschreiben gemeinsam</label>
+          <p class="muted">Bei zwei Personen unterschreiben beide nacheinander an diesem Ger&auml;t. Der Vertrag wird erst mit beiden Unterschriften abgeschlossen.</p>
+          <h3>Erste Unterschrift</h3>
           <div class="signature-area">
             <canvas id="signature-pad" width="900" height="260" aria-label="Signaturfeld"></canvas>
             <div class="form-actions">
               <button id="clear-signature" class="ghost-button" type="button">Leeren</button>
+            </div>
+          </div>
+          <div id="second-signer-fields" hidden>
+            <h3>Zweite Unterschrift</h3>
+            <label class="modal-field">Vollst&auml;ndiger Name der zweiten Person
+              <input id="second-signer-name" type="text" maxlength="190" autocomplete="off" />
+            </label>
+            <label><input id="second-signer-confirmed" type="checkbox" /> Ich bin berechtigt, diesen Vertrag gemeinsam zu unterschreiben, stimme dem Auftrag und den Vertragsbedingungen zu und bin mit der Speicherung und Verarbeitung meiner Daten f&uuml;r diesen Vertrag einverstanden.</label>
+            <div class="signature-area">
+              <canvas id="second-signature-pad" width="900" height="260" aria-label="Signaturfeld der zweiten Person"></canvas>
+              <div class="form-actions"><button id="clear-second-signature" class="ghost-button" type="button">Zweite Unterschrift leeren</button></div>
             </div>
           </div>
           <div class="form-actions">
@@ -128,6 +142,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=skip-terms-step-20260827-1"></script>
+    <script src="public.js?v=two-signers-20260908-1"></script>
   </body>
 </html>

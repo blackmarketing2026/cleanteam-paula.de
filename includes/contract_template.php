@@ -590,6 +590,12 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $signatureImage = $isSigned && !empty($contract['signature_data'])
         ? '<img src="' . h($contract['signature_data']) . '" alt="Unterschrift" style="max-height:70px;">'
         : '<span class="sign-placeholder">noch nicht unterschrieben</span>';
+    if ($isSigned && !empty($contract['second_signature_data'])) {
+        $signatureImage .= '<div style="margin-top:16px;">Zweite unterzeichnende Person: '
+            . h($contract['second_signer_name']) . '<br>'
+            . h(contract_format_datetime($contract['second_signed_at'])) . '</div>'
+            . '<img src="' . h($contract['second_signature_data']) . '" alt="Zweite Unterschrift" style="max-height:70px;">';
+    }
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
     $contractorSignatureImage = $contractorSignatureDataUrl !== null
         ? '<img src="' . h($contractorSignatureDataUrl) . '" alt="Unterschrift Thomas Mündlein" style="max-height:70px;">'
