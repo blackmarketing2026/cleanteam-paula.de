@@ -2,6 +2,8 @@
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/recurring_email.php';
+require_once __DIR__ . '/../includes/recurring_email_sender.php';
+require_once __DIR__ . '/../includes/email_settings.php';
 
 require_login();
 $_SESSION['email_series_csrf'] ??= bin2hex(random_bytes(32));
@@ -50,7 +52,7 @@ try {
     if ($action === 'pause') {
         $pdo->prepare('UPDATE customer_email_series SET enabled = 0, next_run_at = NULL, revision = revision + 1, updated_at = UTC_TIMESTAMP() WHERE customer_id = ?')->execute([$id]);
     } else {
-        if (!in_array($action, ['draft', 'activate'], true)) {
+        if (!in_array($action, ['draft', 'activate', 'test'], true)) {
             throw new InvalidArgumentException('Bitte die Serie speichern oder aktivieren. Ein Upload kann das Serverlimit ueberschritten haben.');
         }
         if ($customer['deleted_at'] !== null || !$customer['eligible']) {
@@ -68,10 +70,13 @@ try {
         if (mb_strlen($subject) > 190 || preg_match('/[\r\n]/', $subject) || strlen($body) > 50000) {
             throw new InvalidArgumentException('Betreff: maximal 190 Zeichen ohne Zeilenumbruch. Inhalt: maximal 50 KB.');
         }
-        $next = recurring_email_next_run($frequency, (int) $day, $time, new DateTimeImmutable('now', new DateTimeZone('UTC')));
+        $recipientMode = (string) ($_POST['recipientMode'] ?? 'contract');
+        $recipientEmail = $recipientMode === 'manual' ? trim((string) ($_POST['recipientEmail'] ?? '')) : null;
+        $recipient = recurring_email_recipient(['recipient_mode' => $recipientMode, 'recipient_email' => $recipientEmail], $customer);
+        $next = $action === 'test' ? null : recurring_email_next_run($frequency, (int) $day, $time, new DateTimeImmutable('now', new DateTimeZone('UTC')));
         $enabled = $action === 'activate';
-        if ($enabled && ($subject === '' || $body === '' || !filter_var($customer['email'], FILTER_VALIDATE_EMAIL))) {
-            throw new InvalidArgumentException('Zum Aktivieren werden Betreff, Inhalt und eine gueltige Kunden-E-Mail benoetigt.');
+        if (($enabled || $action === 'test') && ($subject === '' || $body === '')) {
+            throw new InvalidArgumentException('Bitte Betreff und Inhalt angeben.');
         }
         $file = ['name' => $current['attachment_name'] ?? null, 'mime' => $current['attachment_mime'] ?? null,
             'content' => $current['attachment_content'] ?? null];
@@ -81,24 +86,51 @@ try {
         if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] !== UPLOAD_ERR_NO_FILE) {
             $file = recurring_email_attachment($_FILES['attachment']);
         }
-        // Editing content does not move an already-active due date into the future.
-        if ($enabled && !empty($current['enabled']) && $frequency === $current['frequency']
-            && (int) $day === (int) $current['schedule_day'] && $time === $current['send_time'] && $current['next_run_at']) {
-            $next = $current['next_run_at'];
-        }
-        $params = [$subject, $body, $frequency, (int) $day, $time, (int) $enabled, $enabled ? $next : null,
-            $file['name'], $file['mime'], $file['content'], $id];
-        if ($current) {
-            $pdo->prepare('UPDATE customer_email_series SET subject = ?, body = ?, frequency = ?, schedule_day = ?, send_time = ?,
-                enabled = ?, next_run_at = ?, attachment_name = ?, attachment_mime = ?, attachment_content = ?,
-                last_error = NULL, revision = revision + 1, updated_at = UTC_TIMESTAMP() WHERE customer_id = ?')->execute($params);
+        if ($action === 'test') {
+            $delivery = load_email_delivery_settings($pdo);
+            if (!$delivery['testEmailsEnabled'] || !$delivery['customerEmailsEnabled'] || !$delivery['contractEmailsEnabled']) {
+                throw new InvalidArgumentException('Der Test- oder Kunden-E-Mail-Versand ist in den Einstellungen ausgeschaltet.');
+            }
+            if (time() - (int) ($_SESSION['series_test_at'][$id] ?? 0) < 30) {
+                throw new InvalidArgumentException('Bitte vor einer weiteren Test-E-Mail 30 Sekunden warten.');
+            }
+            $smtp = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1')->fetch();
+            if (!$smtp || empty($smtp['host']) || empty($smtp['username']) || empty($smtp['password_encrypted'])) {
+                throw new InvalidArgumentException('Bitte zuerst das E-Mail-Versandkonto einrichten.');
+            }
+            $testSeries = ['subject' => $subject, 'body' => $body, 'attachment_name' => $file['name'],
+                'attachment_mime' => $file['mime'], 'attachment_content' => $file['content']];
+            $_SESSION['series_test_at'][$id] = time();
+            try {
+                $message = recurring_email_message($pdo, $smtp, $testSeries);
+                $mailer = new SmtpMailer($smtp['host'], (int) $smtp['smtp_port'], $smtp['smtp_encryption'],
+                    $smtp['username'], decrypt_secret($smtp['password_encrypted']));
+                recurring_email_deliver($mailer, $smtp, $customer, $testSeries, $message, $recipient, true);
+            } catch (Throwable $exception) {
+                error_log('Test-E-Mail-Serie ' . $id . ': ' . $exception->getMessage());
+                throw new InvalidArgumentException('Testversand nicht sicher bestaetigt. Bitte Postfach und SMTP-Einstellungen pruefen, bevor Sie erneut senden.');
+            }
+            $result = ['testSent' => true, 'recipient' => $recipient];
         } else {
-            $pdo->prepare('INSERT INTO customer_email_series (subject, body, frequency, schedule_day, send_time, enabled,
-                next_run_at, attachment_name, attachment_mime, attachment_content, customer_id, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())')->execute($params);
+            // Editing content does not move an already-active due date into the future.
+            if ($enabled && !empty($current['enabled']) && $frequency === $current['frequency']
+                && (int) $day === (int) $current['schedule_day'] && $time === $current['send_time'] && $current['next_run_at']) {
+                $next = $current['next_run_at'];
+            }
+            $params = [$subject, $body, $frequency, (int) $day, $time, (int) $enabled, $enabled ? $next : null,
+                $file['name'], $file['mime'], $file['content'], $recipientMode, $recipientEmail, $id];
+            if ($current) {
+                $pdo->prepare('UPDATE customer_email_series SET subject = ?, body = ?, frequency = ?, schedule_day = ?, send_time = ?,
+                    enabled = ?, next_run_at = ?, attachment_name = ?, attachment_mime = ?, attachment_content = ?, recipient_mode = ?, recipient_email = ?,
+                    last_error = NULL, revision = revision + 1, updated_at = UTC_TIMESTAMP() WHERE customer_id = ?')->execute($params);
+            } else {
+                $pdo->prepare('INSERT INTO customer_email_series (subject, body, frequency, schedule_day, send_time, enabled,
+                    next_run_at, attachment_name, attachment_mime, attachment_content, recipient_mode, recipient_email, customer_id, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())')->execute($params);
+            }
         }
     }
-    $result = recurring_email_state($pdo, $customer);
+    $result ??= recurring_email_state($pdo, $customer);
 } catch (InvalidArgumentException $exception) {
     $error = $exception->getMessage();
 } finally {

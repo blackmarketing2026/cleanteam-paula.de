@@ -12,10 +12,22 @@
   let busy = false;
   let previousFocus = null;
   let csrfToken = '';
+  let contractEmail = '';
 
   const date = value => value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' })
     .format(new Date(value.replace(' ', 'T') + 'Z')) : 'Noch nicht';
   const url = () => `api/customer-email-series.php?customerId=${encodeURIComponent(customerId)}`;
+
+  function recipientFields() {
+    const manual = form.elements.recipientMode.value === 'manual';
+    document.querySelector('#series-manual-recipient').hidden = !manual;
+    form.elements.recipientEmail.disabled = !manual;
+    form.elements.recipientEmail.required = manual;
+    const recipient = manual ? form.elements.recipientEmail.value.trim() : contractEmail;
+    document.querySelector('#series-recipient-hint').textContent = recipient
+      ? `Serie und Test-E-Mail gehen an: ${recipient}. Der Test sendet den aktuellen Inhalt samt Anhang, ohne die Serie zu speichern oder zu aktivieren.`
+      : 'Bitte eine Empfänger-E-Mail-Adresse eingeben.';
+  }
 
   function scheduleFields() {
     const weekly = form.elements.frequency.value === 'weekly';
@@ -33,6 +45,11 @@
     current = data.series;
     form.reset();
     removeAttachment = false;
+    contractEmail = data.customer.email;
+    document.querySelector('#series-contract-recipient').textContent = `E-Mail aus dem Vertrag: ${contractEmail || 'Keine Adresse hinterlegt'}`;
+    form.elements.recipientMode.value = current?.recipient_mode || 'contract';
+    form.elements.recipientEmail.value = current?.recipient_email || '';
+    recipientFields();
     document.querySelector('#email-series-customer').textContent = `${data.customer.name} · ${data.customer.email}`;
     form.elements.subject.value = current?.subject || '';
     form.elements.body.value = current?.body || '';
@@ -48,6 +65,7 @@
     document.querySelector('#series-activate').textContent = active ? 'Änderungen speichern' : 'Speichern und aktivieren';
     document.querySelector('#series-activate').disabled = !data.eligible;
     document.querySelector('#series-draft').disabled = !data.eligible;
+    document.querySelector('#series-test').disabled = !data.eligible;
     const attachment = document.querySelector('#series-current-attachment');
     attachment.hidden = !current?.attachment_name;
     const link = document.querySelector('#series-attachment-link');
@@ -89,6 +107,7 @@
     current = null;
     form.reset();
     error.textContent = '';
+    document.querySelector('#series-test-status').textContent = '';
     status.textContent = 'Serie wird geladen …';
     document.querySelector('#email-series-customer').textContent = '';
     document.querySelector('#series-history').replaceChildren();
@@ -113,6 +132,8 @@
   dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
   dialog.addEventListener('close', () => previousFocus?.focus());
   form.elements.frequency.addEventListener('change', scheduleFields);
+  form.elements.recipientMode.addEventListener('change', recipientFields);
+  form.elements.recipientEmail.addEventListener('input', recipientFields);
   document.querySelector('#series-remove-attachment').addEventListener('click', () => {
     removeAttachment = true;
     fileInput.value = '';
@@ -129,10 +150,11 @@
     event.preventDefault();
     if (busy) return;
     const action = event.submitter?.value || 'draft';
-    if (action === 'activate' && (!form.elements.subject.value.trim() || !form.elements.body.value.trim())) {
-      error.textContent = 'Bitte Betreff und Inhalt eingeben, bevor die Serie aktiviert wird.';
+    if (['activate', 'test'].includes(action) && (!form.elements.subject.value.trim() || !form.elements.body.value.trim())) {
+      error.textContent = 'Bitte Betreff und Inhalt eingeben.';
       return;
     }
+    if (action !== 'pause' && form.elements.recipientMode.value === 'manual' && !form.elements.recipientEmail.reportValidity()) return;
     const payload = new FormData(form);
     payload.set('csrfToken', csrfToken);
     payload.set('action', action);
@@ -142,10 +164,17 @@
     busy = true;
     fieldset.disabled = true;
     error.textContent = '';
+    document.querySelector('#series-test-status').textContent = action === 'test' ? 'Test-E-Mail wird gesendet …' : '';
     try {
-      render(await request({ method: 'POST', body: payload }));
-      status.textContent = 'Gespeichert. ' + status.textContent;
+      const response = await request({ method: 'POST', body: payload });
+      if (action === 'test') {
+        document.querySelector('#series-test-status').textContent = `Test-E-Mail an ${response.recipient} versendet. Die Serie und ihr Zeitplan wurden nicht verändert.`;
+      } else {
+        render(response);
+        status.textContent = 'Gespeichert. ' + status.textContent;
+      }
     } catch (failure) {
+      document.querySelector('#series-test-status').textContent = '';
       error.textContent = failure.message;
     } finally {
       fieldset.disabled = false;

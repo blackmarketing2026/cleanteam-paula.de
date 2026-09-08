@@ -29,3 +29,20 @@ foreach ([['weekly', 8, '09:00'], ['monthly', 0, '09:00'], ['daily', 1, '09:00']
     throw new RuntimeException('Invalid schedule was accepted.');
 }
 echo "PASS: monthly/year boundaries, leap year, weekly schedules, DST and invalid input\n";
+
+$customer = ['email' => 'contract@example.com'];
+if (recurring_email_recipient([], $customer) !== 'contract@example.com'
+    || recurring_email_recipient(['recipient_mode' => 'contract', 'recipient_email' => 'ignored@example.com'], $customer) !== 'contract@example.com'
+    || recurring_email_recipient(['recipient_mode' => 'manual', 'recipient_email' => ' office@example.com '], $customer) !== 'office@example.com') {
+    throw new RuntimeException('Recipient selection failed.');
+}
+foreach ([['recipient_mode' => 'invalid'], ['recipient_mode' => 'manual', 'recipient_email' => ''],
+    ['recipient_mode' => 'manual', 'recipient_email' => "a@example.com\r\nBcc: b@example.com"]] as $bad) {
+    try {
+        recurring_email_recipient($bad, $customer);
+    } catch (InvalidArgumentException $exception) {
+        continue;
+    }
+    throw new RuntimeException('Invalid recipient accepted.');
+}
+echo "PASS: contract/manual recipients and invalid addresses\n";

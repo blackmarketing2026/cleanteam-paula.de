@@ -247,6 +247,7 @@ VALUES
 CREATE TABLE IF NOT EXISTS customer_email_series (
         customer_id VARCHAR(64) NOT NULL PRIMARY KEY,
         subject VARCHAR(190) NOT NULL DEFAULT '', body TEXT NOT NULL,
+        recipient_mode VARCHAR(10) NOT NULL DEFAULT 'contract', recipient_email VARCHAR(190) NULL,
         frequency VARCHAR(10) NOT NULL DEFAULT 'monthly', schedule_day TINYINT UNSIGNED NOT NULL DEFAULT 1,
         send_time CHAR(5) NOT NULL DEFAULT '09:00', enabled TINYINT(1) NOT NULL DEFAULT 0,
         next_run_at DATETIME NULL, last_sent_at DATETIME NULL, last_error VARCHAR(500) NULL,

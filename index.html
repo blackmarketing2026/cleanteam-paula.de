@@ -1279,6 +1279,16 @@
         <p id="email-series-error" class="series-error" role="alert"></p>
         <fieldset id="email-series-fields">
           <p class="muted">Eine Serie pro Kunde. Betreff, Inhalt und Anhang werden bei jeder Wiederholung erneut versendet.</p>
+          <label class="modal-field">Empf&auml;nger
+            <select name="recipientMode">
+              <option id="series-contract-recipient" value="contract">E-Mail-Adresse aus dem Vertrag</option>
+              <option value="manual">Andere E-Mail-Adresse eingeben</option>
+            </select>
+          </label>
+          <label id="series-manual-recipient" class="modal-field" hidden>E-Mail-Adresse
+            <input name="recipientEmail" type="email" maxlength="190" placeholder="name@firma.de" />
+          </label>
+          <p id="series-recipient-hint" class="muted"></p>
           <div class="series-schedule">
             <label class="modal-field">Wiederholung
               <select name="frequency"><option value="monthly">Monatlich</option><option value="weekly">W&ouml;chentlich</option></select>
@@ -1309,11 +1319,13 @@
             <button id="series-remove-attachment" class="ghost-button" type="button">Anhang entfernen</button>
           </div>
           <div class="form-actions">
+            <button id="series-test" class="secondary-button" type="submit" value="test" formnovalidate>Test-E-Mail senden</button>
             <button id="series-pause" class="ghost-button" type="submit" value="pause" formnovalidate hidden>Serie pausieren</button>
             <button id="series-draft" class="secondary-button" type="submit" value="draft">Entwurf speichern</button>
             <button id="series-activate" class="primary-button" type="submit" value="activate">Speichern und aktivieren</button>
           </div>
         </fieldset>
+        <p id="series-test-status" role="status"></p>
         <p id="series-scheduler-status" class="muted"></p>
         <details><summary>Versandverlauf</summary><ul id="series-history"></ul></details>
       </form>
@@ -1321,6 +1333,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="app.js?v=email-series-20260908-1"></script>
-    <script src="customer-email-series.js?v=20260908-1"></script>
+    <script src="customer-email-series.js?v=20260908-2"></script>
   </body>
 </html>

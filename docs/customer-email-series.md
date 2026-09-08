@@ -46,3 +46,18 @@ werden berücksichtigt.
   Zustellung im Mailkonto prüfen und anschließend bei Bedarf erneut aktivieren.
 
 Prüfung ohne Kundendaten: `php tests/recurring_email_test.php`.
+
+## Empfaenger und Testversand
+
+Im Editor entweder die E-Mail-Adresse aus dem Vertrag/Kundenstamm verwenden oder
+manuell eine andere Adresse angeben. Die manuelle Adresse gilt nur fuer diese Serie;
+der Kundenstamm wird nicht geaendert. Bei Vertragsadresse wird die jeweils aktuelle
+Kundenadresse verwendet.
+
+**Test-E-Mail senden** verschickt den aktuellen Editorinhalt mit dem aktuellen
+Anhang einmalig an die sichtbar ausgewaehlte Adresse. Auch eine neu ausgewaehlte,
+noch nicht gespeicherte Datei wird verwendet. Der Betreff beginnt mit `[Test]`.
+Serienentwurf, Aktivierung, naechster Termin und Versandverlauf bleiben unveraendert.
+Testversand beruecksichtigt die Test-, Kunden- und Vertrags-Versandschalter und
+benoetigt keinen Cronjob. Zwischen Tests gilt eine Wartezeit von 30 Sekunden je
+Kunde/Sitzung. Bei unklarem Versandresultat zuerst die Zustellung pruefen.

@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/recurring_email.php';
-require_once __DIR__ . '/crypto.php';
+require_once __DIR__ . '/recurring_email_sender.php';
 require_once __DIR__ . '/SmtpMailer.php';
 require_once __DIR__ . '/email_template.php';
 require_once __DIR__ . '/email_settings.php';
@@ -62,13 +62,8 @@ function run_recurring_emails(PDO $pdo): array
             if (!$smtp || empty($smtp['host']) || empty($smtp['username']) || empty($smtp['password_encrypted'])) {
                 throw new RuntimeException('Bitte das E-Mail-Versandkonto in den Einstellungen einrichten.');
             }
-            if (!filter_var($customer['email'], FILTER_VALIDATE_EMAIL)) {
-                throw new RuntimeException('Die Kunden-E-Mail-Adresse ist ungueltig.');
-            }
-            $message = render_email_template_message($pdo, '<div>' . nl2br(email_h($series['body'])) . '</div>', [
-                'title' => $series['subject'], 'fromName' => $smtp['from_name'] ?? 'CleanTeam',
-                'signatureText' => $smtp['signature'] ?? '', 'signatureContext' => 'contract_customer',
-            ]);
+            $recipient = recurring_email_recipient($series, $customer);
+            $message = recurring_email_message($pdo, $smtp, $series);
             $mailer = new SmtpMailer($smtp['host'], (int) $smtp['smtp_port'], $smtp['smtp_encryption'],
                 $smtp['username'], decrypt_secret($smtp['password_encrypted']));
             $next = recurring_email_next_run($series['frequency'], (int) $series['schedule_day'], $series['send_time'],
@@ -77,18 +72,11 @@ function run_recurring_emails(PDO $pdo): array
             $pdo->prepare("INSERT INTO customer_email_series_runs
                 (customer_id, scheduled_at, started_at, status, recipient, subject, attachment_name)
                 VALUES (?, ?, UTC_TIMESTAMP(), 'sending', ?, ?, ?)")
-                ->execute([$id, $series['next_run_at'], $customer['email'], $series['subject'], $series['attachment_name']]);
+                ->execute([$id, $series['next_run_at'], $recipient, $series['subject'], $series['attachment_name']]);
             $runId = $pdo->lastInsertId();
             $pdo->prepare('UPDATE customer_email_series SET next_run_at = ? WHERE customer_id = ?')->execute([$next, $id]);
             $pdo->commit();
-            if ($series['attachment_name'] !== null) {
-                $mailer->sendWithAttachment($smtp['username'], $smtp['from_name'], $customer['email'], $customer['name'],
-                    $series['subject'], $message['html'], $series['attachment_name'], $series['attachment_content'],
-                    $series['attachment_mime'], $message['inlineImages']);
-            } else {
-                $mailer->send($smtp['username'], $smtp['from_name'], $customer['email'], $customer['name'],
-                    $series['subject'], $message['html'], true, $message['inlineImages']);
-            }
+            recurring_email_deliver($mailer, $smtp, $customer, $series, $message, $recipient);
             $pdo->beginTransaction();
             $pdo->prepare("UPDATE customer_email_series_runs SET status = 'sent', completed_at = UTC_TIMESTAMP() WHERE id = ?")->execute([$runId]);
             $pdo->prepare('UPDATE customer_email_series SET last_sent_at = UTC_TIMESTAMP(), last_error = NULL WHERE customer_id = ?')->execute([$id]);

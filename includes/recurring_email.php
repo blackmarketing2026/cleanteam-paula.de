@@ -20,6 +20,11 @@ function ensure_recurring_email_tables(PDO $pdo): void
         KEY idx_series_due (enabled, next_run_at),
         CONSTRAINT fk_series_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    foreach (['recipient_mode' => "VARCHAR(10) NOT NULL DEFAULT 'contract'", 'recipient_email' => 'VARCHAR(190) NULL'] as $name => $definition) {
+        if (!$pdo->query("SHOW COLUMNS FROM customer_email_series LIKE '{$name}'")->fetch()) {
+            $pdo->exec("ALTER TABLE customer_email_series ADD COLUMN {$name} {$definition}");
+        }
+    }
     $pdo->exec("CREATE TABLE IF NOT EXISTS customer_email_series_runs (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, customer_id VARCHAR(64) NOT NULL,
         scheduled_at DATETIME NOT NULL, started_at DATETIME NOT NULL, completed_at DATETIME NULL,
@@ -69,6 +74,19 @@ function recurring_email_customer(PDO $pdo, string $id): ?array
     return $stmt->fetch() ?: null;
 }
 
+function recurring_email_recipient(array $series, array $customer): string
+{
+    $mode = $series['recipient_mode'] ?? 'contract';
+    if (!in_array($mode, ['contract', 'manual'], true)) {
+        throw new InvalidArgumentException('Bitte eine gueltige Empfaengerauswahl treffen.');
+    }
+    $email = trim((string) ($mode === 'manual' ? ($series['recipient_email'] ?? '') : $customer['email']));
+    if (strlen($email) > 190 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new InvalidArgumentException('Bitte eine gueltige Empfaenger-E-Mail-Adresse angeben.');
+    }
+    return $email;
+}
+
 function recurring_email_lock(PDO $pdo, string $customerId): bool
 {
     $stmt = $pdo->prepare('SELECT GET_LOCK(?, 0)');
@@ -85,7 +103,7 @@ function recurring_email_state(PDO $pdo, array $customer): array
 {
     $stmt = $pdo->prepare('SELECT customer_id, subject, body, frequency, schedule_day, send_time, enabled,
         next_run_at, last_sent_at, last_error, attachment_name, attachment_mime,
-        OCTET_LENGTH(attachment_content) AS attachment_size, revision FROM customer_email_series WHERE customer_id = ?');
+        OCTET_LENGTH(attachment_content) AS attachment_size, revision, recipient_mode, recipient_email FROM customer_email_series WHERE customer_id = ?');
     $stmt->execute([$customer['id']]);
     $series = $stmt->fetch() ?: null;
     $logs = $pdo->prepare('SELECT scheduled_at, started_at, completed_at, status, recipient, subject, attachment_name, error_message
