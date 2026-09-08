@@ -26,7 +26,7 @@ return [
 
     // Zufaelligen Schluessel erzeugen, z. B. mit:
     // php -r "echo bin2hex(random_bytes(32));"
-    // Schuetzt api/cron-reminders.php vor fremden Aufrufen (kein Login moeglich,
+    // Schuetzt api/cron-reminders.php und api/cron-customer-emails.php (kein Login moeglich,
     // da der Cronjob von aussen kommt). Ohne diesen Schluessel lehnt der
     // Endpunkt jeden Aufruf ab.
     'cron_secret' => 'BITTE_ZUFAELLIGEN_SCHLUESSEL_EINTRAGEN',

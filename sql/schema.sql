@@ -241,3 +241,30 @@ VALUES
 -- cleanteam@function-concept.de wird automatisch als Admin gefuehrt,
 -- sobald er in der users-Tabelle existiert. Es muss hier kein Nutzer
 -- manuell per SQL angelegt werden.
+
+
+-- Wiederkehrende Kunden-E-Mails
+CREATE TABLE IF NOT EXISTS customer_email_series (
+        customer_id VARCHAR(64) NOT NULL PRIMARY KEY,
+        subject VARCHAR(190) NOT NULL DEFAULT '', body TEXT NOT NULL,
+        frequency VARCHAR(10) NOT NULL DEFAULT 'monthly', schedule_day TINYINT UNSIGNED NOT NULL DEFAULT 1,
+        send_time CHAR(5) NOT NULL DEFAULT '09:00', enabled TINYINT(1) NOT NULL DEFAULT 0,
+        next_run_at DATETIME NULL, last_sent_at DATETIME NULL, last_error VARCHAR(500) NULL,
+        attachment_name VARCHAR(190) NULL, attachment_mime VARCHAR(100) NULL, attachment_content MEDIUMBLOB NULL,
+        revision INT UNSIGNED NOT NULL DEFAULT 1, updated_at DATETIME NOT NULL,
+        KEY idx_series_due (enabled, next_run_at),
+        CONSTRAINT fk_series_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS customer_email_series_runs (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, customer_id VARCHAR(64) NOT NULL,
+        scheduled_at DATETIME NOT NULL, started_at DATETIME NOT NULL, completed_at DATETIME NULL,
+        status VARCHAR(20) NOT NULL, recipient VARCHAR(190) NOT NULL, subject VARCHAR(190) NOT NULL,
+        attachment_name VARCHAR(190) NULL, error_message VARCHAR(500) NULL,
+        UNIQUE KEY uniq_series_occurrence (customer_id, scheduled_at),
+        CONSTRAINT fk_series_run_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS customer_email_scheduler (
+        id TINYINT UNSIGNED NOT NULL PRIMARY KEY, last_run_at DATETIME NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

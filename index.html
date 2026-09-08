@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=email-open-tracking-fix-20260827-1" />
+    <link rel="stylesheet" href="styles.css?v=email-series-20260908-1" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -1268,7 +1268,59 @@
       </form>
     </div>
 
+    <dialog id="email-series-dialog" aria-labelledby="email-series-title">
+      <form id="email-series-form">
+        <div class="series-dialog-heading">
+          <h2 id="email-series-title">E-Mail-Serie</h2>
+          <button id="series-close" class="ghost-button" type="button" aria-label="Fenster schlie&szlig;en">Schlie&szlig;en</button>
+        </div>
+        <p id="email-series-customer" class="muted"></p>
+        <p id="email-series-status" role="status"></p>
+        <p id="email-series-error" class="series-error" role="alert"></p>
+        <fieldset id="email-series-fields">
+          <p class="muted">Eine Serie pro Kunde. Betreff, Inhalt und Anhang werden bei jeder Wiederholung erneut versendet.</p>
+          <div class="series-schedule">
+            <label class="modal-field">Wiederholung
+              <select name="frequency"><option value="monthly">Monatlich</option><option value="weekly">W&ouml;chentlich</option></select>
+            </label>
+            <label id="series-month-day" class="modal-field">Tag im Monat
+              <input name="monthDay" type="number" min="1" max="31" value="1" required />
+            </label>
+            <label id="series-week-day" class="modal-field" hidden>Wochentag
+              <select name="weekDay"><option value="1">Montag</option><option value="2">Dienstag</option><option value="3">Mittwoch</option><option value="4">Donnerstag</option><option value="5">Freitag</option><option value="6">Samstag</option><option value="7">Sonntag</option></select>
+            </label>
+            <label class="modal-field">Uhrzeit
+              <input name="sendTime" type="time" value="09:00" required />
+            </label>
+          </div>
+          <p id="series-schedule-hint" class="muted">Fehlt der gew&auml;hlte Tag in einem Monat, erfolgt der Versand am letzten Monatstag. Der erste Versand erfolgt zum n&auml;chsten geplanten Termin.</p>
+          <label class="modal-field">Betreff
+            <input name="subject" type="text" maxlength="190" placeholder="Betreff der Checklisten-E-Mail" />
+          </label>
+          <label class="modal-field">Inhalt
+            <textarea name="body" rows="10" maxlength="50000" placeholder="E-Mail-Text hier einf&uuml;gen. Abs&auml;tze bleiben erhalten."></textarea>
+          </label>
+          <label class="modal-field">Anhang hochladen (optional)
+            <input name="attachment" type="file" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.txt,.csv" />
+          </label>
+          <p class="muted">PDF, DOCX, XLSX, PNG, JPG, TXT oder CSV, maximal 5 MB (ggf. kleineres Upload-Limit des Hostings). Eine neue Datei ersetzt den bisherigen Anhang beim Speichern.</p>
+          <div id="series-current-attachment" hidden>
+            <a id="series-attachment-link" href="#">Anhang</a>
+            <button id="series-remove-attachment" class="ghost-button" type="button">Anhang entfernen</button>
+          </div>
+          <div class="form-actions">
+            <button id="series-pause" class="ghost-button" type="submit" value="pause" formnovalidate hidden>Serie pausieren</button>
+            <button id="series-draft" class="secondary-button" type="submit" value="draft">Entwurf speichern</button>
+            <button id="series-activate" class="primary-button" type="submit" value="activate">Speichern und aktivieren</button>
+          </div>
+        </fieldset>
+        <p id="series-scheduler-status" class="muted"></p>
+        <details><summary>Versandverlauf</summary><ul id="series-history"></ul></details>
+      </form>
+    </dialog>
+
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=contract-ftp-backup-button-20260828-1"></script>
+    <script src="app.js?v=email-series-20260908-1"></script>
+    <script src="customer-email-series.js?v=20260908-1"></script>
   </body>
 </html>

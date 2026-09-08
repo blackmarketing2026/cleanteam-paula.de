@@ -1928,6 +1928,22 @@ button.compact-item.selected {
 .add-signer-button { margin-top: 16px; }
 .signer-question { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); }
 
+#email-series-dialog { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); box-sizing: border-box; overflow-y: auto; border: 1px solid var(--line); border-radius: 16px; padding: 28px; color: var(--blue-950); background: #fff; }
+#email-series-dialog::backdrop { background: rgba(16, 32, 51, .48); }
+#email-series-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.series-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.series-dialog-heading h2 { margin: 0; }
+.series-schedule { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+#email-series-dialog .modal-field { margin-bottom: 16px; }
+#email-series-dialog [hidden] { display: none !important; }
+#email-series-dialog textarea { resize: vertical; min-height: 180px; line-height: 1.5; font-weight: 400; }
+#email-series-dialog .form-actions { flex-wrap: wrap; }
+.series-error { color: #b42318; }
+.series-error:empty { display: none; }
+#series-current-attachment { overflow-wrap: anywhere; }
+#series-history { padding-left: 20px; font-size: 13px; line-height: 1.7; }
+@media (max-width: 600px) { .series-schedule { grid-template-columns: 1fr; gap: 0; } #email-series-dialog { padding: 20px; } }
+
 .toast {
   position: fixed;
   right: 22px;

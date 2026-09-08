@@ -1493,6 +1493,10 @@ function renderContractRow(contract) {
                 <i data-lucide="upload-cloud" aria-hidden="true"></i>
                 Backup
               </button>
+              <button class="secondary-button" type="button" data-action="email-series" data-customer-id="${escapeHtml(contract.customer.id)}">
+                <i data-lucide="mail" aria-hidden="true"></i>
+                E-Mail-Serie
+              </button>
             `
             : ""}
           <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
