@@ -71,3 +71,22 @@ veraendert keine globalen E-Mail-Einstellungen und keine anderen Kundenserien.
 Test-E-Mails sind auch bei ausgeschalteter Serie und ausgeschalteten globalen
 Versandfreigaben moeglich. Gueltiger Empfaenger, Betreff, Inhalt und konfiguriertes
 SMTP-Konto bleiben erforderlich. Tests speichern oder aktivieren die Serie nicht.
+
+## Platzhalter und Checklisten-Vorlage
+
+Im Editor koennen Platzhalter an der Cursorposition in Betreff oder Inhalt
+eingefuegt werden. Die Checklisten-Vorlage ergaenzt bestehenden Text; sie ersetzt
+keine vorhandenen Eingaben. Die Vorschau zeigt die Werte beim Oeffnen des Editors.
+
+Verfuegbar: `{{firma}}`, `{{ansprechpartner}}`, `{{email}}`, `{{telefon}}`,
+`{{strasse}}`, `{{plz}}`, `{{ort}}`, `{{vertragsbeginn}}`, `{{unterschrieben_am}}`,
+`{{intervall}}`, `{{monatspreis_netto}}`, `{{leistung}}`, `{{leistungsbeschreibung}}`,
+`{{datum}}`, `{{monat}}`, `{{jahr}}`.
+
+Verwendet wird der zuletzt unterschriebene Vertrag dieses Kunden (Unterschriftsdatum,
+danach Erstellungsdatum und ID). Die Kundenadresse stammt aus dem Kundenstamm.
+Test und automatischer Versand lesen die Werte jeweils neu; Datum/Monat/Jahr gelten
+zum Versandzeitpunkt in Deutschland. In der Datenbank bleibt die Vorlage erhalten.
+Unbekannte Platzhalter oder fehlende verwendete Daten verhindern den Versand. Im
+automatischen Lauf wird die Serie bei Fehlern pausiert. Inhalte werden als Klartext
+ersetzt und anschliessend fuer die HTML-E-Mail maskiert. Anhaenge bleiben unveraendert.

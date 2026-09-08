@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=email-series-20260908-3" />
+    <link rel="stylesheet" href="styles.css?v=email-series-20260908-5" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -1311,9 +1311,25 @@
           <label class="modal-field">Betreff
             <input name="subject" type="text" maxlength="190" placeholder="Betreff der Checklisten-E-Mail" />
           </label>
+          <div class="series-delivery-controls">
+            <strong>Platzhalter und Vorlage</strong>
+            <p id="series-placeholder-source" class="muted"></p>
+            <div class="series-schedule">
+              <label class="modal-field">Vertragsdaten<select id="series-placeholder"></select></label>
+              <label class="modal-field">Einf&uuml;gen in<select id="series-placeholder-target"><option value="body">Inhalt</option><option value="subject">Betreff</option></select></label>
+            </div>
+            <div class="form-actions">
+              <button id="series-insert-placeholder" class="secondary-button" type="button">Platzhalter einf&uuml;gen</button>
+              <button id="series-insert-template" class="ghost-button" type="button">Checklisten-Vorlage einf&uuml;gen</button>
+            </div>
+          </div>
           <label class="modal-field">Inhalt
             <textarea name="body" rows="10" maxlength="50000" placeholder="E-Mail-Text hier einf&uuml;gen. Abs&auml;tze bleiben erhalten."></textarea>
           </label>
+          <details class="series-placeholder-preview"><summary>Vorschau mit Vertragsdaten</summary>
+            <p><strong id="series-preview-subject"></strong></p>
+            <pre id="series-preview-body"></pre>
+          </details>
           <label class="modal-field">Anhang hochladen (optional)
             <input name="attachment" type="file" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.txt,.csv" />
           </label>
@@ -1335,6 +1351,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="app.js?v=email-series-20260908-1"></script>
-    <script src="customer-email-series.js?v=20260908-4"></script>
+    <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

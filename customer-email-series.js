@@ -13,6 +13,20 @@
   let previousFocus = null;
   let csrfToken = '';
   let contractEmail = '';
+  let placeholderValues = {};
+  const placeholderLabels = {firma: 'Firma', ansprechpartner: 'Ansprechpartner', email: 'Kunden-E-Mail', telefon: 'Telefon',
+    strasse: 'Straße und Hausnummer', plz: 'Postleitzahl', ort: 'Ort', vertragsbeginn: 'Vertragsbeginn',
+    unterschrieben_am: 'Unterschriftsdatum', intervall: 'Reinigungsintervall', monatspreis_netto: 'Monatspreis netto',
+    leistung: 'Leistung', leistungsbeschreibung: 'Leistungsbeschreibung', datum: 'Heutiges Datum', monat: 'Aktueller Monat', jahr: 'Aktuelles Jahr'};
+
+  function previewPlaceholders() {
+    const expand = text => text.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (token, key) => {
+      const value = placeholderValues[key.trim()];
+      return value === undefined ? token : value || '(nicht hinterlegt)';
+    });
+    document.querySelector('#series-preview-subject').textContent = expand(form.elements.subject.value).replace(/[\r\n]+/g, ' ');
+    document.querySelector('#series-preview-body').textContent = expand(form.elements.body.value);
+  }
   const seriesEnabled = document.querySelector('#series-enabled');
 
   function renderSeriesSwitch() {
@@ -65,6 +79,19 @@
     form.elements.monthDay.value = current?.frequency === 'monthly' ? current.schedule_day : 1;
     form.elements.weekDay.value = current?.frequency === 'weekly' ? current.schedule_day : 1;
     form.elements.sendTime.value = current?.send_time || '09:00';
+    placeholderValues = data.placeholders?.values || {};
+    const choices = document.querySelector('#series-placeholder');
+    choices.replaceChildren();
+    for (const [key, label] of Object.entries(placeholderLabels)) {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = `${label} – {{${key}}}`;
+      choices.append(option);
+    }
+    document.querySelector('#series-placeholder-source').textContent = 'Verwendet wird der zuletzt unterschriebene Vertrag'
+      + (data.placeholders?.contractSignedAt ? ` (${date(data.placeholders.contractSignedAt)})` : '')
+      + '. Platzhalter werden bei jedem Versand neu ausgefüllt. Vorschau: Daten beim Öffnen des Editors.';
+    previewPlaceholders();
     scheduleFields();
     const active = Number(current?.enabled) === 1;
     status.textContent = `${active ? 'Aktiv' : current ? 'Pausiert / Entwurf' : 'Noch keine Serie angelegt'} · Nächster Versand: ${date(current?.next_run_at)} · Zuletzt versendet: ${date(current?.last_sent_at)}`;
@@ -141,6 +168,23 @@
   form.elements.frequency.addEventListener('change', scheduleFields);
   form.elements.recipientMode.addEventListener('change', recipientFields);
   form.elements.recipientEmail.addEventListener('input', recipientFields);
+  form.elements.subject.addEventListener('input', previewPlaceholders);
+  form.elements.body.addEventListener('input', previewPlaceholders);
+  document.querySelector('#series-insert-placeholder').addEventListener('click', () => {
+    const key = document.querySelector('#series-placeholder').value;
+    if (!Object.hasOwn(placeholderLabels, key)) return;
+    const target = document.querySelector('#series-placeholder-target').value === 'subject' ? form.elements.subject : form.elements.body;
+    target.setRangeText(`{{${key}}}`, target.selectionStart ?? target.value.length, target.selectionEnd ?? target.value.length, 'end');
+    target.focus();
+    previewPlaceholders();
+  });
+  document.querySelector('#series-insert-template').addEventListener('click', () => {
+    if (!form.elements.subject.value.trim()) form.elements.subject.value = 'Checkliste für {{firma}} – {{monat}} {{jahr}}';
+    const template = 'Guten Tag {{ansprechpartner}},\n\nbitte prüfen Sie die beigefügte Checkliste für {{firma}} in {{strasse}}, {{plz}} {{ort}}.\n\nVereinbartes Reinigungsintervall: {{intervall}}.\n\nBitte senden Sie uns die ausgefüllte Checkliste zurück. Vielen Dank!';
+    form.elements.body.value += (form.elements.body.value.trim() ? '\n\n' : '') + template;
+    form.elements.body.focus();
+    previewPlaceholders();
+  });
   seriesEnabled.addEventListener('change', renderSeriesSwitch);
   document.querySelector('#series-remove-attachment').addEventListener('click', () => {
     removeAttachment = true;

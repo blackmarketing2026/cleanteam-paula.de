@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/recurring_email_placeholders.php';
 
 function ensure_recurring_email_tables(PDO $pdo): void
 {
@@ -112,6 +113,7 @@ function recurring_email_state(PDO $pdo, array $customer): array
     return ['customer' => ['id' => $customer['id'], 'name' => $customer['name'], 'email' => $customer['email']],
         'eligible' => $customer['deleted_at'] === null && (bool) $customer['eligible'],
         'series' => $series, 'runs' => $logs->fetchAll(),
+        'placeholders' => recurring_email_placeholder_context($pdo, $customer['id']),
         'schedulerLastRunAt' => $pdo->query('SELECT last_run_at FROM customer_email_scheduler WHERE id = 1')->fetchColumn() ?: null];
 }
 

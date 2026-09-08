@@ -46,3 +46,29 @@ foreach ([['recipient_mode' => 'invalid'], ['recipient_mode' => 'manual', 'recip
     throw new RuntimeException('Invalid recipient accepted.');
 }
 echo "PASS: contract/manual recipients and invalid addresses\n";
+
+$values = recurring_email_placeholder_values(
+    ['name' => 'Muster & Co', 'salutation' => 'Frau', 'contact_last_name' => 'Muster'],
+    ['price' => '1234.5', 'start_date' => '2026-09-01', 'interval_label' => 'Woechentlich'],
+    new DateTimeImmutable('2026-08-31 23:30:00 UTC')
+);
+if ($values['datum'] !== '01.09.2026' || $values['monat'] !== 'September'
+    || $values['monatspreis_netto'] !== '1.234,50 €'
+    || recurring_email_expand('Hallo {{ ansprechpartner }}, {{firma}}', $values) !== 'Hallo Frau Muster, Muster & Co') {
+    throw new RuntimeException('Placeholder formatting failed.');
+}
+if (recurring_email_expand('{{firma}}', ['firma' => '{{datum}}', 'datum' => 'secret']) !== '{{datum}}') {
+    throw new RuntimeException('Replacement must not expand nested customer data.');
+}
+if (recurring_email_expand('{{firma}}', ['firma' => "Firma\r\nBcc: test"], true) !== 'Firma Bcc: test') {
+    throw new RuntimeException('Subject newlines not normalized.');
+}
+foreach (['{{unknown}}', '{{telefon}}'] as $invalid) {
+    try {
+        recurring_email_expand($invalid, $values);
+    } catch (InvalidArgumentException $e) {
+        continue;
+    }
+    throw new RuntimeException('Unknown or missing placeholder accepted.');
+}
+echo "PASS: placeholder values, German formatting, timezone, unknown/missing data and nonrecursive expansion\n";

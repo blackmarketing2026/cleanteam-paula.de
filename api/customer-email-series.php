@@ -77,6 +77,10 @@ try {
         if (($enabled || $action === 'test') && ($subject === '' || $body === '')) {
             throw new InvalidArgumentException('Bitte Betreff und Inhalt angeben.');
         }
+        if ($enabled || $action === 'test') {
+            $expanded = recurring_email_expand_series(['subject' => $subject, 'body' => $body],
+                recurring_email_placeholder_context($pdo, $id)['values']);
+        }
         $file = ['name' => $current['attachment_name'] ?? null, 'mime' => $current['attachment_mime'] ?? null,
             'content' => $current['attachment_content'] ?? null];
         if (($_POST['removeAttachment'] ?? '') === '1') {
@@ -93,7 +97,7 @@ try {
             if (!$smtp || empty($smtp['host']) || empty($smtp['username']) || empty($smtp['password_encrypted'])) {
                 throw new InvalidArgumentException('Bitte zuerst das E-Mail-Versandkonto einrichten.');
             }
-            $testSeries = ['subject' => $subject, 'body' => $body, 'attachment_name' => $file['name'],
+            $testSeries = ['subject' => $expanded['subject'], 'body' => $expanded['body'], 'attachment_name' => $file['name'],
                 'attachment_mime' => $file['mime'], 'attachment_content' => $file['content']];
             $_SESSION['series_test_at'][$id] = time();
             try {

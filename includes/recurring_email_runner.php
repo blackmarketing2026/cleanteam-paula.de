@@ -57,6 +57,7 @@ function run_recurring_emails(PDO $pdo): array
                 throw new RuntimeException('Bitte das E-Mail-Versandkonto in den Einstellungen einrichten.');
             }
             $recipient = recurring_email_recipient($series, $customer);
+            $series = recurring_email_expand_series($series, recurring_email_placeholder_context($pdo, $id)['values']);
             $message = recurring_email_message($pdo, $smtp, $series);
             $mailer = new SmtpMailer($smtp['host'], (int) $smtp['smtp_port'], $smtp['smtp_encryption'],
                 $smtp['username'], decrypt_secret($smtp['password_encrypted']));

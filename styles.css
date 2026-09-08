@@ -1939,6 +1939,8 @@ button.compact-item.selected {
 #email-series-dialog textarea { resize: vertical; min-height: 180px; line-height: 1.5; font-weight: 400; }
 #email-series-dialog .form-actions { flex-wrap: wrap; }
 .series-error { color: #b42318; }
+.series-placeholder-preview { margin: 16px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+#series-preview-body { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.5; }
 .series-delivery-controls { border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 20px 0 8px; }
 .series-delivery-controls legend { font-weight: 700; padding: 0 6px; }
 .series-delivery-switch { display: flex; align-items: center; gap: 12px; margin: 14px 0; }
