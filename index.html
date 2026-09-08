@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=email-series-20260908-1" />
+    <link rel="stylesheet" href="styles.css?v=email-series-20260908-3" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -1277,6 +1277,14 @@
         <p id="email-series-customer" class="muted"></p>
         <p id="email-series-status" role="status"></p>
         <p id="email-series-error" class="series-error" role="alert"></p>
+        <fieldset id="series-delivery-controls" class="series-delivery-controls" disabled>
+          <legend>Versand aktivieren / deaktivieren</legend>
+          <p class="muted">Diese Freigaben gelten f&uuml;r alle Kunden. Das Einschalten verschickt keine Testmail und aktiviert keine neue Serie. Bereits aktive Serien k&ouml;nnen wieder versendet werden.</p>
+          <label class="series-delivery-switch"><input type="checkbox" role="switch" data-delivery-setting="customerEmailsEnabled" /><span>Kunden-E-Mails</span><strong data-delivery-label="customerEmailsEnabled">Aus</strong></label>
+          <label class="series-delivery-switch"><input type="checkbox" role="switch" data-delivery-setting="contractEmailsEnabled" /><span>Vertrags-E-Mails und Serien</span><strong data-delivery-label="contractEmailsEnabled">Aus</strong></label>
+          <label class="series-delivery-switch"><input type="checkbox" role="switch" data-delivery-setting="testEmailsEnabled" /><span>Test-E-Mails</span><strong data-delivery-label="testEmailsEnabled">Aus</strong></label>
+        </fieldset>
+        <p id="series-delivery-status" class="muted" role="status"></p>
         <fieldset id="email-series-fields">
           <p class="muted">Eine Serie pro Kunde. Betreff, Inhalt und Anhang werden bei jeder Wiederholung erneut versendet.</p>
           <label class="modal-field">Empf&auml;nger
@@ -1333,6 +1341,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="app.js?v=email-series-20260908-1"></script>
-    <script src="customer-email-series.js?v=20260908-2"></script>
+    <script src="customer-email-series.js?v=20260908-3"></script>
   </body>
 </html>

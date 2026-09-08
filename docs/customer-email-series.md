@@ -61,3 +61,12 @@ Serienentwurf, Aktivierung, naechster Termin und Versandverlauf bleiben unveraen
 Testversand beruecksichtigt die Test-, Kunden- und Vertrags-Versandschalter und
 benoetigt keinen Cronjob. Zwischen Tests gilt eine Wartezeit von 30 Sekunden je
 Kunde/Sitzung. Bei unklarem Versandresultat zuerst die Zustellung pruefen.
+
+## Versandfreigaben im Editor
+
+Drei Schiebeschalter zeigen Kunden-, Vertrags- und Test-E-Mail-Freigaben.
+Admins koennen diese globalen Einstellungen direkt im Editor aendern; andere
+Rollen sehen den Zustand ohne Aenderungsrecht. Jede Aenderung wird sofort
+gespeichert, ohne den Entwurf, Anhang oder Zeitplan zu veraendern.
+Der Testbutton ist nur bei allen drei Freigaben verfuegbar. Das Einschalten
+kann bereits aktive Serien wieder freigeben; es sendet selbst keine Testmail.

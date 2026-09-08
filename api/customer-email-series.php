@@ -6,6 +6,11 @@ require_once __DIR__ . '/../includes/recurring_email_sender.php';
 require_once __DIR__ . '/../includes/email_settings.php';
 
 require_login();
+function series_delivery_state(PDO $pdo): array
+{
+    return ['deliverySettings' => load_email_delivery_settings($pdo),
+        'canManageDelivery' => (bool) (current_user()['isAdmin'] ?? false)];
+}
 $_SESSION['email_series_csrf'] ??= bin2hex(random_bytes(32));
 $pdo = db();
 ensure_recurring_email_tables($pdo);
@@ -30,13 +35,27 @@ if ($method === 'GET') {
         echo $file['attachment_content'];
         exit;
     }
-    json_response(recurring_email_state($pdo, $customer) + ['csrfToken' => $_SESSION['email_series_csrf']]);
+    json_response(recurring_email_state($pdo, $customer) + series_delivery_state($pdo) + ['csrfToken' => $_SESSION['email_series_csrf']]);
 }
 if ($method !== 'POST') {
     json_error('Methode nicht erlaubt.', 405);
 }
 if (!hash_equals($_SESSION['email_series_csrf'], (string) ($_POST['csrfToken'] ?? ''))) {
     json_error('Die Sitzung ist abgelaufen oder der Upload ueberschreitet das Serverlimit. Bitte Fenster neu oeffnen und erneut versuchen.', 403);
+}
+if (($_POST['action'] ?? '') === 'delivery') {
+    require_admin();
+    $columns = ['customerEmailsEnabled' => 'customer_emails_enabled',
+        'contractEmailsEnabled' => 'contract_emails_enabled', 'testEmailsEnabled' => 'test_emails_enabled'];
+    $setting = (string) ($_POST['setting'] ?? '');
+    $enabled = (string) ($_POST['enabled'] ?? '');
+    if (!isset($columns[$setting]) || !in_array($enabled, ['0', '1'], true)) {
+        json_error('Ungueltige Versandeinstellung.', 422);
+    }
+    ensure_email_delivery_settings_table($pdo);
+    $pdo->prepare('UPDATE email_delivery_settings SET ' . $columns[$setting] . ' = ?, updated_at = UTC_TIMESTAMP() WHERE id = 1')
+        ->execute([(int) $enabled]);
+    json_response(series_delivery_state($pdo));
 }
 if (!recurring_email_lock($pdo, $id)) {
     json_error('Die Serie wird gerade verarbeitet. Bitte gleich erneut versuchen.', 409);
@@ -139,4 +158,4 @@ try {
 if ($error !== null) {
     json_error($error, $code);
 }
-json_response($result + ['csrfToken' => $_SESSION['email_series_csrf']]);
+json_response($result + series_delivery_state($pdo) + ['csrfToken' => $_SESSION['email_series_csrf']]);

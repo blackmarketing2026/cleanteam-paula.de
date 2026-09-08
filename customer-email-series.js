@@ -13,6 +13,26 @@
   let previousFocus = null;
   let csrfToken = '';
   let contractEmail = '';
+  let deliverySettings = {};
+  let canManageDelivery = false;
+  let eligible = false;
+  const deliveryControls = document.querySelector('#series-delivery-controls');
+
+  function renderDelivery(data) {
+    deliverySettings = data.deliverySettings || {};
+    canManageDelivery = Boolean(data.canManageDelivery);
+    deliveryControls.disabled = !canManageDelivery;
+    for (const setting of ['customerEmailsEnabled', 'contractEmailsEnabled', 'testEmailsEnabled']) {
+      document.querySelector(`[data-delivery-setting="${setting}"]`).checked = Boolean(deliverySettings[setting]);
+      document.querySelector(`[data-delivery-label="${setting}"]`).textContent = deliverySettings[setting] ? 'Ein' : 'Aus';
+    }
+    const allowed = deliverySettings.customerEmailsEnabled && deliverySettings.contractEmailsEnabled && deliverySettings.testEmailsEnabled;
+    document.querySelector('#series-test').disabled = !eligible || !allowed;
+    document.querySelector('#series-delivery-status').textContent = (allowed
+      ? 'Versand freigegeben. Test-E-Mail kann gesendet werden.'
+      : 'Für Test-E-Mails müssen alle drei Freigaben eingeschaltet sein.')
+      + (canManageDelivery ? ' Änderungen werden sofort gespeichert.' : ' Nur Admins können diese Freigaben ändern.');
+  }
 
   const date = value => value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' })
     .format(new Date(value.replace(' ', 'T') + 'Z')) : 'Noch nicht';
@@ -41,6 +61,7 @@
   }
 
   function render(data) {
+    eligible = Boolean(data.eligible);
     csrfToken = data.csrfToken;
     current = data.series;
     form.reset();
@@ -65,7 +86,7 @@
     document.querySelector('#series-activate').textContent = active ? 'Änderungen speichern' : 'Speichern und aktivieren';
     document.querySelector('#series-activate').disabled = !data.eligible;
     document.querySelector('#series-draft').disabled = !data.eligible;
-    document.querySelector('#series-test').disabled = !data.eligible;
+    renderDelivery(data);
     const attachment = document.querySelector('#series-current-attachment');
     attachment.hidden = !current?.attachment_name;
     const link = document.querySelector('#series-attachment-link');
@@ -112,6 +133,7 @@
     document.querySelector('#email-series-customer').textContent = '';
     document.querySelector('#series-history').replaceChildren();
     fieldset.disabled = true;
+    deliveryControls.disabled = true;
     dialog.showModal();
     try {
       render(await request());
@@ -134,6 +156,29 @@
   form.elements.frequency.addEventListener('change', scheduleFields);
   form.elements.recipientMode.addEventListener('change', recipientFields);
   form.elements.recipientEmail.addEventListener('input', recipientFields);
+  deliveryControls.addEventListener('change', async event => {
+    const toggle = event.target.closest('[data-delivery-setting]');
+    if (!toggle || busy || !canManageDelivery) return;
+    const payload = new FormData();
+    payload.set('action', 'delivery');
+    payload.set('csrfToken', csrfToken);
+    payload.set('setting', toggle.dataset.deliverySetting);
+    payload.set('enabled', toggle.checked ? '1' : '0');
+    busy = true;
+    fieldset.disabled = true;
+    deliveryControls.disabled = true;
+    error.textContent = '';
+    try {
+      renderDelivery(await request({method: 'POST', body: payload}));
+    } catch (failure) {
+      renderDelivery({deliverySettings, canManageDelivery});
+      error.textContent = failure.message;
+    } finally {
+      fieldset.disabled = false;
+      deliveryControls.disabled = !canManageDelivery;
+      busy = false;
+    }
+  });
   document.querySelector('#series-remove-attachment').addEventListener('click', () => {
     removeAttachment = true;
     fileInput.value = '';
@@ -163,11 +208,13 @@
     payload.set('removeAttachment', removeAttachment ? '1' : '0');
     busy = true;
     fieldset.disabled = true;
+    deliveryControls.disabled = true;
     error.textContent = '';
     document.querySelector('#series-test-status').textContent = action === 'test' ? 'Test-E-Mail wird gesendet …' : '';
     try {
       const response = await request({ method: 'POST', body: payload });
       if (action === 'test') {
+        renderDelivery(response);
         document.querySelector('#series-test-status').textContent = `Test-E-Mail an ${response.recipient} versendet. Die Serie und ihr Zeitplan wurden nicht verändert.`;
       } else {
         render(response);
@@ -178,6 +225,7 @@
       error.textContent = failure.message;
     } finally {
       fieldset.disabled = false;
+      deliveryControls.disabled = !canManageDelivery;
       busy = false;
     }
   });
