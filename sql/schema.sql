@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS contracts (
   second_signer_name VARCHAR(190) NULL,
   second_signature_data LONGTEXT NULL,
   second_signed_at DATETIME NULL,
+  additional_signers LONGTEXT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uniq_contracts_offer (offer_id),

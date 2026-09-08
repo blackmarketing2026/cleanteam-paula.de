@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../includes/contract_signers.php';
+
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -75,6 +77,7 @@ function contract_row_to_json(array $row): array
         'termsAcceptedAt' => to_iso($row['terms_accepted_at'] ?? null),
         'signedAt' => to_iso($row['signed_at']),
         'signatureDataUrl' => $row['signature_data'],
+        'additionalSigners' => contract_additional_signers($row),
         'secondSignerName' => $row['second_signer_name'] ?? null,
         'secondSignatureDataUrl' => $row['second_signature_data'] ?? null,
         'secondSignedAt' => to_iso($row['second_signed_at'] ?? null),

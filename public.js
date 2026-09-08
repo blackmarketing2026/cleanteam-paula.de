@@ -28,8 +28,7 @@ const els = {
 };
 
 const signatureInk = new WeakSet();
-const secondPad = document.querySelector("#second-signature-pad");
-const twoSigners = document.querySelector("#two-signers");
+const additionalSigners = [];
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -290,6 +289,50 @@ function clearSignaturePad(canvas = els.signaturePad) {
   signatureInk.delete(canvas);
 }
 
+function updateSignerControls() {
+  const button = document.querySelector("#add-signer");
+  button.hidden = additionalSigners.length >= 4;
+  button.textContent = additionalSigners.length ? `Person ${additionalSigners.length + 2} hinzufügen` : "Eine Person hinzufügen";
+  els.saveSignature.textContent = additionalSigners.length ? "Vertrag mit allen Unterschriften abschließen" : "Vertrag jetzt unterschreiben";
+  additionalSigners.forEach((signer, index) => {
+    signer.heading.textContent = `Person ${index + 2}`;
+    signer.canvas.setAttribute("aria-label", `Unterschrift Person ${index + 2}`);
+  });
+}
+
+function addSigner() {
+  if (additionalSigners.length >= 4) return;
+  const section = document.createElement("section");
+  section.className = "additional-signer";
+  section.innerHTML = `
+    <div class="signer-heading"><h3></h3><button class="ghost-button remove-signer" type="button">Entfernen</button></div>
+    <label class="modal-field">Vollständiger Name
+      <input class="signer-name" type="text" maxlength="190" autocomplete="off" />
+    </label>
+    <label class="signer-consent"><input type="checkbox" />
+      <span>Ich bin zur gemeinsamen Unterzeichnung berechtigt, stimme dem Auftrag und den Vertragsbedingungen zu und bin mit der Verarbeitung meiner Daten für diesen Vertrag einverstanden.</span>
+    </label>
+    <div class="signature-area">
+      <canvas class="additional-signature-pad" width="900" height="260"></canvas>
+      <div class="form-actions"><button class="ghost-button clear-signer" type="button">Leeren</button></div>
+    </div>`;
+  const signer = {section, heading: section.querySelector("h3"), name: section.querySelector(".signer-name"),
+    confirmed: section.querySelector('input[type="checkbox"]'), canvas: section.querySelector("canvas")};
+  additionalSigners.push(signer);
+  document.querySelector("#additional-signers").append(section);
+  setupSignaturePad(signer.canvas);
+  section.querySelector(".clear-signer").addEventListener("click", () => clearSignaturePad(signer.canvas));
+  section.querySelector(".remove-signer").addEventListener("click", () => {
+    additionalSigners.splice(additionalSigners.indexOf(signer), 1);
+    section.remove();
+    document.querySelector("#add-signer-question").hidden = true;
+    els.saveSignature.disabled = false;
+    updateSignerControls();
+  });
+  updateSignerControls();
+  signer.name.focus();
+}
+
 function bindEvents() {
   els.card.addEventListener("click", (event) => {
     const yesNoButton = event.target.closest("[data-yesno]");
@@ -339,10 +382,25 @@ function bindEvents() {
   });
 
   els.clearSignature.addEventListener("click", () => clearSignaturePad());
-  document.querySelector("#clear-second-signature").addEventListener("click", () => clearSignaturePad(secondPad));
-  twoSigners.addEventListener("change", () => {
-    document.querySelector("#second-signer-fields").hidden = !twoSigners.checked;
-    els.saveSignature.textContent = twoSigners.checked ? "Vertrag mit beiden Unterschriften abschlie\u00dfen" : "Vertrag jetzt unterschreiben";
+  const addButton = document.querySelector("#add-signer");
+  const question = document.querySelector("#add-signer-question");
+  addButton.addEventListener("click", () => {
+    question.hidden = false;
+    addButton.hidden = true;
+    els.saveSignature.disabled = true;
+    document.querySelector("#add-signer-question-text").textContent = `Soll Person ${additionalSigners.length + 2} diesen Vertrag mit unterschreiben?`;
+    document.querySelector("#add-signer-yes").focus();
+  });
+  document.querySelector("#add-signer-no").addEventListener("click", () => {
+    question.hidden = true;
+    els.saveSignature.disabled = false;
+    updateSignerControls();
+  });
+  document.querySelector("#add-signer-yes").addEventListener("click", () => {
+    if (additionalSigners.length >= 4) return;
+    question.hidden = true;
+    els.saveSignature.disabled = false;
+    addSigner();
   });
 
   els.saveSignature.addEventListener("click", async () => {
@@ -350,18 +408,19 @@ function bindEvents() {
       showToast("Bitte zuerst im Signaturfeld unterschreiben.");
       return;
     }
-    const secondSignerName = document.querySelector("#second-signer-name").value.trim();
-    const secondSignerConfirmed = document.querySelector("#second-signer-confirmed").checked;
-    if (twoSigners.checked && (!secondSignerName || !secondSignerConfirmed || !signatureInk.has(secondPad))) {
-      showToast("Bitte Namen, Berechtigung und Unterschrift der zweiten Person angeben.");
+    const signers = additionalSigners.map(({name, confirmed, canvas}) => ({
+      name: name.value.trim(), confirmed: confirmed.checked,
+      signatureDataUrl: canvas.toDataURL("image/png"),
+    }));
+    if (additionalSigners.some((signer, index) => !signers[index].name || !signers[index].confirmed || !signatureInk.has(signer.canvas))) {
+      showToast("Bitte Namen, Best\u00e4tigung und Unterschrift jeder weiteren Person angeben.");
       return;
     }
     els.saveSignature.disabled = true;
     try {
       await handleAction("sign", {
         signatureDataUrl: els.signaturePad.toDataURL("image/png"),
-        twoSigners: twoSigners.checked, secondSignerName, secondSignerConfirmed,
-        secondSignatureDataUrl: twoSigners.checked ? secondPad.toDataURL("image/png") : null,
+        additionalSigners: signers,
       });
     } finally {
       els.saveSignature.disabled = false;
@@ -392,7 +451,7 @@ function init() {
 
   bindEvents();
   setupSignaturePad(els.signaturePad);
-  setupSignaturePad(secondPad);
+
   loadBranding();
   loadOffer();
 }

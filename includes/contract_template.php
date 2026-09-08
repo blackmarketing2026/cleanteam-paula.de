@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/contract_signers.php';
+
 const CONTRACTOR = [
     'legal_name' => 'Clean Team Group SRLS',
     'trade_description' => 'Meisterbetrieb Gebäudereinigung',
@@ -590,11 +592,10 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $signatureImage = $isSigned && !empty($contract['signature_data'])
         ? '<img src="' . h($contract['signature_data']) . '" alt="Unterschrift" style="max-height:70px;">'
         : '<span class="sign-placeholder">noch nicht unterschrieben</span>';
-    if ($isSigned && !empty($contract['second_signature_data'])) {
-        $signatureImage .= '<div style="margin-top:16px;">Zweite unterzeichnende Person: '
-            . h($contract['second_signer_name']) . '<br>'
-            . h(contract_format_datetime($contract['second_signed_at'])) . '</div>'
-            . '<img src="' . h($contract['second_signature_data']) . '" alt="Zweite Unterschrift" style="max-height:70px;">';
+    foreach ($isSigned ? contract_additional_signers($contract) : [] as $index => $signer) {
+        $signatureImage .= '<div style="margin-top:16px;">Person ' . ($index + 2) . ': '
+            . h($signer['name']) . '<br>' . h(contract_format_datetime($signer['signedAt'])) . '</div>'
+            . '<img src="' . h($signer['signatureDataUrl']) . '" alt="Unterschrift Person ' . ($index + 2) . '" style="max-height:70px;">';
     }
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
     $contractorSignatureImage = $contractorSignatureDataUrl !== null

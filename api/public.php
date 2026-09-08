@@ -329,21 +329,28 @@ if ($method === 'POST' && $action === 'sign') {
         || empty($contract['data_confirmed'])) {
         json_error('Bitte schliessen Sie zuerst die vorherigen Schritte ab.', 409);
     }
-    $twoSigners = ($body['twoSigners'] ?? false) === true;
-    $secondName = $twoSigners ? trim((string) ($body['secondSignerName'] ?? '')) : null;
-    $secondSignature = $twoSigners ? (string) ($body['secondSignatureDataUrl'] ?? '') : null;
-    if ($twoSigners && ($secondName === '' || mb_strlen($secondName) > 190
-        || ($body['secondSignerConfirmed'] ?? false) !== true
-        || !validate_contract_signature($secondSignature))) {
-        json_error('Bitte Namen, Berechtigung und Unterschrift der zweiten Person angeben.', 422);
+    // Accept already-open clients from the previous two-person form as well.
+    $inputSigners = $body['additionalSigners'] ?? [];
+    if (!array_key_exists('additionalSigners', $body) && ($body['twoSigners'] ?? false) === true) {
+        $inputSigners = [['name' => $body['secondSignerName'] ?? '',
+            'signatureDataUrl' => $body['secondSignatureDataUrl'] ?? '',
+            'confirmed' => $body['secondSignerConfirmed'] ?? false]];
     }
+    try {
+        $signers = validate_additional_signers($inputSigners);
+    } catch (InvalidArgumentException $exception) {
+        json_error($exception->getMessage(), 422);
+    }
+    $secondName = $signers[0]['name'] ?? null;
+    $secondSignature = $signers[0]['signatureDataUrl'] ?? null;
 
     $stmt = $pdo->prepare(
-        "UPDATE contracts SET second_signer_name = :second_name, second_signature_data = :second_signature,
+        "UPDATE contracts SET additional_signers = :additional_signers, second_signer_name = :second_name, second_signature_data = :second_signature,
         second_signed_at = CASE WHEN :two_signers = 1 THEN UTC_TIMESTAMP() ELSE NULL END, status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, current_step = 'fertig' WHERE id = :id AND status <> 'signiert' AND current_step = 'signatur'"
     );
     $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id'],
-        'second_name' => $secondName, 'second_signature' => $secondSignature, 'two_signers' => (int) $twoSigners]);
+        'second_name' => $secondName, 'second_signature' => $secondSignature, 'two_signers' => (int) (count($signers) > 0),
+        'additional_signers' => json_encode($signers, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
     if ($stmt->rowCount() !== 1) {
         json_error('Der Vertrag wurde bereits abgeschlossen oder der Schritt hat sich geaendert.', 409);
     }

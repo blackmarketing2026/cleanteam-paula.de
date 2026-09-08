@@ -928,11 +928,11 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->keyValue('Elektronische Signatur', 'Noch nicht unterschrieben.');
     }
 
-    if ($isSigned && !empty($contract['second_signature_data'])) {
-        $pdf->keyValue('Zweite unterzeichnende Person', $contract['second_signer_name']);
-        $pdf->keyValue('Gemeinsam elektronisch signiert', contract_format_datetime($contract['second_signed_at']));
-        $pdf->keyValue('Bestaetigung zweite Person', 'Berechtigung, Auftrag, Vertragsbedingungen und Datenverarbeitung bestaetigt.');
-        $pdf->signatureImage($contract['second_signature_data']);
+    foreach ($isSigned ? contract_additional_signers($contract) : [] as $index => $signer) {
+        $pdf->keyValue('Unterzeichnende Person ' . ($index + 2), $signer['name']);
+        $pdf->keyValue('Gemeinsam elektronisch signiert', contract_format_datetime($signer['signedAt']));
+        $pdf->keyValue('Bestaetigung', 'Berechtigung, Auftrag, Vertragsbedingungen und Datenverarbeitung bestaetigt.');
+        $pdf->signatureImage($signer['signatureDataUrl']);
     }
 
     if ($isCleanTeamCopy) {
