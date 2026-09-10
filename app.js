@@ -2073,7 +2073,7 @@ async function deleteOffer(id) {
 async function resetContractLink(offerId) {
   const offer = getOffer(offerId);
   const confirmed = window.confirm(
-    "Neuen Link für diesen Vertrag erstellen? Der bisherige Link wird dabei ungültig, ein eventueller Fortschritt geht verloren.",
+    "Diesen Vertragslink wieder freigeben? Der Link bleibt gleich, ein eventueller Fortschritt geht verloren.",
   );
   if (!confirmed) {
     return;
@@ -2089,7 +2089,7 @@ async function resetContractLink(offerId) {
       await apiPatch(`api/offers.php?id=${encodeURIComponent(offerId)}`, { action: "reset-link" });
     }
     await loadAll();
-    showToast("Neuer Token wurde erstellt.");
+    showToast("Der bestehende Link wurde wieder freigegeben.");
   } catch (error) {
     showToast(error.message);
   }

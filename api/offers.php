@@ -226,7 +226,7 @@ if ($method === 'PUT') {
         json_error('Vertrags-ID fehlt.', 422);
     }
 
-    $stmt = $pdo->prepare('SELECT id, customer_id, created_at FROM offers WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, customer_id FROM offers WHERE id = :id');
     $stmt->execute(['id' => $id]);
     $existing = $stmt->fetch();
     if (!$existing) {
@@ -289,7 +289,7 @@ if ($method === 'PUT') {
             price = :price, base_price = :base_price, vat_applicable = :vat_applicable, notes = :notes,
             customer_obligations_note = :customer_obligations_note,
             validity_days = :validity_days, validity_hours = :validity_hours,
-            expires_at = DATE_ADD(DATE_ADD(:created_at, INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) WHERE id = :id'
+            expires_at = DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) WHERE id = :id'
     )->execute([
         'square_meters' => $squareMeters,
         'interval_label' => $intervalLabel,
@@ -303,7 +303,6 @@ if ($method === 'PUT') {
         'validity_days2' => $validityDays,
         'validity_hours' => $validityHours,
         'validity_hours2' => $validityHours,
-        'created_at' => $existing['created_at'],
         'id' => $id,
     ]);
 
@@ -331,12 +330,10 @@ if ($method === 'PATCH') {
         json_error('Vertragsentwurf wurde nicht gefunden.', 404);
     }
 
-    // Neuen Token vergeben, damit der alte (bereits verschickte/geoeffnete) Link endgueltig
-    // ungueltig bleibt; "Link kopieren"/"Vertrag senden" verwenden danach automatisch den neuen Link.
-    // sent_at/email_opened_at ebenfalls zuruecksetzen, sonst zeigt die Vertragsliste beim naechsten
-    // Versand faelschlich schon "zugestellt"/"geoeffnet" fuer den laengst ungueltigen alten Link an.
-    $pdo->prepare('UPDATE offers SET link_opened_at = NULL, sent_at = NULL, email_opened_at = NULL, token = :token WHERE id = :id')
-        ->execute(['token' => generate_token(), 'id' => $id]);
+    // Der bestehende Kundenlink bleibt erhalten. Nur die Einmal-Oeffnung und die
+    // Versandanzeige werden fuer eine erneute Freigabe zurueckgesetzt.
+    $pdo->prepare('UPDATE offers SET link_opened_at = NULL, sent_at = NULL, email_opened_at = NULL WHERE id = :id')
+        ->execute(['id' => $id]);
 
     $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');
     $stmt->execute(['id' => $id]);

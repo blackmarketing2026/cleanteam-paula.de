@@ -259,12 +259,9 @@ if ($method === 'DELETE') {
         $stmt = $pdo->prepare('DELETE FROM contracts WHERE id = :id');
         $stmt->execute(['id' => $id]);
 
-        // Neuen Token vergeben, damit der alte (bereits verschickte/geoeffnete) Link endgueltig
-        // ungueltig bleibt; "Link kopieren"/"Vertrag senden" verwenden danach automatisch den neuen Link.
-        // sent_at/email_opened_at ebenfalls zuruecksetzen, sonst zeigt die Vertragsliste beim naechsten
-        // Versand faelschlich schon "zugestellt"/"geoeffnet" fuer den laengst ungueltigen alten Link an.
-        $pdo->prepare('UPDATE offers SET link_opened_at = NULL, sent_at = NULL, email_opened_at = NULL, token = :token WHERE id = :offer_id')
-            ->execute(['token' => generate_token(), 'offer_id' => $row['offer_id']]);
+        // Der bestehende Kundenlink bleibt auch nach dem Zuruecksetzen erhalten.
+        $pdo->prepare('UPDATE offers SET link_opened_at = NULL, sent_at = NULL, email_opened_at = NULL WHERE id = :offer_id')
+            ->execute(['offer_id' => $row['offer_id']]);
 
         $pdo->commit();
     } catch (Throwable $exception) {
