@@ -227,7 +227,7 @@ if ($method === 'PUT') {
         json_error('Vertrags-ID fehlt.', 422);
     }
 
-    $stmt = $pdo->prepare('SELECT id, customer_id FROM offers WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, customer_id, is_existing_contract FROM offers WHERE id = :id');
     $stmt->execute(['id' => $id]);
     $existing = $stmt->fetch();
     if (!$existing) {
@@ -250,6 +250,9 @@ if ($method === 'PUT') {
     $interval = trim((string) ($body['interval'] ?? ''));
     $validityDays = (int) ($body['validityDays'] ?? 14);
     $validityHours = (int) ($body['validityHours'] ?? 0);
+    $isExistingContract = !empty($existing['is_existing_contract']);
+    $originalStartMonth = (int) ($body['originalStartMonth'] ?? 0);
+    $originalStartYear = (int) ($body['originalStartYear'] ?? 0);
 
     $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
     if (!in_array($interval, $allowedIntervals, true)) {
@@ -264,13 +267,20 @@ if ($method === 'PUT') {
     if ($price <= 0) {
         json_error('Bitte den monatlichen Preis eintragen.', 422);
     }
-    if ($startDate === '' || strtotime($startDate) === false) {
+    if (!$isExistingContract && ($startDate === '' || strtotime($startDate) === false)) {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
     }
-    if ($validityDays < 0 || $validityHours < 0 || $validityHours > 24
-        || ($validityDays === 0 && $validityHours === 0)) {
+    if (!$isExistingContract && ($validityDays < 0 || $validityHours < 0 || $validityHours > 24
+        || ($validityDays === 0 && $validityHours === 0))) {
         json_error('Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.', 422);
     }
+    if ($isExistingContract && ($originalStartMonth < 1 || $originalStartMonth > 12
+        || $originalStartYear < 1900 || $originalStartYear > (int) gmdate('Y'))) {
+        json_error('Bitte den ursprünglichen Vertragsbeginn mit einem gültigen Monat und Jahr eintragen.', 422);
+    }
+    $originalStartDate = $isExistingContract
+        ? sprintf('%04d-%02d-01', $originalStartYear, $originalStartMonth)
+        : null;
 
     $pdo->prepare(
         'UPDATE customers SET name = :name, contact_last_name = :contact, email = :email,
@@ -287,14 +297,16 @@ if ($method === 'PUT') {
 
     $pdo->prepare(
         'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
+            original_start_date = :original_start_date,
             price = :price, base_price = :base_price, vat_applicable = :vat_applicable, notes = :notes,
             customer_obligations_note = :customer_obligations_note,
             validity_days = :validity_days, validity_hours = :validity_hours,
-            expires_at = DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) WHERE id = :id'
+            expires_at = CASE WHEN is_existing_contract = 1 THEN expires_at ELSE DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) END WHERE id = :id'
     )->execute([
         'square_meters' => $squareMeters,
         'interval_label' => $intervalLabel,
-        'start_date' => $startDate,
+        'start_date' => $isExistingContract ? null : $startDate,
+        'original_start_date' => $originalStartDate,
         'price' => $price,
         'base_price' => $price,
         'vat_applicable' => $vatApplicable ? 1 : 0,

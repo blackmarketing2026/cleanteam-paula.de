@@ -396,7 +396,7 @@
               <label>Urspr&uuml;nglicher Vertragsbeginn &ndash; Jahr *<input id="existing-offer-start-year" type="number" min="1900" step="1" required placeholder="z. B. 2018" /></label>
               <label class="span-2">Leistungsbeschreibung *<textarea id="existing-offer-service-text" class="offer-service-editor" rows="18" required placeholder="Alle vereinbarten Leistungen als Flie&szlig;text eintragen"></textarea></label>
               <label class="span-2">Pflichten des Auftraggebers (optional)<textarea id="existing-offer-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6" placeholder="Zus&auml;tzliche kundenspezifische Pflichten, eine Pflicht pro Zeile"></textarea></label>
-              <p class="muted span-2">Nach dem Erstellen wird ausschlie&szlig;lich ein Link zum manuellen Kopieren bereitgestellt. Es werden keine Kunden-E-Mails versendet.</p>
+              <p class="muted span-2">Link, Versand und E-Mail-Vorlage werden manuell ausgel&ouml;st. Automatische Signatur-Erinnerungen und E-Mail-Serien bleiben deaktiviert.</p>
               <div class="form-actions span-2"><button class="primary-button" type="submit"><i data-lucide="file-check-2" aria-hidden="true"></i>Bestandsvertrag erstellen</button></div>
             </form>
           </section>
@@ -1295,10 +1295,19 @@
           Preis (monatlich, netto) *
           <input id="offer-edit-price" type="number" min="0" step="0.01" required />
         </label>
-        <label class="modal-field">
+        <label id="offer-edit-start-date-field" class="modal-field">
           Beginn der Dienstleistung *
           <input id="offer-edit-start-date" type="date" required />
         </label>
+        <div id="offer-edit-original-start-fields" hidden>
+          <label class="modal-field">Urspr&uuml;nglicher Vertragsbeginn &ndash; Monat *
+            <select id="offer-edit-original-start-month"><option value="">Bitte w&auml;hlen</option><option value="1">Januar</option><option value="2">Februar</option><option value="3">M&auml;rz</option><option value="4">April</option><option value="5">Mai</option><option value="6">Juni</option><option value="7">Juli</option><option value="8">August</option><option value="9">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Dezember</option></select>
+          </label>
+          <label class="modal-field">Urspr&uuml;nglicher Vertragsbeginn &ndash; Jahr *
+            <input id="offer-edit-original-start-year" type="number" min="1900" step="1" />
+          </label>
+        </div>
+        <div id="offer-edit-validity-fields">
         <label class="modal-field">
           Gültigkeitsdauer (Tage) *
           <input id="offer-edit-validity-days" type="number" min="0" step="1" required />
@@ -1333,6 +1342,7 @@
             <option value="24">24 Stunden</option>
           </select>
         </label>
+        </div>
         <label class="modal-field">
           Umsatzsteuer berechnen? *
           <select id="offer-edit-vat" required>
@@ -1440,7 +1450,7 @@
     </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=existing-contracts-20260910"></script>
+    <script src="app.js?v=existing-contract-actions-20260910"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

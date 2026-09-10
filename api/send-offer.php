@@ -31,10 +31,6 @@ if (!$offer) {
     json_error('Vertrag wurde nicht gefunden.', 404);
 }
 
-if (!empty($offer['is_existing_contract'])) {
-    json_error('Bestandsverträge werden ausschließlich über den kopierten Link weitergegeben.', 422);
-}
-
 $requestBody = read_json_body();
 $toEmail = trim((string) ($requestBody['toEmail'] ?? ''));
 if ($toEmail === '') {
@@ -69,9 +65,15 @@ $validityLabel = implode(' und ', $validityParts);
 $contactName = $offer['c_salutation'] . ' ' . $offer['c_contact_last_name'];
 
 $companyName = trim((string) $offer['c_name']);
-$subject = 'Angebot CleanTeam für Firma ' . $companyName;
+$subject = !empty($offer['is_existing_contract'])
+    ? 'Vertragsunterlagen CleanTeam für Firma ' . $companyName
+    : 'Angebot CleanTeam für Firma ' . $companyName;
 
-$bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
+$bodyContent = !empty($offer['is_existing_contract'])
+    ? '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
+        . '<p>unter folgendem Link finden Sie Ihre aktualisierten Vertragsunterlagen. Dort können Sie die Angaben prüfen und den Vertrag digital unterzeichnen:</p>'
+        . email_button_html($publicUrl, 'Vertragsunterlagen öffnen')
+    : '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
     . '<p>mein Name ist Frau Seidler, ich bin Ihre Ansprechpartnerin bei CleanTeam. Vielen Dank für Ihr Interesse an unserem Angebot für ' . email_h($companyName) . '.</p>'
     . '<p>Ihr Vertrag wird komplett online abgeschlossen. Sobald Sie unterschrieben haben, erhalten Sie den fertigen Vertrag automatisch als PDF per E-Mail.</p>'
     . '<h2 style="margin:24px 0 10px 0;color:#08325f;font-size:17px;">Online-Prozess</h2>'
@@ -80,8 +82,8 @@ $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName
     . '<p style="color:#51657d;font-size:13px;">Der Vertragslink ist ' . email_h($validityLabel) . ' lang gültig, also bis zum ' . email_h($validUntil) . ', und kann während dieser Zeit jederzeit geöffnet werden. Danach verfällt er automatisch.</p>'
     . '<img src="' . email_h(base_url() . '/api/track-open.php?token=' . $offer['token']) . '" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />';
 $message = render_email_template_message($pdo, $bodyContent, [
-    'title' => 'Ihr Angebot von CleanTeam',
-    'preheader' => 'Bitte schließen Sie Ihren Vertrag jetzt online ab.',
+    'title' => !empty($offer['is_existing_contract']) ? 'Ihre Vertragsunterlagen von CleanTeam' : 'Ihr Angebot von CleanTeam',
+    'preheader' => !empty($offer['is_existing_contract']) ? 'Ihre aktualisierten Vertragsunterlagen.' : 'Bitte schließen Sie Ihren Vertrag jetzt online ab.',
     'fromName' => $settings['from_name'] ?? 'CleanTeam',
     'signatureText' => $settings['signature'] ?? '',
     'signatureContext' => 'offer',

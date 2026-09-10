@@ -193,6 +193,11 @@ const els = {
   offerEditInterval: document.querySelector("#offer-edit-interval"),
   offerEditPrice: document.querySelector("#offer-edit-price"),
   offerEditStartDate: document.querySelector("#offer-edit-start-date"),
+  offerEditStartDateField: document.querySelector("#offer-edit-start-date-field"),
+  offerEditOriginalStartFields: document.querySelector("#offer-edit-original-start-fields"),
+  offerEditOriginalStartMonth: document.querySelector("#offer-edit-original-start-month"),
+  offerEditOriginalStartYear: document.querySelector("#offer-edit-original-start-year"),
+  offerEditValidityFields: document.querySelector("#offer-edit-validity-fields"),
   offerEditValidityDays: document.querySelector("#offer-edit-validity-days"),
   offerEditValidityHours: document.querySelector("#offer-edit-validity-hours"),
   offerEditVat: document.querySelector("#offer-edit-vat"),
@@ -1228,12 +1233,12 @@ function renderOfferCard(offer) {
       </button>
     `
     : "";
-  const contractProcessAction = offer.contractId || offer.isExistingContract
+  const contractProcessAction = offer.contractId
     ? ""
     : `
       <button class="secondary-button" type="button" data-action="open-offer-contract-link" data-id="${escapeHtml(offer.id)}">
         <i data-lucide="signature" aria-hidden="true"></i>
-        Neuen Vertrag erstellen
+        ${offer.isExistingContract ? "Vertrag ansehen" : "Neuen Vertrag erstellen"}
       </button>
     `;
   return `
@@ -1257,28 +1262,28 @@ function renderOfferCard(offer) {
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
-        ${offer.isExistingContract ? "" : `<a class="secondary-button" href="offer.php?offerId=${encodeURIComponent(offer.id)}" target="_blank" rel="noopener">
+        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `offer.php?offerId=${encodeURIComponent(offer.id)}`}" target="_blank" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
           Vertrag Vorschau
-        </a>`}
-        ${offer.isExistingContract ? "" : `<button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
+        </a>
+        <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
           Vertrag senden
-        </button>`}
+        </button>
         ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="link" aria-hidden="true"></i>
           Link kopieren
         </button>
-        ${offer.isExistingContract ? "" : `<button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
+        <button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="mail" aria-hidden="true"></i>
           E-Mail-Vorlage
-        </button>`}
+        </button>
         ${contractActions}
-        ${offer.isExistingContract ? "" : `<button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
+        <button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="pencil" aria-hidden="true"></i>
           Bearbeiten
-        </button>`}
+        </button>
         <button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
           Löschen
@@ -1982,6 +1987,21 @@ function openOfferEditModal(id) {
   els.offerEditPrice.value = offer.price;
   els.offerEditVat.value = offer.vatApplicable === false ? "no" : "yes";
   els.offerEditStartDate.value = offer.startDate || "";
+  els.offerEditModal.dataset.existingContract = offer.isExistingContract ? "true" : "false";
+  els.offerEditStartDateField.hidden = offer.isExistingContract;
+  els.offerEditStartDate.required = !offer.isExistingContract;
+  els.offerEditOriginalStartFields.hidden = !offer.isExistingContract;
+  els.offerEditValidityFields.hidden = offer.isExistingContract;
+  els.offerEditValidityDays.required = !offer.isExistingContract;
+  els.offerEditValidityHours.required = !offer.isExistingContract;
+  if (offer.isExistingContract && offer.originalStartDate) {
+    const [year, month] = offer.originalStartDate.split("-");
+    els.offerEditOriginalStartMonth.value = String(Number(month));
+    els.offerEditOriginalStartYear.value = year;
+  } else {
+    els.offerEditOriginalStartMonth.value = "";
+    els.offerEditOriginalStartYear.value = "";
+  }
   els.offerEditValidityDays.value = offer.validityDays ?? 14;
   els.offerEditValidityHours.value = offer.validityHours ?? 0;
   els.offerEditServiceText.value = offer.notes || "";
@@ -1999,11 +2019,12 @@ async function handleOfferEditSubmit(event) {
   event.preventDefault();
 
   const interval = els.offerEditInterval.value;
+  const isExistingContract = els.offerEditModal.dataset.existingContract === "true";
   const validityDays = Number(els.offerEditValidityDays.value);
   const validityHours = Number(els.offerEditValidityHours.value);
-  if (!Number.isInteger(validityDays) || validityDays < 0
+  if (!isExistingContract && (!Number.isInteger(validityDays) || validityDays < 0
       || !Number.isInteger(validityHours) || validityHours < 0 || validityHours > 24
-      || (validityDays === 0 && validityHours === 0)) {
+      || (validityDays === 0 && validityHours === 0))) {
     showToast("Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.");
     els.offerEditValidityDays.focus();
     return;
@@ -2026,11 +2047,18 @@ async function handleOfferEditSubmit(event) {
     validityHours,
     serviceText: els.offerEditServiceText.value.trim(),
     customerObligationsNote: els.offerEditObligationsText.value.trim(),
+    originalStartMonth: Number(els.offerEditOriginalStartMonth.value),
+    originalStartYear: Number(els.offerEditOriginalStartYear.value),
   };
 
-  if (!payload.startDate) {
+  if (!isExistingContract && !payload.startDate) {
     showToast("Bitte den Beginn der Dienstleistung eintragen.");
     els.offerEditStartDate.focus();
+    return;
+  }
+  if (isExistingContract && (!payload.originalStartMonth || !payload.originalStartYear)) {
+    showToast("Bitte den ursprünglichen Vertragsbeginn mit Monat und Jahr eintragen.");
+    els.offerEditOriginalStartMonth.focus();
     return;
   }
 
