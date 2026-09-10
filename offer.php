@@ -1,5 +1,13 @@
 <?php
 
+$token = trim((string) ($_GET['token'] ?? ''));
+if ($token !== '') {
+    // Alte, bereits versendete Links ueberspringen die nicht mehr benoetigte
+    // Vorschaltseite und fuehren direkt in den Vertragsabschluss.
+    header('Location: /o.php?token=' . rawurlencode($token), true, 302);
+    exit;
+}
+
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
@@ -7,41 +15,26 @@ require_once __DIR__ . '/includes/offer_template.php';
 
 $pdo = db();
 $offerId = trim((string) ($_GET['offerId'] ?? ''));
-$token = trim((string) ($_GET['token'] ?? ''));
 
-if ($token !== '') {
-    // Oeffentlicher Zugriff ueber den Vertrags-Token, z. B. aus der Vertrags-E-Mail
-    // oder dem "Link kopieren"-Button. Derselbe Token, der auch fuer o.php verwendet wird.
-    $stmt = $pdo->prepare('SELECT * FROM offers WHERE token = :token');
-    $stmt->execute(['token' => $token]);
-    $offer = $stmt->fetch();
+if (current_user_id() === null) {
+    header('Location: /index.html');
+    exit;
+}
 
-    if (!$offer) {
-        http_response_code(404);
-        echo 'Vertrag nicht gefunden.';
-        exit;
-    }
-} else {
-    if (current_user_id() === null) {
-        header('Location: /index.html');
-        exit;
-    }
+if ($offerId === '') {
+    http_response_code(400);
+    echo 'Vertrag fehlt.';
+    exit;
+}
 
-    if ($offerId === '') {
-        http_response_code(400);
-        echo 'Vertrag fehlt.';
-        exit;
-    }
+$stmt = $pdo->prepare('SELECT * FROM offers WHERE id = :id');
+$stmt->execute(['id' => $offerId]);
+$offer = $stmt->fetch();
 
-    $stmt = $pdo->prepare('SELECT * FROM offers WHERE id = :id');
-    $stmt->execute(['id' => $offerId]);
-    $offer = $stmt->fetch();
-
-    if (!$offer) {
-        http_response_code(404);
-        echo 'Vertrag nicht gefunden.';
-        exit;
-    }
+if (!$offer) {
+    http_response_code(404);
+    echo 'Vertrag nicht gefunden.';
+    exit;
 }
 
 $stmt = $pdo->prepare('SELECT * FROM customers WHERE id = :id');

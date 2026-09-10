@@ -10,8 +10,6 @@ const els = {
   screens: document.querySelectorAll(".public-screen"),
   errorMessage: document.querySelector("#error-message"),
   dataCheckList: document.querySelector("#data-check-list"),
-  overviewList: document.querySelector("#overview-list"),
-  startQuestions: document.querySelector("#start-questions"),
   serviceDetails: document.querySelector("#service-details"),
   signaturePad: document.querySelector("#signature-pad"),
   contractPreviewFrame: document.querySelector("#contract-preview-frame"),
@@ -34,7 +32,6 @@ const els = {
 
 const signatureInk = new WeakSet();
 const additionalSigners = [];
-let overviewShown = false;
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -108,18 +105,6 @@ function renderDataCheck() {
     ["Geschäftsführer / Inhaber", contactName(offer.customer)],
     ["E-Mail", offer.customer.email],
     ["Adresse", customerAddress(offer.customer)],
-  ]);
-}
-
-function renderOverview() {
-  const offer = state.offer;
-  renderDefinitionList(els.overviewList, [
-    ["Vertragspartner", offer.customer.name],
-    ["Ansprechperson", contactName(offer.customer)],
-    ["Leistung", offer.service],
-    ["Ausführung", offer.interval],
-    ["Vertragsbeginn", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
-    ["Monatlicher Preis", `${formatCurrency(offer.price)} netto`],
   ]);
 }
 
@@ -204,13 +189,6 @@ function routeToState(data) {
     contract.status === "berechtigung_abgelehnt"
   ) {
     showScreen("abgelehnt");
-    return;
-  }
-
-  if (!overviewShown && contract.currentStep === "datenschutz") {
-    overviewShown = true;
-    renderOverview();
-    showScreen("uebersicht");
     return;
   }
 
@@ -361,8 +339,6 @@ function addSigner() {
 }
 
 function bindEvents() {
-  els.startQuestions.addEventListener("click", () => showScreen("datenschutz"));
-
   els.card.addEventListener("click", (event) => {
     const yesNoButton = event.target.closest("[data-yesno]");
     if (yesNoButton) {

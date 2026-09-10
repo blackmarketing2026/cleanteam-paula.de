@@ -47,6 +47,11 @@ function ensure_offers_validity_days_column(PDO $pdo): void
     if (!$stmt->fetch()) {
         $pdo->exec('ALTER TABLE offers ADD COLUMN validity_days SMALLINT UNSIGNED NOT NULL DEFAULT 14 AFTER expires_at');
     }
+
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'validity_hours'");
+    if (!$stmt->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD COLUMN validity_hours TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER validity_days');
+    }
 }
 
 function offer_row_to_json(array $row): array
@@ -83,10 +88,11 @@ function offer_row_to_json(array $row): array
         'price' => $price,
         'vatApplicable' => !isset($row['vat_applicable']) || (int) $row['vat_applicable'] === 1,
         'token' => $row['token'],
-        'publicUrl' => base_url() . '/offer.php?token=' . $row['token'],
+        'publicUrl' => base_url() . '/o.php?token=' . $row['token'],
         'createdAt' => to_iso($row['created_at']),
         'expiresAt' => to_iso($row['expires_at']),
         'validityDays' => (int) ($row['validity_days'] ?? 14),
+        'validityHours' => (int) ($row['validity_hours'] ?? 0),
         'linkOpenedAt' => to_iso($row['link_opened_at'] ?? null),
         'sentAt' => to_iso($row['sent_at']),
         'contractId' => $row['contract_id'],
@@ -133,6 +139,7 @@ if ($method === 'POST') {
     $customerObligationsNote = trim((string) ($body['customerObligationsNote'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
     $validityDays = (int) ($body['validityDays'] ?? 14);
+    $validityHours = (int) ($body['validityHours'] ?? 0);
 
     $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
     if (!in_array($interval, $allowedIntervals, true)) {
@@ -153,8 +160,9 @@ if ($method === 'POST') {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
     }
 
-    if ($validityDays <= 0) {
-        json_error('Bitte eine gültige Anzahl an Tagen für die Gültigkeitsdauer eintragen.', 422);
+    if ($validityDays < 0 || $validityHours < 0 || $validityHours > 24
+        || ($validityDays === 0 && $validityHours === 0)) {
+        json_error('Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.', 422);
     }
 
     $customerId = generate_id('customer');
@@ -179,8 +187,8 @@ if ($method === 'POST') {
     $token = generate_token();
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, customer_obligations_note, base_price, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :customer_obligations_note, :base_price, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), :validity_days2)'
+        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, customer_obligations_note, base_price, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :customer_obligations_note, :base_price, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), INTERVAL :validity_hours HOUR), :validity_days2, :validity_hours2)'
     );
     $stmt->execute([
         'id' => $id,
@@ -197,6 +205,8 @@ if ($method === 'POST') {
         'token' => $token,
         'validity_days' => $validityDays,
         'validity_days2' => $validityDays,
+        'validity_hours' => $validityHours,
+        'validity_hours2' => $validityHours,
     ]);
 
     $agbSnapshotText = fetch_agb_text_snapshot();
@@ -238,6 +248,7 @@ if ($method === 'PUT') {
     $customerObligationsNote = trim((string) ($body['customerObligationsNote'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
     $validityDays = (int) ($body['validityDays'] ?? 14);
+    $validityHours = (int) ($body['validityHours'] ?? 0);
 
     $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
     if (!in_array($interval, $allowedIntervals, true)) {
@@ -255,8 +266,9 @@ if ($method === 'PUT') {
     if ($startDate === '' || strtotime($startDate) === false) {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
     }
-    if ($validityDays <= 0) {
-        json_error('Bitte eine gültige Anzahl an Tagen für die Gültigkeitsdauer eintragen.', 422);
+    if ($validityDays < 0 || $validityHours < 0 || $validityHours > 24
+        || ($validityDays === 0 && $validityHours === 0)) {
+        json_error('Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.', 422);
     }
 
     $pdo->prepare(
@@ -276,7 +288,8 @@ if ($method === 'PUT') {
         'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
             price = :price, base_price = :base_price, vat_applicable = :vat_applicable, notes = :notes,
             customer_obligations_note = :customer_obligations_note,
-            validity_days = :validity_days, expires_at = DATE_ADD(:created_at, INTERVAL :validity_days2 DAY) WHERE id = :id'
+            validity_days = :validity_days, validity_hours = :validity_hours,
+            expires_at = DATE_ADD(DATE_ADD(:created_at, INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) WHERE id = :id'
     )->execute([
         'square_meters' => $squareMeters,
         'interval_label' => $intervalLabel,
@@ -288,6 +301,8 @@ if ($method === 'PUT') {
         'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
         'validity_days' => $validityDays,
         'validity_days2' => $validityDays,
+        'validity_hours' => $validityHours,
+        'validity_hours2' => $validityHours,
         'created_at' => $existing['created_at'],
         'id' => $id,
     ]);

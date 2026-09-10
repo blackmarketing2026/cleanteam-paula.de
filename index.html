@@ -285,8 +285,38 @@
                 <input id="offer-start-date" type="date" required />
               </label>
               <label>
-                Gültigkeitsdauer des Vertragslinks (Tage) *
-                <input id="offer-validity-days" type="number" min="1" step="1" required value="14" />
+                Gültigkeitsdauer (Tage) *
+                <input id="offer-validity-days" type="number" min="0" step="1" required value="14" />
+              </label>
+              <label>
+                Zusätzliche Stunden (0–24) *
+                <select id="offer-validity-hours" required>
+                  <option value="0" selected>0 Stunden</option>
+                  <option value="1">1 Stunde</option>
+                  <option value="2">2 Stunden</option>
+                  <option value="3">3 Stunden</option>
+                  <option value="4">4 Stunden</option>
+                  <option value="5">5 Stunden</option>
+                  <option value="6">6 Stunden</option>
+                  <option value="7">7 Stunden</option>
+                  <option value="8">8 Stunden</option>
+                  <option value="9">9 Stunden</option>
+                  <option value="10">10 Stunden</option>
+                  <option value="11">11 Stunden</option>
+                  <option value="12">12 Stunden</option>
+                  <option value="13">13 Stunden</option>
+                  <option value="14">14 Stunden</option>
+                  <option value="15">15 Stunden</option>
+                  <option value="16">16 Stunden</option>
+                  <option value="17">17 Stunden</option>
+                  <option value="18">18 Stunden</option>
+                  <option value="19">19 Stunden</option>
+                  <option value="20">20 Stunden</option>
+                  <option value="21">21 Stunden</option>
+                  <option value="22">22 Stunden</option>
+                  <option value="23">23 Stunden</option>
+                  <option value="24">24 Stunden</option>
+                </select>
               </label>
               <label>
                 Umsatzsteuer berechnen? *
@@ -1240,8 +1270,38 @@
           <input id="offer-edit-start-date" type="date" required />
         </label>
         <label class="modal-field">
-          Gültigkeitsdauer des Vertragslinks (Tage) *
-          <input id="offer-edit-validity-days" type="number" min="1" step="1" required />
+          Gültigkeitsdauer (Tage) *
+          <input id="offer-edit-validity-days" type="number" min="0" step="1" required />
+        </label>
+        <label class="modal-field">
+          Zusätzliche Stunden (0–24) *
+          <select id="offer-edit-validity-hours" required>
+            <option value="0">0 Stunden</option>
+            <option value="1">1 Stunde</option>
+            <option value="2">2 Stunden</option>
+            <option value="3">3 Stunden</option>
+            <option value="4">4 Stunden</option>
+            <option value="5">5 Stunden</option>
+            <option value="6">6 Stunden</option>
+            <option value="7">7 Stunden</option>
+            <option value="8">8 Stunden</option>
+            <option value="9">9 Stunden</option>
+            <option value="10">10 Stunden</option>
+            <option value="11">11 Stunden</option>
+            <option value="12">12 Stunden</option>
+            <option value="13">13 Stunden</option>
+            <option value="14">14 Stunden</option>
+            <option value="15">15 Stunden</option>
+            <option value="16">16 Stunden</option>
+            <option value="17">17 Stunden</option>
+            <option value="18">18 Stunden</option>
+            <option value="19">19 Stunden</option>
+            <option value="20">20 Stunden</option>
+            <option value="21">21 Stunden</option>
+            <option value="22">22 Stunden</option>
+            <option value="23">23 Stunden</option>
+            <option value="24">24 Stunden</option>
+          </select>
         </label>
         <label class="modal-field">
           Umsatzsteuer berechnen? *
@@ -1350,7 +1410,7 @@
     </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=email-series-20260908-1"></script>
+    <script src="app.js?v=validity-hours-20260910"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

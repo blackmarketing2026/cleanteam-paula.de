@@ -64,6 +64,7 @@ const els = {
   offerPrice: document.querySelector("#offer-price"),
   offerStartDate: document.querySelector("#offer-start-date"),
   offerValidityDays: document.querySelector("#offer-validity-days"),
+  offerValidityHours: document.querySelector("#offer-validity-hours"),
   offerVat: document.querySelector("#offer-vat"),
   offerServiceText: document.querySelector("#offer-service-text"),
   offerObligationsText: document.querySelector("#offer-obligations-text"),
@@ -192,6 +193,7 @@ const els = {
   offerEditPrice: document.querySelector("#offer-edit-price"),
   offerEditStartDate: document.querySelector("#offer-edit-start-date"),
   offerEditValidityDays: document.querySelector("#offer-edit-validity-days"),
+  offerEditValidityHours: document.querySelector("#offer-edit-validity-hours"),
   offerEditVat: document.querySelector("#offer-edit-vat"),
   offerEditServiceText: document.querySelector("#offer-edit-service-text"),
   offerEditObligationsText: document.querySelector("#offer-edit-obligations-text"),
@@ -391,6 +393,13 @@ function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
+function formatValidityDuration(days, hours) {
+  const parts = [];
+  if (days > 0) parts.push(`${days} ${days === 1 ? "Tag" : "Tage"}`);
+  if (hours > 0) parts.push(`${hours} ${hours === 1 ? "Stunde" : "Stunden"}`);
+  return parts.join(" und ");
+}
+
 function offerValidity(offer) {
   const diffMs = new Date(offer.expiresAt).getTime() - Date.now();
 
@@ -398,15 +407,15 @@ function offerValidity(offer) {
     return { label: "Abgelaufen", className: "danger" };
   }
 
-  const days = Math.floor(diffMs / 86400000);
-  if (days >= 1) {
+  const hours = Math.max(1, Math.ceil(diffMs / 3600000));
+  if (hours > 24) {
+    const days = Math.ceil(hours / 24);
     return {
       label: `Noch ${days} ${days === 1 ? "Tag" : "Tage"} gültig`,
       className: days <= 2 ? "warning" : "success",
     };
   }
 
-  const hours = Math.max(1, Math.floor(diffMs / 3600000));
   return { label: `Noch ${hours} Std. gültig`, className: "warning" };
 }
 
@@ -1531,6 +1540,7 @@ async function handleOfferSubmit(event) {
   const price = Number(els.offerPrice.value);
   const startDate = els.offerStartDate.value;
   const validityDays = Number(els.offerValidityDays.value);
+  const validityHours = Number(els.offerValidityHours.value);
   const serviceText = els.offerServiceText.value.trim();
   const obligationsText = els.offerObligationsText.value.trim();
 
@@ -1594,8 +1604,10 @@ async function handleOfferSubmit(event) {
     return;
   }
 
-  if (!Number.isFinite(validityDays) || validityDays <= 0) {
-    showToast("Bitte eine gültige Anzahl an Tagen für die Gültigkeitsdauer eintragen.");
+  if (!Number.isInteger(validityDays) || validityDays < 0
+      || !Number.isInteger(validityHours) || validityHours < 0 || validityHours > 24
+      || (validityDays === 0 && validityHours === 0)) {
+    showToast("Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.");
     els.offerValidityDays.focus();
     return;
   }
@@ -1609,7 +1621,7 @@ async function handleOfferSubmit(event) {
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
         <span>${escapeHtml(email)}</span>
         <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)}${squareMeters > 0 ? ` · ${squareMeters} m²` : ""} · ${escapeHtml(interval)}</span>
-        <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."} · Link gültig ${validityDays} Tage</span>
+        <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."} · Link gültig ${formatValidityDuration(validityDays, validityHours)}</span>
       </div>
     `;
     els.offerIntakePanel.hidden = true;
@@ -1635,7 +1647,8 @@ async function handleOfferReviewSubmit(event) {
     price: Number(els.offerPrice.value),
     vatApplicable: els.offerVat.value === "yes",
     startDate: els.offerStartDate.value,
-    validityDays: Number(els.offerValidityDays.value) || 14,
+    validityDays: Number(els.offerValidityDays.value),
+    validityHours: Number(els.offerValidityHours.value),
     serviceText: els.offerServiceTextCorrected.value.trim(),
     customerObligationsNote: els.offerObligationsTextCorrected.value.trim(),
   };
@@ -1937,7 +1950,8 @@ function openOfferEditModal(id) {
   els.offerEditPrice.value = offer.price;
   els.offerEditVat.value = offer.vatApplicable === false ? "no" : "yes";
   els.offerEditStartDate.value = offer.startDate || "";
-  els.offerEditValidityDays.value = offer.validityDays || 14;
+  els.offerEditValidityDays.value = offer.validityDays ?? 14;
+  els.offerEditValidityHours.value = offer.validityHours ?? 0;
   els.offerEditServiceText.value = offer.notes || "";
   els.offerEditObligationsText.value = offer.customerObligationsNote || "";
   els.offerEditModal.hidden = false;
@@ -1954,8 +1968,11 @@ async function handleOfferEditSubmit(event) {
 
   const interval = els.offerEditInterval.value;
   const validityDays = Number(els.offerEditValidityDays.value);
-  if (!Number.isFinite(validityDays) || validityDays <= 0) {
-    showToast("Bitte eine gültige Anzahl an Tagen für die Gültigkeitsdauer eintragen.");
+  const validityHours = Number(els.offerEditValidityHours.value);
+  if (!Number.isInteger(validityDays) || validityDays < 0
+      || !Number.isInteger(validityHours) || validityHours < 0 || validityHours > 24
+      || (validityDays === 0 && validityHours === 0)) {
+    showToast("Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.");
     els.offerEditValidityDays.focus();
     return;
   }
@@ -1974,6 +1991,7 @@ async function handleOfferEditSubmit(event) {
     vatApplicable: els.offerEditVat.value === "yes",
     startDate: els.offerEditStartDate.value,
     validityDays,
+    validityHours,
     serviceText: els.offerEditServiceText.value.trim(),
     customerObligationsNote: els.offerEditObligationsText.value.trim(),
   };

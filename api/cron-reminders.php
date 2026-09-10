@@ -111,8 +111,10 @@ foreach ($offers as $offer) {
         continue;
     }
 
-    $publicUrl = base_url() . '/offer.php?token=' . $offer['token'];
-    $validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))->format('d.m.Y');
+    $publicUrl = base_url() . '/o.php?token=' . $offer['token'];
+    $validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))
+        ->setTimezone(new DateTimeZone('Europe/Berlin'))
+        ->format('d.m.Y \u\m H:i \U\h\r');
     $contactName = trim($offer['c_salutation'] . ' ' . $offer['c_contact_last_name']);
     $companyName = trim((string) $offer['c_name']);
     $subject = 'Re: Erinnerungen, Clean Team Vertrag, digital abschließen';

@@ -47,9 +47,20 @@ if (!$settings || $settings['host'] === '' || $settings['username'] === '' || ($
     json_error('Bitte zuerst das E-Mail-Versand-Konto unter Einstellungen > E-Mails einrichten.', 422);
 }
 
-$publicUrl = base_url() . '/offer.php?token=' . $offer['token'];
-$validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))->format('d.m.Y');
+$publicUrl = base_url() . '/o.php?token=' . $offer['token'];
+$validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))
+    ->setTimezone(new DateTimeZone('Europe/Berlin'))
+    ->format('d.m.Y \u\m H:i \U\h\r');
 $validityDays = (int) ($offer['validity_days'] ?? 14);
+$validityHours = (int) ($offer['validity_hours'] ?? 0);
+$validityParts = [];
+if ($validityDays > 0) {
+    $validityParts[] = $validityDays . ' ' . ($validityDays === 1 ? 'Tag' : 'Tage');
+}
+if ($validityHours > 0) {
+    $validityParts[] = $validityHours . ' ' . ($validityHours === 1 ? 'Stunde' : 'Stunden');
+}
+$validityLabel = implode(' und ', $validityParts);
 $contactName = $offer['c_salutation'] . ' ' . $offer['c_contact_last_name'];
 
 $companyName = trim((string) $offer['c_name']);
@@ -61,7 +72,7 @@ $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName
     . '<h2 style="margin:24px 0 10px 0;color:#08325f;font-size:17px;">Online-Prozess</h2>'
     . '<p>Alle Informationen zum weiteren Ablauf finden Sie im Online-Prozess. Klicken Sie dazu einfach auf den folgenden Button:</p>'
     . email_button_html($publicUrl, 'Jetzt Vertrag online abschließen')
-    . '<p style="color:#51657d;font-size:13px;">Der Button ist aus Datenschutzgründen nur einmal nutzbar und ' . $validityDays . ' Tage lang gültig, also bis zum ' . email_h($validUntil) . '. Danach verfällt er automatisch. Wurde er versehentlich schon einmal geöffnet, muss er erst wieder von uns freigegeben werden, bevor er erneut funktioniert.</p>'
+    . '<p style="color:#51657d;font-size:13px;">Der Button ist aus Datenschutzgründen nur einmal nutzbar und ' . email_h($validityLabel) . ' lang gültig, also bis zum ' . email_h($validUntil) . '. Danach verfällt er automatisch. Wurde er versehentlich schon einmal geöffnet, muss er erst wieder von uns freigegeben werden, bevor er erneut funktioniert.</p>'
     . '<img src="' . email_h(base_url() . '/api/track-open.php?token=' . $offer['token']) . '" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />';
 $message = render_email_template_message($pdo, $bodyContent, [
     'title' => 'Ihr Angebot von CleanTeam',

@@ -46,16 +46,6 @@ header('Cache-Control: no-store, private');
           </p>
         </section>
 
-        <section id="screen-uebersicht" class="public-screen wizard-screen">
-          <p class="step-indicator">Ihre Vertragsunterlagen</p>
-          <h2>Vertrag im &Uuml;berblick</h2>
-          <p class="muted">Pr&uuml;fen Sie kurz die wichtigsten Eckdaten. Anschlie&szlig;end folgt nur noch eine Frage, bevor Sie den vollst&auml;ndigen Vertrag lesen und unterschreiben k&ouml;nnen.</p>
-          <dl id="overview-list" class="data-check"></dl>
-          <div class="form-actions">
-            <button id="start-questions" class="primary-button" type="button">Fragen starten</button>
-          </div>
-        </section>
-
         <section id="screen-datenschutz" class="public-screen wizard-screen">
           <p class="step-indicator">Eine kurze Frage</p>
           <h2>D&uuml;rfen wir die Zustimmung erhalten, Ihre Daten f&uuml;r die Vertragserstellung hier abspeichern?</h2>
