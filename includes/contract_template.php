@@ -167,6 +167,11 @@ function contract_format_date(?string $isoOrMysqlDate): string
     return gmdate('d.m.Y', $timestamp);
 }
 
+function contract_current_date(): string
+{
+    return (new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin')))->format('d.m.Y');
+}
+
 function contract_format_datetime(?string $isoOrMysqlDate): string
 {
     if ($isoOrMysqlDate === null || $isoOrMysqlDate === '') {
@@ -623,12 +628,9 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
         ? h($representationNote) . ' (i. V. ' . $signatoryName . ')'
         : $signatoryName;
 
-    $statusLabel = $contract === null
-        ? 'Entwurf (noch nicht gestartet)'
-        : h(ucfirst(str_replace('_', ' ', (string) $contract['status'])));
-    $documentLabel = $isCleanTeamCopy ? 'CleanTeam-Ausfertigung' : 'Kundenausfertigung';
     $protocolHtml = $isCleanTeamCopy ? render_signature_protocol_html($offer, $customer, $contract) : '';
     $logoHtml = contract_logo_html();
+    $currentDate = h(contract_current_date());
 
     $templateHtml = get_contract_template_html(db());
     if (!empty($options['excludeAgb'])) {
@@ -658,7 +660,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 <body>
 
 {$logoHtml}
-<div class="doc-meta">{$documentLabel} &nbsp;·&nbsp; Status: {$statusLabel} &nbsp;·&nbsp; Erstellt: {$createdAt}</div>
+<div class="doc-meta">Datum: {$currentDate}</div>
 
 <h1>Gebäudereinigungsvertrag</h1>
 

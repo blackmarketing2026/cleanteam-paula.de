@@ -862,10 +862,9 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $pdf = new SimplePdfDocument();
 
     $createdAt = contract_format_date($offer['created_at']);
+    $currentDate = contract_current_date();
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '-';
-    $statusLabel = $contract === null ? 'Entwurf' : ucfirst(str_replace('_', ' ', (string) $contract['status']));
-    $documentLabel = $isCleanTeamCopy ? 'CleanTeam-Ausfertigung' : 'Kundenausfertigung';
 
     $authorized = isset($contract['authorized']) && $contract['authorized'] !== null ? (bool) $contract['authorized'] : null;
     $representationNote = $contract['representation_note'] ?? null;
@@ -882,7 +881,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $contractorServicePoint = CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'];
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
-    $pdf->meta($documentLabel . ' | Status: ' . $statusLabel . ' | Erstellt: ' . $createdAt);
+    $pdf->meta('Datum: ' . $currentDate);
     $pdf->title('Gebäudereinigungsvertrag');
     $pdf->centeredText('zwischen');
 
