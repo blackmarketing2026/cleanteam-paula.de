@@ -48,7 +48,8 @@ header('Cache-Control: no-store, private');
 
         <section id="screen-datenschutz" class="public-screen wizard-screen">
           <p class="step-indicator">Eine kurze Frage</p>
-          <h2>D&uuml;rfen wir die Zustimmung erhalten, Ihre Daten f&uuml;r die Vertragserstellung hier abspeichern?</h2>
+          <h2>D&uuml;rfen wir Ihre Daten speichern?</h2>
+          <p class="muted">D&uuml;rfen wir Ihre Daten f&uuml;r die Vertragserstellung hier abspeichern?</p>
           <div class="form-actions">
             <button class="ghost-button" data-yesno="no" type="button">Nein</button>
             <button class="primary-button" data-yesno="yes" type="button">Ja, einverstanden</button>

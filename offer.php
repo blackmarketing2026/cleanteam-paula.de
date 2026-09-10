@@ -1,5 +1,6 @@
 <?php
 
+header('Cache-Control: no-store, private');
 $token = trim((string) ($_GET['token'] ?? ''));
 if ($token !== '') {
     // Alte, bereits versendete Links ueberspringen die nicht mehr benoetigte
@@ -11,7 +12,6 @@ if ($token !== '') {
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
-require_once __DIR__ . '/includes/offer_template.php';
 
 $pdo = db();
 $offerId = trim((string) ($_GET['offerId'] ?? ''));
@@ -37,14 +37,6 @@ if (!$offer) {
     exit;
 }
 
-$stmt = $pdo->prepare('SELECT * FROM customers WHERE id = :id');
-$stmt->execute(['id' => $offer['customer_id']]);
-$customer = $stmt->fetch();
-
-if (!$customer) {
-    http_response_code(404);
-    echo 'Kunde nicht gefunden.';
-    exit;
-}
-
-echo render_offer_document($offer, $customer);
+// Auch der Einstieg aus der Vertragsliste fuehrt direkt zur ersten Frage.
+header('Location: /o.php?token=' . rawurlencode($offer['token']), true, 302);
+exit;
