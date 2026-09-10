@@ -99,7 +99,7 @@ header('Cache-Control: no-store, private');
         <section id="screen-signatur" class="public-screen wizard-screen">
           <p class="step-indicator">Pr&uuml;fen und unterschreiben</p>
           <h2>Ihr Vertrag</h2>
-          <p class="muted">Lesen Sie den Vertrag bitte vollst&auml;ndig durch. Die AGB sind in dieser Vorschau bewusst nicht enthalten.</p>
+          <p class="muted">Lesen Sie den Vertrag bitte vollst&auml;ndig durch.</p>
           <div class="protected-contract" id="protected-contract">
             <iframe id="contract-preview-frame" class="contract-frame contract-preview-frame" title="Vorschau des Vertrags"></iframe>
             <div id="capture-shield" class="capture-shield" aria-live="polite" hidden>Die Vertragsansicht ist vor Bildschirmaufnahmen gesch&uuml;tzt.</div>
