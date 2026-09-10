@@ -631,9 +631,18 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $logoHtml = contract_logo_html();
 
     $templateHtml = get_contract_template_html(db());
+    if (!empty($options['excludeAgb'])) {
+        $templateHtml = preg_replace('/<h2>[^<]*(?:§|&sect;)\s*8\b.*?<\/h2>.*?(?=<h2>[^<]*(?:§|&sect;)\s*9\b)/si', '', $templateHtml) ?? $templateHtml;
+    }
     $placeholders = contract_template_placeholder_map($offer, $customer, $contract, false);
     $templateBody = render_contract_template_body($templateHtml, $placeholders);
     $styleCss = contract_document_style_css();
+    $captureProtectionCss = !empty($options['captureProtected'])
+        ? "body { user-select: none; -webkit-user-select: none; } img { pointer-events: none; } @media print { body { display: none !important; } }"
+        : '';
+    $captureProtectionScript = !empty($options['captureProtected'])
+        ? '<script>document.addEventListener("contextmenu",function(e){e.preventDefault()});document.addEventListener("copy",function(e){e.preventDefault()});document.addEventListener("dragstart",function(e){e.preventDefault()});document.addEventListener("keydown",function(e){if(e.key==="PrintScreen"||((e.ctrlKey||e.metaKey)&&e.shiftKey&&["3","4","5","s"].includes(e.key.toLowerCase()))){e.preventDefault();document.body.style.visibility="hidden";setTimeout(function(){document.body.style.visibility="visible"},1200)}});</script>'
+        : '';
 
     return <<<HTML
 <!doctype html>
@@ -643,6 +652,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 <title>Gebäudereinigungsvertrag</title>
 <style>
 {$styleCss}
+{$captureProtectionCss}
 </style>
 </head>
 <body>
@@ -684,6 +694,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 
 {$protocolHtml}
 
+{$captureProtectionScript}
 </body>
 </html>
 HTML;

@@ -13,7 +13,14 @@ $token = trim((string) ($_GET['token'] ?? ''));
 $document = trim((string) ($_GET['document'] ?? ''));
 $format = trim((string) ($_GET['format'] ?? 'html'));
 $download = (string) ($_GET['download'] ?? '') === '1';
+$isPreview = (string) ($_GET['preview'] ?? '') === '1';
 $isPublicTokenAccess = $token !== '';
+
+if ($isPreview) {
+    header('Permissions-Policy: display-capture=()');
+    header("Content-Security-Policy: frame-ancestors 'self'");
+    header('Cache-Control: no-store, private');
+}
 
 if ($isPublicTokenAccess) {
     // Oeffentlicher Zugriff ueber den Vertrags-Token (z. B. von der "fertig"-Seite des
@@ -117,4 +124,8 @@ if ($format === 'pdf') {
     output_contract_pdf($pdf, $download);
 }
 
-echo render_contract_document($offer, $customer, $contract, ['audience' => $documentAudience]);
+echo render_contract_document($offer, $customer, $contract, [
+    'audience' => $documentAudience,
+    'excludeAgb' => $isPreview,
+    'captureProtected' => $isPreview,
+]);

@@ -1,5 +1,7 @@
 <?php
 $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
+header('Permissions-Policy: display-capture=()');
+header('Cache-Control: no-store, private');
 ?>
 <!doctype html>
 <html lang="de">
@@ -14,7 +16,7 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=five-signers-20260908-2" />
+    <link rel="stylesheet" href="styles.css?v=compact-contract-flow-20260910" />
   </head>
   <body data-token="<?php echo $token; ?>">
     <main class="public-shell">
@@ -44,11 +46,19 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
           </p>
         </section>
 
+        <section id="screen-uebersicht" class="public-screen wizard-screen">
+          <p class="step-indicator">Ihre Vertragsunterlagen</p>
+          <h2>Vertrag im &Uuml;berblick</h2>
+          <p class="muted">Pr&uuml;fen Sie kurz die wichtigsten Eckdaten. Anschlie&szlig;end folgt nur noch eine Frage, bevor Sie den vollst&auml;ndigen Vertrag lesen und unterschreiben k&ouml;nnen.</p>
+          <dl id="overview-list" class="data-check"></dl>
+          <div class="form-actions">
+            <button id="start-questions" class="primary-button" type="button">Fragen starten</button>
+          </div>
+        </section>
+
         <section id="screen-datenschutz" class="public-screen wizard-screen">
-          <h2>D&uuml;rfen wir Ihre Daten speichern?</h2>
-          <p class="muted">
-            D&uuml;rfen wir Ihre personenbezogenen Daten f&uuml;r die Erstellung dieses Vertrags speichern und verarbeiten?
-          </p>
+          <p class="step-indicator">Eine kurze Frage</p>
+          <h2>D&uuml;rfen wir die Zustimmung erhalten, Ihre Daten f&uuml;r die Vertragserstellung hier abspeichern?</h2>
           <div class="form-actions">
             <button class="ghost-button" data-yesno="no" type="button">Nein</button>
             <button class="primary-button" data-yesno="yes" type="button">Ja, einverstanden</button>
@@ -96,8 +106,15 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
         </section>
 
         <section id="screen-signatur" class="public-screen wizard-screen">
-          <h2>Vertrag unterschreiben</h2>
-          <p class="muted">Unterschreiben Sie digital mit dem Finger, Stift oder der Maus.</p>
+          <p class="step-indicator">Pr&uuml;fen und unterschreiben</p>
+          <h2>Ihr Vertrag</h2>
+          <p class="muted">Lesen Sie den Vertrag bitte vollst&auml;ndig durch. Die AGB sind in dieser Vorschau bewusst nicht enthalten.</p>
+          <div class="protected-contract" id="protected-contract">
+            <iframe id="contract-preview-frame" class="contract-frame contract-preview-frame" title="Vorschau des Vertrags"></iframe>
+            <div id="capture-shield" class="capture-shield" aria-live="polite" hidden>Die Vertragsansicht ist vor Bildschirmaufnahmen gesch&uuml;tzt.</div>
+          </div>
+          <h2 class="signature-section-heading">Vertrag unterschreiben</h2>
+          <p class="muted">Unterschreiben Sie im Feld mit dem Finger, Stift oder der Maus.</p>
           <div class="signature-area">
             <canvas id="signature-pad" width="900" height="260" aria-label="Signaturfeld"></canvas>
             <div class="form-actions">
@@ -105,16 +122,9 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
             </div>
           </div>
           <div id="additional-signers"></div>
-          <button id="add-signer" class="secondary-button add-signer-button" type="button">Eine Person hinzuf&uuml;gen</button>
-          <div id="add-signer-question" class="signer-question" hidden>
-            <p id="add-signer-question-text">Soll eine weitere Person diesen Vertrag unterschreiben?</p>
-            <div class="form-actions">
-              <button id="add-signer-no" class="ghost-button" type="button">Nein</button>
-              <button id="add-signer-yes" class="primary-button" type="button">Ja</button>
-            </div>
-          </div>
+          <button id="add-signer" class="secondary-button add-signer-button" type="button">Weitere Personen hinzuf&uuml;gen</button>
           <div class="form-actions">
-            <button id="save-signature" class="primary-button" type="button">Vertrag jetzt unterschreiben</button>
+            <button id="save-signature" class="primary-button" type="button">Vertrag abschlie&szlig;en</button>
           </div>
         </section>
 
@@ -137,6 +147,6 @@ $token = htmlspecialchars($_GET['token'] ?? '', ENT_QUOTES, 'UTF-8');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=five-signers-20260908-2"></script>
+    <script src="public.js?v=compact-contract-flow-20260910"></script>
   </body>
 </html>

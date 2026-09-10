@@ -18,7 +18,7 @@ if ($token === '') {
     json_error('Kein Vertragslink angegeben.', 404);
 }
 
-const STEP_ORDER = ['datenschutz', 'daten', 'leistung', 'identitaet', 'signatur', 'fertig'];
+const STEP_ORDER = ['datenschutz', 'signatur', 'fertig'];
 const TERMINAL_STATUSES = ['daten_abgelehnt', 'intervall_abgelehnt', 'datenschutz_abgelehnt', 'berechtigung_abgelehnt'];
 
 // Alte, inzwischen entfernte Schrittnamen (Vollmacht-Funktion) auf den naechsten
@@ -26,12 +26,8 @@ const TERMINAL_STATUSES = ['daten_abgelehnt', 'intervall_abgelehnt', 'datenschut
 // Vertraege nicht in einem unbekannten Schritt haengen bleiben.
 function normalize_current_step(string $step): string
 {
-    if (in_array($step, ['intervall', 'vollmacht', 'vertragspartner'], true)) {
-        return 'leistung';
-    }
-
-    if ($step === 'bedingungen') {
-        return 'identitaet';
+    if (in_array($step, ['daten', 'intervall', 'leistung', 'vollmacht', 'vertragspartner', 'bedingungen', 'identitaet'], true)) {
+        return 'signatur';
     }
 
     return $step;
@@ -191,6 +187,18 @@ ensure_offers_link_opened_column($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
     $contract = load_contract($pdo, $offer['id']);
+    if ($contract !== null && normalize_current_step((string) $contract['current_step']) === 'signatur'
+        && $contract['current_step'] !== 'signatur') {
+        $nextStep = empty($contract['privacy_accepted_at']) ? 'datenschutz' : 'signatur';
+        $pdo->prepare("UPDATE contracts SET current_step = :step, data_confirmed = CASE WHEN :step_confirmed = 'signatur' THEN 1 ELSE data_confirmed END, interval_confirmed = CASE WHEN :step_confirmed_2 = 'signatur' THEN 1 ELSE interval_confirmed END WHERE id = :id")
+            ->execute([
+                'step' => $nextStep,
+                'step_confirmed' => $nextStep,
+                'step_confirmed_2' => $nextStep,
+                'id' => $contract['id'],
+            ]);
+        $contract = load_contract($pdo, $offer['id']);
+    }
     $isCompleted = $contract !== null && $contract['status'] === 'signiert';
 
     if (!$isCompleted && $offer['link_opened_at'] !== null) {
@@ -223,7 +231,7 @@ if ($method === 'POST' && $action === 'confirm-privacy') {
     $confirmed = (bool) ($body['confirmed'] ?? false);
 
     if ($confirmed) {
-        $pdo->prepare("UPDATE contracts SET current_step = 'daten', privacy_accepted_at = UTC_TIMESTAMP() WHERE id = :id")
+        $pdo->prepare("UPDATE contracts SET current_step = 'signatur', data_confirmed = 1, interval_confirmed = 1, privacy_accepted_at = UTC_TIMESTAMP() WHERE id = :id")
             ->execute(['id' => $contract['id']]);
     } else {
         $pdo->prepare("UPDATE contracts SET status = 'datenschutz_abgelehnt' WHERE id = :id")
@@ -325,8 +333,7 @@ if ($method === 'POST' && $action === 'sign') {
     }
 
     if (normalize_current_step($contract['current_step']) !== 'signatur'
-        || empty($contract['privacy_accepted_at']) || empty($contract['terms_accepted_at'])
-        || empty($contract['data_confirmed'])) {
+        || empty($contract['privacy_accepted_at']) || empty($contract['data_confirmed'])) {
         json_error('Bitte schliessen Sie zuerst die vorherigen Schritte ab.', 409);
     }
     // Accept already-open clients from the previous two-person form as well.

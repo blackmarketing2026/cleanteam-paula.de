@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS contracts (
   customer_id VARCHAR(64) NOT NULL,
   -- status: entwurf | daten_abgelehnt | intervall_abgelehnt | datenschutz_abgelehnt | signiert
   status VARCHAR(30) NOT NULL DEFAULT 'entwurf',
-  -- current_step: datenschutz | daten | intervall | vollmacht | vertragspartner | leistung | bedingungen | signatur | fertig
+  -- current_step: datenschutz | signatur | fertig (weitere historische Werte werden beim Oeffnen migriert)
   current_step VARCHAR(30) NOT NULL DEFAULT 'datenschutz',
   data_confirmed TINYINT(1) NOT NULL DEFAULT 0,
   interval_confirmed TINYINT(1) NOT NULL DEFAULT 0,

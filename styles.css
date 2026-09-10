@@ -2021,6 +2021,10 @@ button.compact-item.selected {
   padding: 32px;
 }
 
+.public-card:has(#screen-signatur.active-screen) {
+  max-width: 940px;
+}
+
 .public-screen {
   display: none;
 }
@@ -2138,6 +2142,48 @@ button.compact-item.selected {
   margin: 0;
 }
 
+.protected-contract {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #eef3f8;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.contract-preview-frame {
+  display: block;
+  width: 100%;
+  height: min(74vh, 920px);
+  min-height: 620px;
+  border: 0;
+  background: #fff;
+}
+
+.capture-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #102033;
+  color: #fff;
+  text-align: center;
+  font-weight: 800;
+}
+
+.capture-shield[hidden] {
+  display: none;
+}
+
+.signature-section-heading {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
 @media (max-width: 560px) {
   .public-shell {
     padding: 20px 12px 40px;
@@ -2154,6 +2200,11 @@ button.compact-item.selected {
 
   .public-service-facts {
     grid-template-columns: 1fr;
+  }
+
+  .contract-preview-frame {
+    min-height: 520px;
+    height: 68vh;
   }
 }
 
@@ -2418,6 +2469,10 @@ button.compact-item.selected {
 }
 
 @media print {
+  .protected-contract {
+    display: none !important;
+  }
+
   body {
     background: #fff;
   }

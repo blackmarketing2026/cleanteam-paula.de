@@ -10,8 +10,13 @@ const els = {
   screens: document.querySelectorAll(".public-screen"),
   errorMessage: document.querySelector("#error-message"),
   dataCheckList: document.querySelector("#data-check-list"),
+  overviewList: document.querySelector("#overview-list"),
+  startQuestions: document.querySelector("#start-questions"),
   serviceDetails: document.querySelector("#service-details"),
   signaturePad: document.querySelector("#signature-pad"),
+  contractPreviewFrame: document.querySelector("#contract-preview-frame"),
+  protectedContract: document.querySelector("#protected-contract"),
+  captureShield: document.querySelector("#capture-shield"),
   clearSignature: document.querySelector("#clear-signature"),
   saveSignature: document.querySelector("#save-signature"),
   finalContractFrame: document.querySelector("#final-contract-frame"),
@@ -29,6 +34,7 @@ const els = {
 
 const signatureInk = new WeakSet();
 const additionalSigners = [];
+let overviewShown = false;
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -103,6 +109,22 @@ function renderDataCheck() {
     ["E-Mail", offer.customer.email],
     ["Adresse", customerAddress(offer.customer)],
   ]);
+}
+
+function renderOverview() {
+  const offer = state.offer;
+  renderDefinitionList(els.overviewList, [
+    ["Vertragspartner", offer.customer.name],
+    ["Ansprechperson", contactName(offer.customer)],
+    ["Leistung", offer.service],
+    ["Ausführung", offer.interval],
+    ["Vertragsbeginn", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
+    ["Monatlicher Preis", `${formatCurrency(offer.price)} netto`],
+  ]);
+}
+
+function renderContractPreview() {
+  els.contractPreviewFrame.src = `contract.php?token=${encodeURIComponent(token)}&preview=1`;
 }
 
 function renderFactGrid(items) {
@@ -185,6 +207,13 @@ function routeToState(data) {
     return;
   }
 
+  if (!overviewShown && contract.currentStep === "datenschutz") {
+    overviewShown = true;
+    renderOverview();
+    showScreen("uebersicht");
+    return;
+  }
+
   switch (contract.currentStep) {
     case "datenschutz":
       break;
@@ -196,6 +225,9 @@ function routeToState(data) {
       break;
     case "identitaet":
       renderIdentityCheck();
+      break;
+    case "signatur":
+      renderContractPreview();
       break;
     default:
       break;
@@ -292,8 +324,8 @@ function clearSignaturePad(canvas = els.signaturePad) {
 function updateSignerControls() {
   const button = document.querySelector("#add-signer");
   button.hidden = additionalSigners.length >= 4;
-  button.textContent = additionalSigners.length ? `Person ${additionalSigners.length + 2} hinzufügen` : "Eine Person hinzufügen";
-  els.saveSignature.textContent = additionalSigners.length ? "Vertrag mit allen Unterschriften abschließen" : "Vertrag jetzt unterschreiben";
+  button.textContent = "Weitere Personen hinzufügen";
+  els.saveSignature.textContent = "Vertrag abschließen";
   additionalSigners.forEach((signer, index) => {
     signer.heading.textContent = `Person ${index + 2}`;
     signer.canvas.setAttribute("aria-label", `Unterschrift Person ${index + 2}`);
@@ -309,15 +341,12 @@ function addSigner() {
     <label class="modal-field">Vollständiger Name
       <input class="signer-name" type="text" maxlength="190" autocomplete="off" />
     </label>
-    <label class="signer-consent"><input type="checkbox" />
-      <span>Ich bin zur gemeinsamen Unterzeichnung berechtigt, stimme dem Auftrag und den Vertragsbedingungen zu und bin mit der Verarbeitung meiner Daten für diesen Vertrag einverstanden.</span>
-    </label>
     <div class="signature-area">
       <canvas class="additional-signature-pad" width="900" height="260"></canvas>
       <div class="form-actions"><button class="ghost-button clear-signer" type="button">Leeren</button></div>
     </div>`;
   const signer = {section, heading: section.querySelector("h3"), name: section.querySelector(".signer-name"),
-    confirmed: section.querySelector('input[type="checkbox"]'), canvas: section.querySelector("canvas")};
+    canvas: section.querySelector("canvas")};
   additionalSigners.push(signer);
   document.querySelector("#additional-signers").append(section);
   setupSignaturePad(signer.canvas);
@@ -325,8 +354,6 @@ function addSigner() {
   section.querySelector(".remove-signer").addEventListener("click", () => {
     additionalSigners.splice(additionalSigners.indexOf(signer), 1);
     section.remove();
-    document.querySelector("#add-signer-question").hidden = true;
-    els.saveSignature.disabled = false;
     updateSignerControls();
   });
   updateSignerControls();
@@ -334,6 +361,8 @@ function addSigner() {
 }
 
 function bindEvents() {
+  els.startQuestions.addEventListener("click", () => showScreen("datenschutz"));
+
   els.card.addEventListener("click", (event) => {
     const yesNoButton = event.target.closest("[data-yesno]");
     if (yesNoButton) {
@@ -383,23 +412,7 @@ function bindEvents() {
 
   els.clearSignature.addEventListener("click", () => clearSignaturePad());
   const addButton = document.querySelector("#add-signer");
-  const question = document.querySelector("#add-signer-question");
   addButton.addEventListener("click", () => {
-    question.hidden = false;
-    addButton.hidden = true;
-    els.saveSignature.disabled = true;
-    document.querySelector("#add-signer-question-text").textContent = `Soll Person ${additionalSigners.length + 2} diesen Vertrag mit unterschreiben?`;
-    document.querySelector("#add-signer-yes").focus();
-  });
-  document.querySelector("#add-signer-no").addEventListener("click", () => {
-    question.hidden = true;
-    els.saveSignature.disabled = false;
-    updateSignerControls();
-  });
-  document.querySelector("#add-signer-yes").addEventListener("click", () => {
-    if (additionalSigners.length >= 4) return;
-    question.hidden = true;
-    els.saveSignature.disabled = false;
     addSigner();
   });
 
@@ -408,12 +421,12 @@ function bindEvents() {
       showToast("Bitte zuerst im Signaturfeld unterschreiben.");
       return;
     }
-    const signers = additionalSigners.map(({name, confirmed, canvas}) => ({
-      name: name.value.trim(), confirmed: confirmed.checked,
+    const signers = additionalSigners.map(({name, canvas}) => ({
+      name: name.value.trim(), confirmed: true,
       signatureDataUrl: canvas.toDataURL("image/png"),
     }));
-    if (additionalSigners.some((signer, index) => !signers[index].name || !signers[index].confirmed || !signatureInk.has(signer.canvas))) {
-      showToast("Bitte Namen, Best\u00e4tigung und Unterschrift jeder weiteren Person angeben.");
+    if (additionalSigners.some((signer, index) => !signers[index].name || !signatureInk.has(signer.canvas))) {
+      showToast("Bitte Namen und Unterschrift jeder weiteren Person angeben.");
       return;
     }
     els.saveSignature.disabled = true;
@@ -425,6 +438,23 @@ function bindEvents() {
     } finally {
       els.saveSignature.disabled = false;
     }
+  });
+}
+
+function setupCaptureProtection() {
+  const preventCaptureAction = (event) => event.preventDefault();
+  els.protectedContract.addEventListener("contextmenu", preventCaptureAction);
+  els.protectedContract.addEventListener("copy", preventCaptureAction);
+  els.protectedContract.addEventListener("dragstart", preventCaptureAction);
+
+  document.addEventListener("keydown", (event) => {
+    const captureShortcut = event.key === "PrintScreen"
+      || ((event.ctrlKey || event.metaKey) && event.shiftKey && ["3", "4", "5", "s"].includes(event.key.toLowerCase()));
+    if (!captureShortcut) return;
+    event.preventDefault();
+    els.captureShield.hidden = false;
+    showToast("Bildschirmaufnahmen der Vertragsvorschau sind deaktiviert.");
+    window.setTimeout(() => { els.captureShield.hidden = true; }, 1600);
   });
 }
 
@@ -450,6 +480,7 @@ function init() {
   }
 
   bindEvents();
+  setupCaptureProtection();
   setupSignaturePad(els.signaturePad);
 
   loadBranding();
