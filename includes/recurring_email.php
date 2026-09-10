@@ -69,7 +69,8 @@ function recurring_email_next_run(string $frequency, int $day, string $time, Dat
 function recurring_email_customer(PDO $pdo, string $id): ?array
 {
     $stmt = $pdo->prepare("SELECT c.id, c.name, c.email, c.deleted_at,
-        EXISTS(SELECT 1 FROM contracts ct WHERE ct.customer_id = c.id AND ct.status = 'signiert') AS eligible
+        EXISTS(SELECT 1 FROM contracts ct INNER JOIN offers o ON o.id = ct.offer_id
+            WHERE ct.customer_id = c.id AND ct.status = 'signiert' AND COALESCE(o.is_existing_contract, 0) = 0) AS eligible
         FROM customers c WHERE c.id = ?");
     $stmt->execute([$id]);
     return $stmt->fetch() ?: null;

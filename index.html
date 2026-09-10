@@ -64,6 +64,10 @@
               <i data-lucide="file-plus-2" aria-hidden="true"></i>
               <span>Neuer Vertrag erstellen</span>
             </button>
+            <button class="nav-link" type="button" data-view="offers-existing-new">
+              <i data-lucide="copy-plus" aria-hidden="true"></i>
+              <span>Neuen Bestandsvertrag erstellen</span>
+            </button>
             <button class="nav-link" type="button" data-view="offers-saved">
               <i data-lucide="archive" aria-hidden="true"></i>
               <span>Vertragsentwürfe</span>
@@ -373,6 +377,31 @@
           </section>
         </section>
 
+        <section id="offers-existing-new-view" class="view" aria-label="Neuen Bestandsvertrag erstellen">
+          <div class="section-heading"><div><p class="muted">Papiervertrag, Vertragsanpassung oder aktualisierten Leistungsumfang manuell erfassen.</p></div></div>
+          <section class="panel form-panel" aria-labelledby="existing-offer-form-heading">
+            <div class="panel-header"><div><h4 id="existing-offer-form-heading">Neuen Bestandsvertrag erstellen</h4><p class="muted">Der historische Vertragsbeginn bleibt vom heutigen digitalen Abschluss getrennt.</p></div></div>
+            <form id="existing-offer-form" class="form-grid">
+              <label class="span-2">Name des Kunden *<input id="existing-offer-customer-name" type="text" required placeholder="Firma / Kunde" /></label>
+              <label>Gesch&auml;ftsf&uuml;hrer / Inhaber *<input id="existing-offer-contact-person" type="text" required placeholder="Vor- und Nachname" /></label>
+              <label>E-Mail-Adresse *<input id="existing-offer-email" type="email" required placeholder="kunde@beispiel.de" /></label>
+              <label class="span-2">Stra&szlig;e und Hausnummer (Objektadresse) *<input id="existing-offer-address" type="text" required placeholder="Musterstra&szlig;e 12" /></label>
+              <label>Postleitzahl *<input id="existing-offer-zip" type="text" inputmode="numeric" required placeholder="42719" /></label>
+              <label>Ort *<input id="existing-offer-city" type="text" required placeholder="Solingen" /></label>
+              <label>Quadratmeter<input id="existing-offer-square-meters" type="number" min="0" step="1" placeholder="optional" /></label>
+              <label>Reinigungsintervall *<select id="existing-offer-interval" required><option value="">Bitte w&auml;hlen</option><option>T&auml;glich</option><option>Einmal w&ouml;chentlich</option><option>Zweimal w&ouml;chentlich</option><option>Dreimal w&ouml;chentlich</option><option>Viermal w&ouml;chentlich</option><option>14-t&auml;gig</option></select></label>
+              <label>Preis (monatlich, netto) *<input id="existing-offer-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" /></label>
+              <label>Umsatzsteuer berechnen? *<select id="existing-offer-vat" required><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
+              <label>Urspr&uuml;nglicher Vertragsbeginn &ndash; Monat *<select id="existing-offer-start-month" required><option value="">Bitte w&auml;hlen</option><option value="1">Januar</option><option value="2">Februar</option><option value="3">M&auml;rz</option><option value="4">April</option><option value="5">Mai</option><option value="6">Juni</option><option value="7">Juli</option><option value="8">August</option><option value="9">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Dezember</option></select></label>
+              <label>Urspr&uuml;nglicher Vertragsbeginn &ndash; Jahr *<input id="existing-offer-start-year" type="number" min="1900" step="1" required placeholder="z. B. 2018" /></label>
+              <label class="span-2">Leistungsbeschreibung *<textarea id="existing-offer-service-text" class="offer-service-editor" rows="18" required placeholder="Alle vereinbarten Leistungen als Flie&szlig;text eintragen"></textarea></label>
+              <label class="span-2">Pflichten des Auftraggebers (optional)<textarea id="existing-offer-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6" placeholder="Zus&auml;tzliche kundenspezifische Pflichten, eine Pflicht pro Zeile"></textarea></label>
+              <p class="muted span-2">Nach dem Erstellen wird ausschlie&szlig;lich ein Link zum manuellen Kopieren bereitgestellt. Es werden keine Kunden-E-Mails versendet.</p>
+              <div class="form-actions span-2"><button class="primary-button" type="submit"><i data-lucide="file-check-2" aria-hidden="true"></i>Bestandsvertrag erstellen</button></div>
+            </form>
+          </section>
+        </section>
+
         <section id="offers-saved-view" class="view" aria-label="Vertragsentwürfe">
           <div class="section-heading">
             <div>
@@ -441,6 +470,7 @@
               <table class="contract-table">
                 <thead>
                   <tr>
+                    <th>Art</th>
                     <th>Name</th>
                     <th>Geschäftsführer/Inhaber</th>
                     <th>Datum</th>
@@ -1410,7 +1440,7 @@
     </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=expiry-only-contract-links-20260910"></script>
+    <script src="app.js?v=existing-contracts-20260910"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

@@ -36,10 +36,12 @@ CREATE TABLE IF NOT EXISTS customers (
 CREATE TABLE IF NOT EXISTS offers (
   id VARCHAR(64) NOT NULL,
   customer_id VARCHAR(64) NOT NULL,
+  is_existing_contract TINYINT(1) NOT NULL DEFAULT 0,
   square_meters INT UNSIGNED NOT NULL,
   interval_label VARCHAR(40) NOT NULL,
   service VARCHAR(80) NOT NULL,
   start_date DATE NULL,
+  original_start_date DATE NULL,
   notes TEXT NULL,
   base_price DECIMAL(10,2) NOT NULL DEFAULT 0,
   price_adjustment DECIMAL(10,2) NOT NULL DEFAULT 0,

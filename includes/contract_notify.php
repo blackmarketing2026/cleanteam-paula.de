@@ -36,7 +36,7 @@ function load_contract_context(PDO $pdo, string $contractId): ?array
     $stmt = $pdo->prepare(
         'SELECT
             c.*,
-            o.id as offer_id_alias, o.customer_id, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes, o.price, o.created_at AS offer_created_at, o.token AS offer_token,
+            o.id as offer_id_alias, o.customer_id, o.is_existing_contract, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes, o.price, o.created_at AS offer_created_at, o.token AS offer_token,
             cust.id as customer_id_alias, cust.name, cust.email, cust.phone, cust.salutation, cust.contact_last_name, cust.address, cust.house_number, cust.zip, cust.city
         FROM contracts c
         JOIN offers o ON c.offer_id = o.id
@@ -52,8 +52,8 @@ function load_contract_context(PDO $pdo, string $contractId): ?array
 
     // Manuell die Arrays für Vertrag, Angebot und Kunde zusammenstellen,
     // um die gleiche Struktur wie vorher zu haben.
-    $contract = array_filter($row, fn($key) => !in_array($key, ['offer_id_alias', 'customer_id_alias', 'name', 'email', 'phone', 'salutation', 'contact_last_name', 'address', 'house_number', 'zip', 'city', 'square_meters', 'interval_label', 'service', 'start_date', 'offer_notes', 'price', 'offer_created_at', 'offer_token']), ARRAY_FILTER_USE_KEY);
-    $offer = array_intersect_key($row, array_flip(['id', 'customer_id', 'square_meters', 'interval_label', 'service', 'start_date', 'notes', 'price', 'created_at']));
+    $contract = array_filter($row, fn($key) => !in_array($key, ['offer_id_alias', 'customer_id_alias', 'name', 'email', 'phone', 'salutation', 'contact_last_name', 'address', 'house_number', 'zip', 'city', 'is_existing_contract', 'square_meters', 'interval_label', 'service', 'start_date', 'offer_notes', 'price', 'offer_created_at', 'offer_token']), ARRAY_FILTER_USE_KEY);
+    $offer = array_intersect_key($row, array_flip(['id', 'customer_id', 'is_existing_contract', 'square_meters', 'interval_label', 'service', 'start_date', 'notes', 'price', 'created_at']));
     $offer['id'] = $row['offer_id_alias']; // 'id' kommt von contracts, also überschreiben
     $offer['notes'] = $row['offer_notes'];
     $offer['created_at'] = $row['offer_created_at'];
@@ -101,7 +101,6 @@ function notify_contract_created(PDO $pdo, string $contractId): void
         if ($context === null) {
             return;
         }
-
         $smtp = load_mailbox_smtp($pdo);
         if ($smtp === null) {
             return;
@@ -172,6 +171,9 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
 
         $context = load_contract_context($pdo, $contractId);
         if ($context === null) {
+            return;
+        }
+        if (!empty($context['offer']['is_existing_contract'])) {
             return;
         }
 

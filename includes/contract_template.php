@@ -478,7 +478,14 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $vatApplicable = !isset($offer['vat_applicable']) || (int) $offer['vat_applicable'] === 1;
     $vatAmount = $vatApplicable ? round($netPrice * VAT_RATE / 100, 2) : 0.0;
     $grossPrice = $vatApplicable ? round($netPrice + $vatAmount, 2) : $netPrice;
-    $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
+    if (!empty($offer['is_existing_contract']) && !empty($offer['original_start_date'])) {
+        $start = new DateTimeImmutable((string) $offer['original_start_date']);
+        $months = [1 => 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
+            'September', 'Oktober', 'November', 'Dezember'];
+        $effectiveDate = $months[(int) $start->format('n')] . ' ' . $start->format('Y');
+    } else {
+        $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
+    }
     $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
     $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
     $customerFullAddress = trim($customerAddress . ', ' . $customerZipCity, ', ');

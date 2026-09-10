@@ -46,7 +46,7 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
     }
 }
 
-const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes,
+const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.is_existing_contract, o.original_start_date, o.notes AS offer_notes,
     o.customer_obligations_note AS offer_customer_obligations_note,
     o.price, o.vat_applicable, o.created_at AS offer_created_at, o.token,
     o.sent_at AS offer_sent_at, o.email_opened_at AS offer_email_opened_at,
@@ -82,6 +82,8 @@ function contract_row_to_json(array $row): array
         'secondSignatureDataUrl' => $row['second_signature_data'] ?? null,
         'secondSignedAt' => to_iso($row['second_signed_at'] ?? null),
         'createdAt' => to_iso($row['created_at']),
+        'isExistingContract' => (bool) ($row['is_existing_contract'] ?? false),
+        'originalStartDate' => $row['original_start_date'] ?? null,
         'customer' => [
             'id' => $row['customer_id'],
             'name' => $row['c_name'],
@@ -100,6 +102,8 @@ function contract_row_to_json(array $row): array
             'interval' => $row['interval_label'],
             'service' => $row['service'],
             'startDate' => $row['start_date'],
+            'isExistingContract' => (bool) ($row['is_existing_contract'] ?? false),
+            'originalStartDate' => $row['original_start_date'] ?? null,
             'notes' => $row['offer_notes'],
             'customerObligationsNote' => $row['offer_customer_obligations_note'],
             'price' => (float) $row['price'],
@@ -120,6 +124,7 @@ ensure_offers_vat_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
 ensure_offers_email_opened_at_column($pdo);
 ensure_offers_reminder_columns($pdo);
+ensure_offers_existing_contract_columns($pdo);
 
 function contract_documents_table_exists(PDO $pdo): bool
 {

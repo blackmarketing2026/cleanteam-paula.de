@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/ftp_export.php';
 require_once __DIR__ . '/../includes/contract_signers.php';
 
 $pdo = db();
+ensure_offers_existing_contract_columns($pdo);
 ensure_contracts_second_signer_columns($pdo);
 $method = $_SERVER['REQUEST_METHOD'];
 $action = (string) ($_GET['action'] ?? '');
@@ -113,6 +114,9 @@ function ensure_contracts_authorized_signer_columns(PDO $pdo): void
 
 function offer_is_expired(array $offer): bool
 {
+    if (!empty($offer['is_existing_contract'])) {
+        return false;
+    }
     return strtotime($offer['expires_at'] . ' UTC') < time();
 }
 
@@ -130,6 +134,8 @@ function public_state(array $offer, ?array $contract): array
             'interval' => $offer['interval_label'],
             'service' => $offer['service'],
             'startDate' => $offer['start_date'],
+            'isExistingContract' => (bool) ($offer['is_existing_contract'] ?? false),
+            'originalStartDate' => $offer['original_start_date'] ?? null,
             'notes' => $offer['notes'],
             'basePrice' => isset($offer['base_price']) && (float) $offer['base_price'] > 0
                 ? (float) $offer['base_price']
@@ -349,7 +355,9 @@ if ($method === 'POST' && $action === 'sign') {
     }
     save_contract_pdfs($pdo, $contract['id'], true);
     notify_contract_created($pdo, $contract['id']);
-    notify_customer_contract_signed($pdo, $contract['id']);
+    if (empty($offer['is_existing_contract'])) {
+        notify_customer_contract_signed($pdo, $contract['id']);
+    }
     export_contract_to_ftp($pdo, $contract['id']);
 
     json_response(public_state($offer, load_contract($pdo, $offer['id'])));

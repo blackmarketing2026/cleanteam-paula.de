@@ -172,8 +172,13 @@ function renderFactGrid(items) {
 
 function renderServiceDetails() {
   const offer = state.offer;
+  const historicalStart = offer.originalStartDate
+    ? new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" })
+        .format(new Date(`${offer.originalStartDate}T00:00:00Z`))
+    : "Nicht angegeben";
   const items = [
-    ["Startdatum", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
+    [offer.isExistingContract ? "Ursprünglicher Vertragsbeginn" : "Startdatum",
+      offer.isExistingContract ? historicalStart : (offer.startDate ? formatDate(offer.startDate) : "Nach Absprache")],
     ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
   ];
 
@@ -213,7 +218,19 @@ function renderFinalContract() {
 function routeToState(data) {
   state.offer = data.offer;
   state.contract = data.contract;
-  startValidityCountdown(data.offer.expiresAt, data.serverNow);
+  if (data.offer.isExistingContract) {
+    window.clearInterval(validityTimer);
+    els.linkValidity.hidden = true;
+  } else {
+    startValidityCountdown(data.offer.expiresAt, data.serverNow);
+  }
+
+  if (data.offer.isExistingContract) {
+    const finalHeading = document.querySelector("#screen-fertig h2");
+    const finalText = document.querySelector("#screen-fertig p");
+    finalHeading.textContent = "Vertrag erfolgreich abgeschlossen";
+    finalText.textContent = "Der Vertrag wurde erfolgreich unterschrieben. Den vollständigen Vertrag können Sie unten einsehen, ausdrucken oder als PDF speichern.";
+  }
 
   if (data.offer.expired) {
     showExpiredLink();

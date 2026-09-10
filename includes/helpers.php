@@ -160,6 +160,21 @@ function ensure_offers_reminder_columns(PDO $pdo): void
     }
 }
 
+function ensure_offers_existing_contract_columns(PDO $pdo): void
+{
+    $columns = [
+        'is_existing_contract' => 'ALTER TABLE offers ADD COLUMN is_existing_contract TINYINT(1) NOT NULL DEFAULT 0 AFTER customer_id',
+        'original_start_date' => 'ALTER TABLE offers ADD COLUMN original_start_date DATE NULL AFTER start_date',
+    ];
+
+    foreach ($columns as $column => $sql) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
 function format_service_text(string $text): string
 {
     $text = str_replace(["\r\n", "\r"], "\n", $text);

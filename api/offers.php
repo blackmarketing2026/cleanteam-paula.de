@@ -64,6 +64,8 @@ function offer_row_to_json(array $row): array
     return [
         'id' => $row['id'],
         'customerId' => $row['customer_id'],
+        'isExistingContract' => (bool) ($row['is_existing_contract'] ?? false),
+        'originalStartDate' => $row['original_start_date'] ?? null,
         'customer' => [
             'id' => $row['customer_id'],
             'name' => $row['c_name'],
@@ -115,6 +117,7 @@ ensure_offers_validity_days_column($pdo);
 ensure_offers_email_opened_at_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
 ensure_offers_reminder_columns($pdo);
+ensure_offers_existing_contract_columns($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();

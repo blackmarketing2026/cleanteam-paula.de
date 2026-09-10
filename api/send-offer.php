@@ -12,6 +12,7 @@ require_login();
 require_method('POST');
 
 $pdo = db();
+ensure_offers_existing_contract_columns($pdo);
 email_delivery_assert_allowed($pdo, 'offer');
 
 $offerId = (string) ($_GET['id'] ?? '');
@@ -28,6 +29,10 @@ $offer = $stmt->fetch();
 
 if (!$offer) {
     json_error('Vertrag wurde nicht gefunden.', 404);
+}
+
+if (!empty($offer['is_existing_contract'])) {
+    json_error('Bestandsverträge werden ausschließlich über den kopierten Link weitergegeben.', 422);
 }
 
 $requestBody = read_json_body();

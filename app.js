@@ -53,6 +53,7 @@ const els = {
   offerIntakePanel: document.querySelector("#offer-intake-panel"),
   offerReviewPanel: document.querySelector("#offer-review-panel"),
   offerForm: document.querySelector("#offer-form"),
+  existingOfferForm: document.querySelector("#existing-offer-form"),
   offerCustomerName: document.querySelector("#offer-customer-name"),
   offerContactPerson: document.querySelector("#offer-contact-person"),
   offerEmail: document.querySelector("#offer-email"),
@@ -226,6 +227,7 @@ const els = {
 const titles = {
   overview: "Übersicht",
   "offers-new": "Neuer Vertrag erstellen",
+  "offers-existing-new": "Neuen Bestandsvertrag erstellen",
   "offers-saved": "Vertragsentwürfe",
   contracts: "Verträge",
   "settings-smtp": "SMTP-Server-Einstellungen",
@@ -1212,7 +1214,9 @@ function renderOffers() {
 
 function renderOfferCard(offer) {
   const validity = offerValidity(offer);
-  const sentLabel = offer.sentAt
+  const sentLabel = offer.isExistingContract
+    ? "Manuelle Weitergabe per Link"
+    : offer.sentAt
     ? `Gesendet am ${formatDate(offer.sentAt)}`
     : "Noch nicht per E-Mail versendet";
 
@@ -1224,7 +1228,7 @@ function renderOfferCard(offer) {
       </button>
     `
     : "";
-  const contractProcessAction = offer.contractId
+  const contractProcessAction = offer.contractId || offer.isExistingContract
     ? ""
     : `
       <button class="secondary-button" type="button" data-action="open-offer-contract-link" data-id="${escapeHtml(offer.id)}">
@@ -1239,13 +1243,13 @@ function renderOfferCard(offer) {
           <div class="record-title">Firma: ${escapeHtml(offer.customer.name)}</div>
           <div class="record-meta">
             ${offer.squareMeters > 0 ? `<span>${offer.squareMeters} m²</span>` : ""}
-            <span>Erstellt am ${formatDate(offer.createdAt)}${offer.startDate ? ` · Start ${formatDate(offer.startDate)}` : ""}</span>
+            <span>Erstellt am ${formatDate(offer.createdAt)}${offer.isExistingContract && offer.originalStartDate ? ` · Ursprünglicher Beginn ${new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${offer.originalStartDate}T00:00:00Z`))}` : offer.startDate ? ` · Start ${formatDate(offer.startDate)}` : ""}</span>
             <span>${escapeHtml(sentLabel)}</span>
           </div>
         </div>
         <div class="record-side">
           ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}</span>` : ""}
-          <span class="badge ${validity.className}">${escapeHtml(validity.label)}</span>
+          ${offer.isExistingContract ? '<span class="badge">Bestand</span>' : `<span class="badge ${validity.className}">${escapeHtml(validity.label)}</span>`}
         </div>
       </div>
       <div class="record-lines">
@@ -1253,28 +1257,28 @@ function renderOfferCard(offer) {
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
-        <a class="secondary-button" href="offer.php?offerId=${encodeURIComponent(offer.id)}" target="_blank" rel="noopener">
+        ${offer.isExistingContract ? "" : `<a class="secondary-button" href="offer.php?offerId=${encodeURIComponent(offer.id)}" target="_blank" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
           Vertrag Vorschau
-        </a>
-        <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
+        </a>`}
+        ${offer.isExistingContract ? "" : `<button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
           Vertrag senden
-        </button>
+        </button>`}
         ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="link" aria-hidden="true"></i>
           Link kopieren
         </button>
-        <button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
+        ${offer.isExistingContract ? "" : `<button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="mail" aria-hidden="true"></i>
           E-Mail-Vorlage
-        </button>
+        </button>`}
         ${contractActions}
-        <button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
+        ${offer.isExistingContract ? "" : `<button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="pencil" aria-hidden="true"></i>
           Bearbeiten
-        </button>
+        </button>`}
         <button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
           Löschen
@@ -1477,6 +1481,7 @@ function renderContractRow(contract) {
 
   return `
     <tr class="${selected}">
+      <td>${contract.isExistingContract ? '<span class="badge">Bestand</span>' : ""}</td>
       <td>${escapeHtml(contract.customer.name)}</td>
       <td>${escapeHtml(contactName(contract.customer))}</td>
       <td>${escapeHtml(formatDate(contract.createdAt))}</td>
@@ -1493,10 +1498,10 @@ function renderContractRow(contract) {
                 <i data-lucide="upload-cloud" aria-hidden="true"></i>
                 Backup
               </button>
-              <button class="secondary-button" type="button" data-action="email-series" data-customer-id="${escapeHtml(contract.customer.id)}">
+              ${contract.isExistingContract ? "" : `<button class="secondary-button" type="button" data-action="email-series" data-customer-id="${escapeHtml(contract.customer.id)}">
                 <i data-lucide="mail" aria-hidden="true"></i>
                 E-Mail-Serie
-              </button>
+              </button>`}
             `
             : ""}
           <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
@@ -1505,7 +1510,7 @@ function renderContractRow(contract) {
           </button>
         </div>
       </td>
-      <td>${renderDeliveryStatus(contract.offer)}</td>
+      <td>${contract.isExistingContract ? '<span class="muted">Manuell per Link</span>' : renderDeliveryStatus(contract.offer)}</td>
     </tr>
   `;
 }
@@ -1515,6 +1520,42 @@ function resetOfferIntake() {
   els.offerReviewForm.reset();
   els.offerIntakePanel.hidden = false;
   els.offerReviewPanel.hidden = true;
+}
+
+async function handleExistingOfferSubmit(event) {
+  event.preventDefault();
+  const value = (id) => document.querySelector(id).value.trim();
+  const serviceText = value("#existing-offer-service-text");
+
+  try {
+    const formatted = await apiPost("api/format-text.php", { text: serviceText });
+    const result = await apiPost("api/existing-offers.php", {
+      customerName: value("#existing-offer-customer-name"),
+      contactPerson: value("#existing-offer-contact-person"),
+      email: value("#existing-offer-email"),
+      address: value("#existing-offer-address"),
+      zip: value("#existing-offer-zip"),
+      city: value("#existing-offer-city"),
+      squareMeters: Number(value("#existing-offer-square-meters")) || 0,
+      interval: value("#existing-offer-interval"),
+      price: Number(value("#existing-offer-price")),
+      vatApplicable: value("#existing-offer-vat") === "yes",
+      originalStartMonth: Number(value("#existing-offer-start-month")),
+      originalStartYear: Number(value("#existing-offer-start-year")),
+      serviceText: formatted.text,
+      customerObligationsNote: value("#existing-offer-obligations-text"),
+    });
+    els.existingOfferForm.reset();
+    await loadAll();
+    switchView("offers-saved");
+    const offer = getOffer(result.id);
+    if (offer) {
+      openLinkModal(offer.publicUrl);
+    }
+    showToast("Bestandsvertrag wurde erstellt. Der Link kann jetzt kopiert werden.");
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 async function handleOfferSubmit(event) {
@@ -3296,6 +3337,7 @@ function bindEvents() {
   document.addEventListener("click", handleDashboardAction);
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
+  els.existingOfferForm.addEventListener("submit", handleExistingOfferSubmit);
   els.offerReviewForm.addEventListener("submit", handleOfferReviewSubmit);
   els.offerReviewBack.addEventListener("click", () => {
     els.offerIntakePanel.hidden = false;
