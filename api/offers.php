@@ -93,7 +93,6 @@ function offer_row_to_json(array $row): array
         'expiresAt' => to_iso($row['expires_at']),
         'validityDays' => (int) ($row['validity_days'] ?? 14),
         'validityHours' => (int) ($row['validity_hours'] ?? 0),
-        'linkOpenedAt' => to_iso($row['link_opened_at'] ?? null),
         'sentAt' => to_iso($row['sent_at']),
         'contractId' => $row['contract_id'],
         'contractStatus' => $row['contract_status'],
@@ -113,7 +112,6 @@ ensure_offers_interval_label_length($pdo);
 ensure_offers_vat_column($pdo);
 ensure_offers_agb_snapshot_columns($pdo);
 ensure_offers_validity_days_column($pdo);
-ensure_offers_link_opened_column($pdo);
 ensure_offers_email_opened_at_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
 ensure_offers_reminder_columns($pdo);
@@ -305,35 +303,6 @@ if ($method === 'PUT') {
         'validity_hours2' => $validityHours,
         'id' => $id,
     ]);
-
-    $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');
-    $stmt->execute(['id' => $id]);
-    json_response(offer_row_to_json($stmt->fetch()));
-}
-
-if ($method === 'PATCH') {
-    $id = (string) ($_GET['id'] ?? '');
-    if ($id === '') {
-        json_error('Vertrags-ID fehlt.', 422);
-    }
-
-    $body = read_json_body();
-    $action = (string) ($body['action'] ?? '');
-
-    if ($action !== 'reset-link') {
-        json_error('Unbekannte Aktion.', 422);
-    }
-
-    $stmt = $pdo->prepare('SELECT id FROM offers WHERE id = :id');
-    $stmt->execute(['id' => $id]);
-    if (!$stmt->fetch()) {
-        json_error('Vertragsentwurf wurde nicht gefunden.', 404);
-    }
-
-    // Der bestehende Kundenlink bleibt erhalten. Nur die Einmal-Oeffnung und die
-    // Versandanzeige werden fuer eine erneute Freigabe zurueckgesetzt.
-    $pdo->prepare('UPDATE offers SET link_opened_at = NULL, sent_at = NULL, email_opened_at = NULL WHERE id = :id')
-        ->execute(['id' => $id]);
 
     $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');
     $stmt->execute(['id' => $id]);

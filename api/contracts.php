@@ -49,7 +49,7 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
 const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.notes AS offer_notes,
     o.customer_obligations_note AS offer_customer_obligations_note,
     o.price, o.vat_applicable, o.created_at AS offer_created_at, o.token,
-    o.sent_at AS offer_sent_at, o.email_opened_at AS offer_email_opened_at, o.link_opened_at AS offer_link_opened_at,
+    o.sent_at AS offer_sent_at, o.email_opened_at AS offer_email_opened_at,
     c.name AS c_name, c.email AS c_email, c.phone AS c_phone, c.salutation AS c_salutation,
     c.contact_last_name AS c_contact_last_name, c.address AS c_address, c.house_number AS c_house_number,
     c.zip AS c_zip, c.city AS c_city
@@ -107,7 +107,6 @@ function contract_row_to_json(array $row): array
             'createdAt' => to_iso($row['offer_created_at']),
             'sentAt' => to_iso($row['offer_sent_at'] ?? null),
             'emailOpenedAt' => to_iso($row['offer_email_opened_at'] ?? null),
-            'linkOpenedAt' => to_iso($row['offer_link_opened_at'] ?? null),
         ],
     ];
 }
@@ -119,7 +118,6 @@ ensure_contracts_number_column_dropped($pdo);
 ensure_offers_interval_label_length($pdo);
 ensure_offers_vat_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
-ensure_offers_link_opened_column($pdo);
 ensure_offers_email_opened_at_column($pdo);
 ensure_offers_reminder_columns($pdo);
 
@@ -247,8 +245,6 @@ if ($method === 'DELETE') {
         json_error('Vertrag wurde nicht gefunden.', 404);
     }
 
-    ensure_offers_link_opened_column($pdo);
-
     $pdo->beginTransaction();
     try {
         if (contract_documents_table_exists($pdo)) {
@@ -259,8 +255,8 @@ if ($method === 'DELETE') {
         $stmt = $pdo->prepare('DELETE FROM contracts WHERE id = :id');
         $stmt->execute(['id' => $id]);
 
-        // Der bestehende Kundenlink bleibt auch nach dem Zuruecksetzen erhalten.
-        $pdo->prepare('UPDATE offers SET link_opened_at = NULL, sent_at = NULL, email_opened_at = NULL WHERE id = :offer_id')
+        // Der bestehende Kundenlink bleibt auch nach dem Loeschen des Vertrags erhalten.
+        $pdo->prepare('UPDATE offers SET sent_at = NULL, email_opened_at = NULL WHERE id = :offer_id')
             ->execute(['offer_id' => $row['offer_id']]);
 
         $pdo->commit();

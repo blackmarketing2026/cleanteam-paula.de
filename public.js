@@ -9,6 +9,7 @@ const els = {
   card: document.querySelector("#public-card"),
   screens: document.querySelectorAll(".public-screen"),
   errorMessage: document.querySelector("#error-message"),
+  linkValidity: document.querySelector("#link-validity"),
   dataCheckList: document.querySelector("#data-check-list"),
   serviceDetails: document.querySelector("#service-details"),
   signaturePad: document.querySelector("#signature-pad"),
@@ -32,6 +33,9 @@ const els = {
 
 const signatureInk = new WeakSet();
 const additionalSigners = [];
+let validityTimer = null;
+
+const EXPIRED_LINK_MESSAGE = "Vertragslink abgelaufen. Bitte kontaktieren Sie das Clean-Team.";
 
 function escapeHtml(value) {
   return String(value == null ? "" : value)
@@ -108,6 +112,52 @@ function renderDataCheck() {
   ]);
 }
 
+function showExpiredLink() {
+  els.errorMessage.textContent = EXPIRED_LINK_MESSAGE;
+  els.linkValidity.textContent = "Link abgelaufen";
+  els.linkValidity.classList.add("expired");
+  els.linkValidity.hidden = false;
+  showScreen("error");
+}
+
+function startValidityCountdown(expiresAt, serverNow) {
+  window.clearInterval(validityTimer);
+  const expiry = new Date(expiresAt).getTime();
+  const serverTime = new Date(serverNow).getTime();
+  const clockOffset = Number.isFinite(serverTime) ? Date.now() - serverTime : 0;
+  if (!Number.isFinite(expiry)) {
+    els.linkValidity.hidden = true;
+    return;
+  }
+
+  const update = () => {
+    const currentServerTime = Date.now() - clockOffset;
+    const remainingSeconds = Math.max(0, Math.ceil((expiry - currentServerTime) / 1000));
+    if (remainingSeconds <= 0) {
+      window.clearInterval(validityTimer);
+      showExpiredLink();
+      return;
+    }
+
+    const days = Math.floor(remainingSeconds / 86400);
+    const hours = Math.floor((remainingSeconds % 86400) / 3600);
+    const minutes = Math.floor((remainingSeconds % 3600) / 60);
+    const seconds = remainingSeconds % 60;
+    const parts = [];
+    if (days > 0) parts.push(`${days} ${days === 1 ? "Tag" : "Tage"}`);
+    if (hours > 0 || days > 0) parts.push(`${hours} Std.`);
+    parts.push(`${minutes} Min.`);
+    if (days === 0 && hours === 0) parts.push(`${seconds} Sek.`);
+
+    els.linkValidity.textContent = `Noch gültig: ${parts.join(" ")}`;
+    els.linkValidity.classList.remove("expired");
+    els.linkValidity.hidden = false;
+  };
+
+  update();
+  validityTimer = window.setInterval(update, 1000);
+}
+
 function renderContractPreview() {
   els.contractPreviewFrame.src = `contract.php?token=${encodeURIComponent(token)}&preview=1`;
 }
@@ -163,10 +213,10 @@ function renderFinalContract() {
 function routeToState(data) {
   state.offer = data.offer;
   state.contract = data.contract;
+  startValidityCountdown(data.offer.expiresAt, data.serverNow);
 
   if (data.offer.expired) {
-    els.errorMessage.textContent = "Dieser Vertrag ist leider abgelaufen. Bitte kontaktieren Sie CleanTeam für einen neuen Vertrag.";
-    showScreen("error");
+    showExpiredLink();
     return;
   }
 

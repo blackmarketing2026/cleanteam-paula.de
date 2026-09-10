@@ -1232,13 +1232,6 @@ function renderOfferCard(offer) {
         Neuen Vertrag erstellen
       </button>
     `;
-  const resetLinkButton = `
-    <button class="ghost-button" type="button" data-action="reset-contract-link" data-id="${escapeHtml(offer.id)}">
-      <i data-lucide="rotate-ccw" aria-hidden="true"></i>
-      Link zurücksetzen
-    </button>
-  `;
-
   return `
     <article class="record-item">
       <div class="record-main">
@@ -1278,7 +1271,6 @@ function renderOfferCard(offer) {
           E-Mail-Vorlage
         </button>
         ${contractActions}
-        ${resetLinkButton}
         <button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="pencil" aria-hidden="true"></i>
           Bearbeiten
@@ -1416,7 +1408,6 @@ function renderDeliveryStatus(offer) {
       at: offer.emailOpenedAt,
       hint: "Technisches Signal (Ladepixel). Kann auch durch Sicherheits-Scanner oder E-Mail-Anbieter ausgelöst werden, bevor ein Mensch die Mail gesehen hat – keine Garantie, dass sie wirklich gelesen wurde.",
     },
-    { done: Boolean(offer.linkOpenedAt), label: "Vertrag geöffnet", at: offer.linkOpenedAt },
   ];
 
   return `
@@ -2065,31 +2056,6 @@ async function deleteOffer(id) {
     }
     await loadAll();
     showToast("Vertragsentwurf wurde gelöscht.");
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-async function resetContractLink(offerId) {
-  const offer = getOffer(offerId);
-  const confirmed = window.confirm(
-    "Diesen Vertragslink wieder freigeben? Der Link bleibt gleich, ein eventueller Fortschritt geht verloren.",
-  );
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    if (offer?.contractId) {
-      await apiDelete(`api/contracts.php?id=${encodeURIComponent(offer.contractId)}`);
-      if (state.selectedContractId === offer.contractId) {
-        state.selectedContractId = null;
-      }
-    } else {
-      await apiPatch(`api/offers.php?id=${encodeURIComponent(offerId)}`, { action: "reset-link" });
-    }
-    await loadAll();
-    showToast("Der bestehende Link wurde wieder freigegeben.");
   } catch (error) {
     showToast(error.message);
   }
@@ -3250,10 +3216,6 @@ function handleRecordAction(event) {
     state.contractFilters.search = "";
     state.contractFilters.period = "all";
     switchView("contracts");
-  }
-
-  if (action === "reset-contract-link") {
-    resetContractLink(id);
   }
 
   if (action === "delete-offer") {

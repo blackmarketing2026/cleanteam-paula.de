@@ -124,6 +124,7 @@ function public_state(array $offer, ?array $contract): array
     }
 
     return [
+        'serverNow' => gmdate('Y-m-d\TH:i:s\Z'),
         'offer' => [
             'squareMeters' => (int) $offer['square_meters'],
             'interval' => $offer['interval_label'],
@@ -183,7 +184,6 @@ ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
 ensure_contracts_authorized_signer_columns($pdo);
-ensure_offers_link_opened_column($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
     $contract = load_contract($pdo, $offer['id']);
@@ -199,25 +199,11 @@ if ($method === 'GET' && $action === 'offer') {
             ]);
         $contract = load_contract($pdo, $offer['id']);
     }
-    $isCompleted = $contract !== null && $contract['status'] === 'signiert';
-
-    if (!$isCompleted && $offer['link_opened_at'] !== null) {
-        json_error(
-            'Dieser Link wurde bereits geöffnet und ist aus Datenschutzgründen gesperrt. Bitte kontaktieren Sie CleanTeam, damit der Link wieder freigegeben wird.',
-            410
-        );
-    }
-
-    $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
-    if ($offer['link_opened_at'] === null && !is_automated_email_scanner($userAgent)) {
-        $pdo->prepare('UPDATE offers SET link_opened_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $offer['id']]);
-    }
-
     json_response(public_state($offer, $contract));
 }
 
 if (offer_is_expired($offer) && $method === 'POST') {
-    json_error('Dieser Vertrag ist abgelaufen. Bitte kontaktieren Sie CleanTeam für einen neuen Vertrag.', 410);
+    json_error('Vertragslink abgelaufen. Bitte kontaktieren Sie das Clean-Team.', 410);
 }
 
 if ($method === 'POST' && $action === 'start') {

@@ -1994,10 +1994,35 @@ button.compact-item.selected {
 .public-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 14px;
   width: 100%;
   max-width: 720px;
   color: var(--blue-950);
+}
+
+.public-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.link-validity {
+  flex: 0 0 auto;
+  border: 1px solid rgba(19, 121, 216, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 8px 12px;
+  color: var(--blue-900);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.link-validity.expired {
+  border-color: rgba(190, 37, 37, 0.25);
+  color: #a51d1d;
 }
 
 .public-header strong,
@@ -2191,6 +2216,15 @@ button.compact-item.selected {
 
   .public-card {
     padding: 20px;
+  }
+
+  .public-header {
+    align-items: flex-start;
+  }
+
+  .link-validity {
+    max-width: 46%;
+    white-space: normal;
   }
 
   .data-check {

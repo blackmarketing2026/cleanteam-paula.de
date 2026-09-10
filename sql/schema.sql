@@ -50,7 +50,6 @@ CREATE TABLE IF NOT EXISTS offers (
   expires_at DATETIME NOT NULL,
   validity_days SMALLINT UNSIGNED NOT NULL DEFAULT 14,
   validity_hours TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  link_opened_at DATETIME NULL,
   sent_at DATETIME NULL,
   email_opened_at DATETIME NULL,
   reminder1_sent_at DATETIME NULL,

@@ -30,7 +30,7 @@ switch ($type) {
             . '<h2 style="margin:24px 0 10px 0;color:#08325f;font-size:17px;">Online-Prozess</h2>'
             . '<p>Alle Informationen zum weiteren Ablauf finden Sie im Online-Prozess. Klicken Sie dazu einfach auf den folgenden Button:</p>'
             . email_button_html($sampleLink, 'Jetzt Vertrag online abschließen')
-            . '<p style="color:#51657d;font-size:13px;">Der Button ist aus Datenschutzgründen nur einmal nutzbar und 14 Tage lang gültig, also bis zum ' . email_h($sampleValidUntil) . '. Danach verfällt er automatisch. Wurde er versehentlich schon einmal geöffnet, muss er erst wieder von uns freigegeben werden, bevor er erneut funktioniert.</p>';
+            . '<p style="color:#51657d;font-size:13px;">Der Vertragslink ist 14 Tage lang gültig, also bis zum ' . email_h($sampleValidUntil) . ', und kann während dieser Zeit jederzeit geöffnet werden. Danach verfällt er automatisch.</p>';
         $title = 'Ihr Angebot von CleanTeam';
         $preheader = 'Bitte schließen Sie Ihren Vertrag jetzt online ab.';
         $signatureContext = 'offer';

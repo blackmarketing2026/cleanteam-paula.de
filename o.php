@@ -16,16 +16,19 @@ header('Cache-Control: no-store, private');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=compact-contract-flow-20260910" />
+    <link rel="stylesheet" href="styles.css?v=link-expiry-countdown-20260910" />
   </head>
   <body data-token="<?php echo $token; ?>">
     <main class="public-shell">
       <header class="public-header">
-        <div class="brand-mark" aria-hidden="true"><span>CT</span></div>
-        <div>
-          <strong>CleanTeam</strong>
-          <span>Ihr pers&ouml;nlicher Vertrag</span>
+        <div class="public-brand">
+          <div class="brand-mark" aria-hidden="true"><span>CT</span></div>
+          <div>
+            <strong>CleanTeam</strong>
+            <span>Ihr pers&ouml;nlicher Vertrag</span>
+          </div>
         </div>
+        <div id="link-validity" class="link-validity" hidden></div>
       </header>
 
       <div class="public-card" id="public-card">
@@ -138,6 +141,6 @@ header('Cache-Control: no-store, private');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=compact-contract-flow-20260910"></script>
+    <script src="public.js?v=link-expiry-countdown-20260910"></script>
   </body>
 </html>
