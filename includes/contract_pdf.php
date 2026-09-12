@@ -914,7 +914,7 @@ function contract_pdf_filename(string $customerName, string $audience): string
 {
     $safeName = trim(preg_replace('/[\/\\\\:*?"<>|]+/', '-', $customerName) ?: '') ?: 'Kunde';
 
-    return 'cleanteam Vertrag - ' . $safeName . '.pdf';
+    return 'CleanTeam Auftragsbestätigung - ' . $safeName . '.pdf';
 }
 
 function order_confirmation_pdf_filename(string $customerName): string
@@ -978,8 +978,8 @@ function render_authorization_pdf(array $offer, array $customer, array $contract
     $grantorName = contract_authorization_grantor_name($contract);
     $companyAddress = contract_authorization_company_address($contract);
 
-    $pdf->title('Vollmacht zum Gebäudereinigungsvertrag');
-    $pdf->label('Vollmacht zum Gebäudereinigungsvertrag');
+    $pdf->title('Vollmacht zur Auftragsbestätigung');
+    $pdf->label('Vollmacht zur Auftragsbestätigung');
     $pdf->meta('Erstellt am: ' . $createdAt . ' | Auftraggeber: ' . $customerName);
 
     $pdf->heading('Vertragsdaten');
@@ -998,7 +998,7 @@ function render_authorization_pdf(array $offer, array $customer, array $contract
 
     $pdf->heading('Erklärung');
     $pdf->paragraph(
-        'Hiermit bevollmächtigt die oben genannte Person die bevollmächtigte Person, den Gebäudereinigungsvertrag'
+        'Hiermit bevollmächtigt die oben genannte Person die bevollmächtigte Person, die Auftragsbestätigung'
         . ' mit ' . CONTRACTOR['legal_name'] . ' für den Auftraggeber rechtsverbindlich zu unterzeichnen.'
     );
     $pdf->paragraph(
@@ -1023,7 +1023,6 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $createdAt = contract_format_date($offer['created_at']);
     $currentDate = contract_current_date();
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
-    $isConfirmation = $contract !== null && $contract['status'] === 'bestaetigt';
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '-';
 
     $authorized = isset($contract['authorized']) && $contract['authorized'] !== null ? (bool) $contract['authorized'] : null;
@@ -1042,7 +1041,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
     $pdf->meta('Datum: ' . $currentDate);
-    $pdf->title($isConfirmation ? 'Auftragsbestätigung' : 'Gebäudereinigungsvertrag');
+    $pdf->title('Auftragsbestätigung');
     $pdf->centeredText('zwischen');
 
     $customerFullAddress = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . 'D-' . $customerZipCity, ', ');
@@ -1055,14 +1054,14 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         'Die ' . $customerName . ', ' . $customerFullAddress . ', Vertragsunterzeichnung durch: ' . $signatoryName . $authorityInline
     );
     $pdf->rightAlignedText('- im Folgenden Auftraggeber genannt -');
-    $pdf->paragraph($isConfirmation ? 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:' : 'Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:');
+    $pdf->paragraph('Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:');
 
     $templateHtml = get_contract_template_html(db());
     $pdfPlaceholders = contract_template_placeholder_map($offer, $customer, $contract, true);
     $templateBodyHtml = render_contract_template_body($templateHtml, $pdfPlaceholders);
     contract_template_html_to_pdf($pdf, $templateBodyHtml);
 
-    $pdf->heading($isConfirmation ? 'Annahme und Bestätigung' : 'Unterschriften');
+    $pdf->heading('Annahme und Bestätigung');
     $pdf->keyValue('CleanTeam', SIGNING_LOCATION . ', ' . $createdAt . ' | Im Namen von CleanTeam Geschäftsführer: ' . $managingDirectors);
     if ($contractorSignatureDataUrl !== null) {
         if (!$pdf->signatureImage($contractorSignatureDataUrl)) {
@@ -1077,13 +1076,13 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $signBlockName = $authorized === false && $representationNote
         ? $representationNote . ' (i. V. ' . $signatoryName . ')'
         : $signatoryName;
-    $pdf->keyValue('Kunde', (string) $customer['city'] . ', ' . $signedAt . ' | ' . ($isConfirmation ? 'Kostenvoranschlag online angenommen' : $signBlockLabel . ': ' . $signBlockName));
+    $pdf->keyValue('Kunde', (string) $customer['city'] . ', ' . $signedAt . ' | ' . $signBlockLabel . ': ' . $signBlockName);
     if ($isSigned) {
         $pdf->keyValue('Elektronische Signatur', 'Signaturdaten wurden elektronisch erfasst.');
         if (!$pdf->signatureImage($contract['signature_data'] ?? null)) {
             $pdf->paragraph('Das Signaturbild konnte nicht eingebettet werden; der Signaturzeitpunkt ist im Dokument protokolliert.', 9.5, 170.0);
         }
-    } elseif (!$isConfirmation) {
+    } else {
         $pdf->keyValue('Elektronische Signatur', 'Noch nicht unterschrieben.');
     }
 
@@ -1103,8 +1102,8 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->protocolKeyValue('Kunde', $customerName);
         $pdf->protocolKeyValue('Unterzeichner', $signatoryName);
         $pdf->protocolKeyValue('Vertragsentwurf erstellt', contract_format_datetime($offer['created_at'] ?? null));
-        $pdf->protocolKeyValue('Vertrag erstellt', contract_format_datetime($contract['created_at'] ?? null));
-        $pdf->protocolKeyValue('Vertrag elektronisch signiert', $signedAtDisplay);
+        $pdf->protocolKeyValue('Auftragsbestätigung erstellt', contract_format_datetime($contract['created_at'] ?? null));
+        $pdf->protocolKeyValue('Auftragsbestätigung elektronisch signiert', $signedAtDisplay);
         $privacyAcceptedAt = $contract['privacy_accepted_at'] ?? null;
         $pdf->protocolKeyValue('Datenschutz-Zustimmung erteilt', $privacyAcceptedAt !== null ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt');
         $pdf->protocolKeyValue('Zeitpunkt der Datenschutz-Zustimmung', contract_format_datetime($privacyAcceptedAt));

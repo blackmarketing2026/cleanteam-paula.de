@@ -449,7 +449,7 @@ function default_contract_template_html(): string
 
 <h2>§ 9 Ausfertigungen und elektronische Dokumentation</h2>
 <p>
-  Beide Parteien erhalten eine Ausfertigung dieses Gebäudereinigungsvertrags. Bei elektronischer Unterzeichnung wird jeder
+  Beide Parteien erhalten eine Ausfertigung dieser Auftragsbestätigung. Bei elektronischer Unterzeichnung wird jeder
   Partei nach Abschluss des Signaturvorgangs eine Ausfertigung zur Verfügung gestellt.
 </p>
 HTML;
@@ -627,9 +627,8 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
         : 'ohne gesonderte Vertretungsangabe';
 
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
-    $isOrderConfirmation = $contract !== null && $contract['status'] === 'bestaetigt';
-    $documentTitle = $isOrderConfirmation ? 'Auftragsbestätigung' : 'Gebäudereinigungsvertrag';
-    $documentLead = $isOrderConfirmation ? 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:' : 'Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:';
+    $documentTitle = 'Auftragsbestätigung';
+    $documentLead = 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:';
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '–';
     $signatureImage = $isSigned && !empty($contract['signature_data'])
         ? '<img src="' . h($contract['signature_data']) . '" alt="Unterschrift" style="max-height:70px;">'
@@ -640,11 +639,9 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
             . '<img src="' . h($signer['signatureDataUrl']) . '" alt="Unterschrift Person ' . ($index + 2) . '" style="max-height:70px;">';
     }
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
-    $contractorSignatureImage = empty($options['excludeContractorSignature']) && $contractorSignatureDataUrl !== null
+    $contractorSignatureImage = $contractorSignatureDataUrl !== null
         ? '<img src="' . h($contractorSignatureDataUrl) . '" alt="Unterschrift Thomas Mündlein" style="max-height:70px;">'
-        : (empty($options['excludeContractorSignature'])
-            ? '<span class="sign-placeholder">CleanTeam-Unterschrift noch nicht hinterlegt</span>'
-            : '');
+        : '<span class="sign-placeholder">CleanTeam-Unterschrift noch nicht hinterlegt</span>';
 
     $managingDirectorsInline = h(implode(', ', CONTRACTOR['managing_directors']));
     $contractorLegalName = h(CONTRACTOR['legal_name']);

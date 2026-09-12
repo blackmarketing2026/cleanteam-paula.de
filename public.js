@@ -233,8 +233,8 @@ function routeToState(data) {
   if (data.offer.isExistingContract) {
     const finalHeading = document.querySelector("#screen-fertig h2");
     const finalText = document.querySelector("#screen-fertig p");
-    finalHeading.textContent = "Vertrag erfolgreich abgeschlossen";
-    finalText.textContent = "Der Vertrag wurde erfolgreich unterschrieben. Den vollständigen Vertrag können Sie unten einsehen, ausdrucken oder als PDF speichern.";
+    finalHeading.textContent = "Auftragsbestätigung erfolgreich abgeschlossen";
+    finalText.textContent = "Die Auftragsbestätigung wurde erfolgreich unterschrieben. Sie können das vollständige Dokument unten einsehen, ausdrucken oder als PDF speichern.";
   }
 
   const contract = data.contract;
@@ -260,8 +260,8 @@ function routeToState(data) {
       return;
     }
     if (data.offer.quoteStatus === "signing") {
-      document.title = "CleanTeam - Vertrag online abschließen";
-      document.querySelector("#public-document-label").textContent = "Vertrag online abschließen";
+      document.title = "CleanTeam - Auftragsbestätigung unterschreiben";
+      document.querySelector("#public-document-label").textContent = "Auftragsbestätigung unterschreiben";
     }
   }
 
@@ -399,7 +399,7 @@ function updateSignerControls() {
   const button = document.querySelector("#add-signer");
   button.hidden = additionalSigners.length >= 4;
   button.textContent = "Weitere Personen hinzufügen";
-  els.saveSignature.textContent = "Vertrag abschließen";
+  els.saveSignature.textContent = "Auftragsbestätigung unterschreiben";
   additionalSigners.forEach((signer, index) => {
     signer.heading.textContent = `Person ${index + 2}`;
     signer.canvas.setAttribute("aria-label", `Unterschrift Person ${index + 2}`);

@@ -30,9 +30,11 @@ foreach ([
 assert_source_contains($appJs, '&preview=1', 'Die Vertragsvorschau ist nicht ausdrücklich als Vorschau gekennzeichnet.');
 assert_source_contains($contractPage, "'excludeAgb' => \$isPreview", 'Die AGB werden in der Vertragsvorschau nicht ausgeblendet.');
 assert_source_contains($contractPage, "'excludeProtocol' => \$isPreview", 'Das Signaturprotokoll wird in der Vertragsvorschau nicht ausgeblendet.');
-assert_source_contains($contractPage, "'excludeContractorSignature' => \$isPreview", 'Die CleanTeam-Unterschrift wird in der Vertragsvorschau nicht ausgeblendet.');
 assert_source_contains($contractTemplate, '$isCleanTeamCopy && $isSigned && empty($options[\'excludeProtocol\'])', 'Das Signaturprotokoll wird auch für nicht unterschriebene Verträge gerendert.');
-assert_source_contains($contractTemplate, "empty(\$options['excludeContractorSignature']) && \$contractorSignatureDataUrl !== null", 'Die CleanTeam-Unterschrift berücksichtigt den Vorschau-Ausschluss nicht.');
+if (str_contains($contractPage, 'excludeContractorSignature')) {
+    throw new RuntimeException('Die CleanTeam-Unterschrift darf in der Vertragsvorschau nicht ausgeblendet werden.');
+}
+assert_source_contains($contractTemplate, '$contractorSignatureDataUrl !== null', 'Die gespeicherte CleanTeam-Unterschrift wird nicht in das Vertragsdokument eingefügt.');
 
 if (str_contains($sendOffer, 'Der Kostenvoranschlag wurde bereits angenommen.')) {
     throw new RuntimeException('Ein bereits versendeter Kostenvoranschlag wird weiterhin für den erneuten Versand gesperrt.');

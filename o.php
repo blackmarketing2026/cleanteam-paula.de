@@ -9,7 +9,7 @@ header('Cache-Control: no-store, private');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>CleanTeam - Ihr Vertrag</title>
+    <title>CleanTeam - Ihre Auftragsbest&auml;tigung</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -25,7 +25,7 @@ header('Cache-Control: no-store, private');
           <div class="brand-mark" aria-hidden="true"><span>CT</span></div>
           <div>
             <strong>CleanTeam</strong>
-            <span id="public-document-label">Ihr persönlicher Vertrag</span>
+            <span id="public-document-label">Ihre persönliche Auftragsbest&auml;tigung</span>
           </div>
         </div>
         <div id="link-validity" class="link-validity" hidden></div>
@@ -111,13 +111,13 @@ header('Cache-Control: no-store, private');
 
         <section id="screen-signatur" class="public-screen wizard-screen">
           <p class="step-indicator">Pr&uuml;fen und unterschreiben</p>
-          <h2>Ihr Vertrag</h2>
-          <p class="muted">Lesen Sie den Vertrag bitte vollst&auml;ndig durch.</p>
+          <h2>Ihre Auftragsbest&auml;tigung</h2>
+          <p class="muted">Lesen Sie die Auftragsbest&auml;tigung bitte vollst&auml;ndig durch.</p>
           <div class="protected-contract" id="protected-contract">
             <iframe id="contract-preview-frame" class="contract-frame contract-preview-frame" title="Vorschau des Vertrags"></iframe>
             <div id="capture-shield" class="capture-shield" aria-live="polite" hidden>Die Vertragsansicht ist vor Bildschirmaufnahmen gesch&uuml;tzt.</div>
           </div>
-          <h2 class="signature-section-heading">Vertrag unterschreiben</h2>
+          <h2 class="signature-section-heading">Auftragsbest&auml;tigung unterschreiben</h2>
           <p class="muted">Unterschreiben Sie im Feld mit dem Finger, Stift oder der Maus.</p>
           <div class="signature-area">
             <canvas id="signature-pad" width="900" height="260" aria-label="Signaturfeld"></canvas>
@@ -128,20 +128,20 @@ header('Cache-Control: no-store, private');
           <div id="additional-signers"></div>
           <button id="add-signer" class="secondary-button add-signer-button" type="button">Weitere Personen hinzuf&uuml;gen</button>
           <div class="form-actions">
-            <button id="save-signature" class="primary-button" type="button">Vertrag abschlie&szlig;en</button>
+            <button id="save-signature" class="primary-button" type="button">Auftragsbest&auml;tigung unterschreiben</button>
           </div>
         </section>
 
         <section id="screen-fertig" class="public-screen">
           <h2>Willkommen bei CleanTeam!</h2>
           <p class="muted">
-            Vielen Dank f&uuml;r Ihr Vertrauen &ndash; Ihr Vertrag ist erfolgreich unterschrieben. Wir freuen uns,
+            Vielen Dank f&uuml;r Ihr Vertrauen &ndash; Ihre Auftragsbest&auml;tigung ist erfolgreich unterschrieben. Wir freuen uns,
             Sie als Kunden begr&uuml;&szlig;en zu d&uuml;rfen, und stehen Ihnen jederzeit gerne zur Verf&uuml;gung.
-            Den vollst&auml;ndigen Vertrag k&ouml;nnen Sie unten einsehen, ausdrucken oder als PDF speichern.
+            Die vollst&auml;ndige Auftragsbest&auml;tigung k&ouml;nnen Sie unten einsehen, ausdrucken oder als PDF speichern.
           </p>
           <div class="form-actions">
             <a id="print-final-contract" class="secondary-button" href="#" target="_blank" rel="noopener">
-              Vertrag &ouml;ffnen / als PDF speichern
+              Auftragsbest&auml;tigung &ouml;ffnen / als PDF speichern
             </a>
           </div>
           <iframe id="final-contract-frame" class="contract-frame"></iframe>
@@ -151,6 +151,6 @@ header('Cache-Control: no-store, private');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=quote-contract-state-fix-20260912"></script>
+    <script src="public.js?v=order-confirmation-20260912"></script>
   </body>
 </html>
