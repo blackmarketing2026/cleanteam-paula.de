@@ -306,6 +306,43 @@ final class SimplePdfDocument
         return true;
     }
 
+    public function quoteSignature(?string $dataUrl, string $name, string $company): bool
+    {
+        $image = $this->parsePngDataUrl($dataUrl);
+        if ($image === null) {
+            return false;
+        }
+
+        $maxWidth = 170.0;
+        $maxHeight = 58.0;
+        $ratio = min($maxWidth / $image['width'], $maxHeight / $image['height'], 1.0);
+        $width = max(1.0, $image['width'] * $ratio);
+        $height = max(1.0, $image['height'] * $ratio);
+
+        $this->ensureSpace($height + 48.0);
+        $imageName = 'Im' . (count($this->images) + 1);
+        $this->images[$imageName] = $image;
+        $this->pages[$this->pageIndex]['images'][$imageName] = true;
+        $imageY = $this->y - $height;
+        $this->write(sprintf(
+            "q %.2F 0 0 %.2F %.2F %.2F cm /%s Do Q\n",
+            $width,
+            $height,
+            self::MARGIN_LEFT,
+            $imageY,
+            $imageName
+        ));
+        $this->y = $imageY - 7.0;
+        $this->write("0.06 0.18 0.45 rg\n");
+        $this->line($name, self::MARGIN_LEFT, $this->y, 10.0, 'F2');
+        $this->write("0 0 0 rg\n");
+        $this->y -= 14.0;
+        $this->line($company, self::MARGIN_LEFT, $this->y, 9.0, 'F1');
+        $this->y -= 18.0;
+
+        return true;
+    }
+
     public function imageFile(string $path, float $maxWidth = 120.0, float $maxHeight = 48.0): bool
     {
         $image = $this->parseImageFile($path);

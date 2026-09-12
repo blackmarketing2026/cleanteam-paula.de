@@ -24,7 +24,7 @@ function quote_pdf_logo_path(): ?string
     return is_file($path) ? $path : null;
 }
 
-function render_quote_pdf(array $offer, array $customer): string
+function render_quote_pdf(array $offer, array $customer, ?string $contractorSignatureDataUrl = null): string
 {
     $pdf = new SimplePdfDocument();
     $pdf->quoteHeader([
@@ -58,17 +58,18 @@ function render_quote_pdf(array $offer, array $customer): string
     }
     $pdf->quoteSectionHeading('Rahmenbedingungen');
     $pdf->keyValue('Ausführungsbeginn', $startDate);
-    $pdf->paragraph('Hinweis: Dieser Kostenvoranschlag basiert auf den im Vertragsentwurf erfassten Leistungsdaten. Änderungen oder zusätzliche Leistungen werden vor Ausführung abgestimmt.', 9.5);
-    $pdf->paragraph('Bitte nehmen Sie den Kostenvoranschlag über den zugesandten Link an. Danach erhalten Sie automatisch Ihre Auftragsbestätigung.', 9.5);
-    $pdf->spacer(8.0);
-    $pdf->paragraph("Freundliche Grüße\n" . CONTRACTOR['legal_name']);
+    $pdf->spacer(14.0);
+    $pdf->paragraph('Freundliche Grüße');
+    if (!$pdf->quoteSignature($contractorSignatureDataUrl, contract_contractor_signature_name(), CONTRACTOR['legal_name'])) {
+        $pdf->paragraph(contract_contractor_signature_name() . ', ' . CONTRACTOR['legal_name'], 9.5);
+    }
     return $pdf->output();
 }
 
 function save_quote_pdf(PDO $pdo, array $offer, array $customer): array
 {
     ensure_quote_documents_table($pdo);
-    $content = render_quote_pdf($offer, $customer);
+    $content = render_quote_pdf($offer, $customer, get_contract_template_contractor_signature_data($pdo));
     $filename = quote_pdf_filename(contract_customer_display_name($customer));
     $stmt = $pdo->prepare(
         'INSERT INTO quote_documents (id, offer_id, filename, mime_type, content, sha256, generated_at)

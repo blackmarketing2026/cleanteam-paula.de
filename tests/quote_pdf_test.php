@@ -9,11 +9,16 @@ $offer = ['id' => 'offer-fixture-123456', 'created_at' => '2026-09-12 10:00:00',
 $customer = ['name' => 'Test GmbH', 'salutation' => '', 'contact_last_name' => 'Max Mustermann',
     'address' => 'Musterstraße', 'house_number' => '8', 'zip' => '55555', 'city' => 'Musterstadt'];
 
-$pdf = render_quote_pdf($offer, $customer);
+$signatureDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+$pdf = render_quote_pdf($offer, $customer, $signatureDataUrl);
 if (!str_starts_with($pdf, '%PDF-1.4') || strlen($pdf) < 3000) throw new RuntimeException('KVA-PDF wurde nicht korrekt erzeugt.');
 if (str_contains($pdf, 'Nr.:') || str_contains($pdf, 'KV-2026-')) throw new RuntimeException('KVA-Nummer darf nicht im PDF ausgegeben werden.');
 if (quote_pdf_logo_path() === null || !str_contains($pdf, '/Subtype /Image')) throw new RuntimeException('CleanTeam-Logo wurde nicht in das KVA-PDF eingebettet.');
+if (substr_count($pdf, '/Subtype /Image') < 2 || !str_contains($pdf, 'Thomas')) throw new RuntimeException('CleanTeam-Signatur wurde nicht in das KVA-PDF eingebettet.');
 if (!str_contains($pdf, '0.25 0.56 0.10 rg') || !str_contains($pdf, '0.06 0.18 0.45 rg')) throw new RuntimeException('CleanTeam-Farben fehlen im KVA-PDF.');
+foreach (['Hinweis: Dieser Kostenvoranschlag', 'Bitte nehmen Sie den Kostenvoranschlag'] as $omittedSentence) {
+    if (str_contains($pdf, $omittedSentence)) throw new RuntimeException('Entfernter KVA-Hinweis wird weiterhin ausgegeben.');
+}
 if (!str_contains($pdf, 'Leistungsbeschreibung')) throw new RuntimeException('Leistungsbeschreibung fehlt im KVA-PDF.');
 foreach (['Pflichten des Auftraggebers', 'Zahlungsbedingungen', 'Preisgrundlage'] as $omittedText) {
     if (str_contains($pdf, $omittedText)) throw new RuntimeException($omittedText . ' darf im KVA-PDF nicht ausgegeben werden.');

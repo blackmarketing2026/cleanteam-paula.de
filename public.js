@@ -247,7 +247,7 @@ function routeToState(data) {
     if (data.offer.quoteStatus === "sent") {
       document.title = "CleanTeam - Ihr Kostenvoranschlag";
       document.querySelector("#public-document-label").textContent = "Ihr persönlicher Kostenvoranschlag";
-      els.quotePdfLink.href = `quote.php?token=${encodeURIComponent(token)}&v=cleanteam-2`;
+      els.quotePdfLink.href = `quote.php?token=${encodeURIComponent(token)}&v=cleanteam-3`;
       renderQuoteDetails();
       showScreen("kostenvoranschlag");
       return;
