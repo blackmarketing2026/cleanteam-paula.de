@@ -9,7 +9,7 @@ header('Cache-Control: no-store, private');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>CleanTeam - Ihr Vertrag</title>
+    <title>CleanTeam - Ihr Kostenvoranschlag</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -25,7 +25,7 @@ header('Cache-Control: no-store, private');
           <div class="brand-mark" aria-hidden="true"><span>CT</span></div>
           <div>
             <strong>CleanTeam</strong>
-            <span>Ihr pers&ouml;nlicher Vertrag</span>
+            <span>Ihr persönlicher Kostenvoranschlag</span>
           </div>
         </div>
         <div id="link-validity" class="link-validity" hidden></div>
@@ -47,6 +47,15 @@ header('Cache-Control: no-store, private');
             Bitte kontaktieren Sie CleanTeam, damit wir den Vertrag f&uuml;r Sie anpassen k&ouml;nnen.
             Wir melden uns schnellstm&ouml;glich bei Ihnen.
           </p>
+        </section>
+
+        <section id="screen-kostenvoranschlag" class="public-screen">
+          <p class="step-indicator">Kostenvoranschlag</p>
+          <h2>Ihr Kostenvoranschlag</h2>
+          <p class="muted">Bitte prüfen Sie die folgenden Angaben. Bei Annahme erstellen wir automatisch Ihre Auftragsbestätigung.</p>
+          <div id="quote-details" class="public-service-summary"></div>
+          <label class="modal-field"><input id="quote-acceptance-check" type="checkbox" /> Ich nehme diesen Kostenvoranschlag an.</label>
+          <div class="form-actions"><button id="accept-quote" class="primary-button" type="button" disabled>Kostenvoranschlag annehmen</button></div>
         </section>
 
         <section id="screen-datenschutz" class="public-screen wizard-screen">

@@ -96,6 +96,8 @@ function offer_row_to_json(array $row): array
         'validityDays' => (int) ($row['validity_days'] ?? 14),
         'validityHours' => (int) ($row['validity_hours'] ?? 0),
         'sentAt' => to_iso($row['sent_at']),
+        'quoteStatus' => $row['quote_status'] ?? 'entwurf',
+        'quoteAcceptedAt' => to_iso($row['quote_accepted_at'] ?? null),
         'contractId' => $row['contract_id'],
         'contractStatus' => $row['contract_status'],
     ];
@@ -118,6 +120,7 @@ ensure_offers_email_opened_at_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
 ensure_offers_reminder_columns($pdo);
 ensure_offers_existing_contract_columns($pdo);
+ensure_quote_workflow_columns($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();
@@ -227,11 +230,16 @@ if ($method === 'PUT') {
         json_error('Vertrags-ID fehlt.', 422);
     }
 
-    $stmt = $pdo->prepare('SELECT id, customer_id, is_existing_contract FROM offers WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, customer_id, is_existing_contract, quote_status, sent_at FROM offers WHERE id = :id');
     $stmt->execute(['id' => $id]);
     $existing = $stmt->fetch();
     if (!$existing) {
         json_error('Vertragsentwurf wurde nicht gefunden.', 404);
+    }
+
+    ensure_quote_workflow_columns($pdo);
+    if (empty($existing['is_existing_contract']) && (($existing['quote_status'] ?? 'entwurf') !== 'entwurf' || !empty($existing['sent_at']))) {
+        json_error('Ein bereits versendeter Kostenvoranschlag kann nicht mehr geändert werden. Bitte einen neuen Entwurf anlegen.', 409);
     }
 
     $body = read_json_body();

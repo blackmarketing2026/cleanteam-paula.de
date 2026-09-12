@@ -29,6 +29,9 @@ const els = {
   identityCheckName: document.querySelector("#identity-check-name"),
   identityCheckAuthorizedYes: document.querySelector("#identity-check-authorized-yes"),
   identityCheckAuthorizedNo: document.querySelector("#identity-check-authorized-no"),
+  quoteDetails: document.querySelector("#quote-details"),
+  quoteAcceptanceCheck: document.querySelector("#quote-acceptance-check"),
+  acceptQuote: document.querySelector("#accept-quote"),
 };
 
 const signatureInk = new WeakSet();
@@ -232,12 +235,28 @@ function routeToState(data) {
     finalText.textContent = "Der Vertrag wurde erfolgreich unterschrieben. Den vollständigen Vertrag können Sie unten einsehen, ausdrucken oder als PDF speichern.";
   }
 
-  if (data.offer.expired) {
+  if (data.offer.expired && data.offer.quoteStatus !== "accepted") {
     showExpiredLink();
     return;
   }
 
   const contract = data.contract;
+
+  if (!data.offer.isExistingContract) {
+    if (data.offer.quoteStatus !== "accepted") {
+      renderQuoteDetails();
+      showScreen("kostenvoranschlag");
+      return;
+    }
+    if (contract && contract.status === "bestaetigt") {
+      renderFinalContract();
+      document.querySelector("#screen-fertig h2").textContent = "Ihre Auftragsbestätigung";
+      document.querySelector("#screen-fertig p").textContent = "Vielen Dank für Ihre Annahme. Ihre Auftragsbestätigung steht zum Download bereit.";
+      els.printFinalContract.textContent = "Auftragsbestätigung öffnen / als PDF speichern";
+      showScreen("fertig");
+      return;
+    }
+  }
 
   if (!contract) {
     return;
@@ -284,6 +303,10 @@ function routeToState(data) {
 async function loadOffer() {
   try {
     const data = await api("offer");
+    if (!data.offer.isExistingContract && !data.offer.expired) {
+      routeToState(data);
+      return;
+    }
     if (!data.offer.expired && !data.contract) {
       const started = await api("start", {});
       routeToState(started);
@@ -377,6 +400,14 @@ function updateSignerControls() {
   });
 }
 
+function renderQuoteDetails() {
+  const offer = state.offer;
+  const gross = offer.vatApplicable === false ? offer.price : offer.price * 1.19;
+  els.quoteDetails.innerHTML = `<div class="public-service-card"><h3>Leistung und Preis</h3>${renderFactGrid([["Leistungsbeginn", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"], ["Reinigungsintervall", offer.interval], ["Monatlicher Preis netto", formatCurrency(offer.price)], ["Monatlicher Preis brutto", formatCurrency(gross)]])}</div><div class="public-service-card"><h3>Leistungsbeschreibung</h3><p class="public-service-text">${escapeHtml(offer.notes || "")}</p></div>`;
+  els.quoteAcceptanceCheck.checked = false;
+  els.acceptQuote.disabled = true;
+}
+
 function addSigner() {
   if (additionalSigners.length >= 4) return;
   const section = document.createElement("section");
@@ -454,6 +485,14 @@ function bindEvents() {
   });
 
   els.clearSignature.addEventListener("click", () => clearSignaturePad());
+  els.quoteAcceptanceCheck.addEventListener("change", () => {
+    els.acceptQuote.disabled = !els.quoteAcceptanceCheck.checked;
+  });
+  els.acceptQuote.addEventListener("click", async () => {
+    if (!els.quoteAcceptanceCheck.checked) return;
+    els.acceptQuote.disabled = true;
+    try { await handleAction("accept-quote", {}); } finally { els.acceptQuote.disabled = false; }
+  });
   const addButton = document.querySelector("#add-signer");
   addButton.addEventListener("click", () => {
     addSigner();

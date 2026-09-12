@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS offers (
   validity_days SMALLINT UNSIGNED NOT NULL DEFAULT 14,
   validity_hours TINYINT UNSIGNED NOT NULL DEFAULT 0,
   sent_at DATETIME NULL,
+  quote_status VARCHAR(20) NOT NULL DEFAULT 'entwurf',
+  quote_accepted_at DATETIME NULL,
+  quote_accepted_ip VARCHAR(64) NULL,
+  quote_accepted_user_agent VARCHAR(255) NULL,
   email_opened_at DATETIME NULL,
   reminder1_sent_at DATETIME NULL,
   reminder2_sent_at DATETIME NULL,
@@ -63,6 +67,19 @@ CREATE TABLE IF NOT EXISTS offers (
   -- Bewusst kein ON DELETE CASCADE: ein Kunde mit bestehenden Kostenvoranschlaegen/Vertraegen
   -- darf nicht geloescht werden, damit Vertragshistorie nicht verloren geht.
   CONSTRAINT fk_offers_customer FOREIGN KEY (customer_id) REFERENCES customers (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS quote_documents (
+  id VARCHAR(64) NOT NULL,
+  offer_id VARCHAR(64) NOT NULL,
+  filename VARCHAR(190) NOT NULL,
+  mime_type VARCHAR(80) NOT NULL DEFAULT 'application/pdf',
+  content LONGBLOB NOT NULL,
+  sha256 CHAR(64) NOT NULL,
+  generated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uniq_quote_documents_offer (offer_id),
+  CONSTRAINT fk_quote_documents_offer FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS contracts (

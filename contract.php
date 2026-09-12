@@ -37,7 +37,7 @@ if ($isPublicTokenAccess) {
         exit;
     }
 
-    if (strtotime($offer['expires_at'] . ' UTC') < time()) {
+    if (strtotime($offer['expires_at'] . ' UTC') < time() && ($offer['quote_status'] ?? '') !== 'accepted') {
         http_response_code(410);
         echo 'Vertragslink abgelaufen. Bitte kontaktieren Sie das Clean-Team.';
         exit;

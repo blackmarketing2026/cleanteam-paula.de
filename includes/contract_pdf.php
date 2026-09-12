@@ -761,7 +761,7 @@ function contract_pdf_filename(string $customerName, string $audience): string
 {
     $safeName = trim(preg_replace('/[\/\\\\:*?"<>|]+/', '-', $customerName) ?: '') ?: 'Kunde';
 
-    return 'cleanteam Vertrag - ' . $safeName . '.pdf';
+    return 'CleanTeam Auftragsbestätigung - ' . $safeName . '.pdf';
 }
 
 function normalize_contract_pdf_audience(string $audience): string
@@ -864,6 +864,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $createdAt = contract_format_date($offer['created_at']);
     $currentDate = contract_current_date();
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
+    $isConfirmation = $contract !== null && $contract['status'] === 'bestaetigt';
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '-';
 
     $authorized = isset($contract['authorized']) && $contract['authorized'] !== null ? (bool) $contract['authorized'] : null;
@@ -882,7 +883,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
     $pdf->meta('Datum: ' . $currentDate);
-    $pdf->title('Gebäudereinigungsvertrag');
+    $pdf->title($isConfirmation ? 'Auftragsbestätigung' : 'Gebäudereinigungsvertrag');
     $pdf->centeredText('zwischen');
 
     $customerFullAddress = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . 'D-' . $customerZipCity, ', ');
@@ -895,14 +896,14 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         'Die ' . $customerName . ', ' . $customerFullAddress . ', Vertragsunterzeichnung durch: ' . $signatoryName . $authorityInline
     );
     $pdf->rightAlignedText('- im Folgenden Auftraggeber genannt -');
-    $pdf->paragraph('Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:');
+    $pdf->paragraph($isConfirmation ? 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:' : 'Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:');
 
     $templateHtml = get_contract_template_html(db());
     $pdfPlaceholders = contract_template_placeholder_map($offer, $customer, $contract, true);
     $templateBodyHtml = render_contract_template_body($templateHtml, $pdfPlaceholders);
     contract_template_html_to_pdf($pdf, $templateBodyHtml);
 
-    $pdf->heading('Unterschriften');
+    $pdf->heading($isConfirmation ? 'Annahme und Bestätigung' : 'Unterschriften');
     $pdf->keyValue('CleanTeam', SIGNING_LOCATION . ', ' . $createdAt . ' | Im Namen von CleanTeam Geschäftsführer: ' . $managingDirectors);
     if ($contractorSignatureDataUrl !== null) {
         if (!$pdf->signatureImage($contractorSignatureDataUrl)) {
@@ -917,13 +918,13 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $signBlockName = $authorized === false && $representationNote
         ? $representationNote . ' (i. V. ' . $signatoryName . ')'
         : $signatoryName;
-    $pdf->keyValue('Kunde', (string) $customer['city'] . ', ' . $signedAt . ' | ' . $signBlockLabel . ': ' . $signBlockName);
+    $pdf->keyValue('Kunde', (string) $customer['city'] . ', ' . $signedAt . ' | ' . ($isConfirmation ? 'Kostenvoranschlag online angenommen' : $signBlockLabel . ': ' . $signBlockName));
     if ($isSigned) {
         $pdf->keyValue('Elektronische Signatur', 'Signaturdaten wurden elektronisch erfasst.');
         if (!$pdf->signatureImage($contract['signature_data'] ?? null)) {
             $pdf->paragraph('Das Signaturbild konnte nicht eingebettet werden; der Signaturzeitpunkt ist im Dokument protokolliert.', 9.5, 170.0);
         }
-    } else {
+    } elseif (!$isConfirmation) {
         $pdf->keyValue('Elektronische Signatur', 'Noch nicht unterschrieben.');
     }
 
@@ -999,7 +1000,7 @@ function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool 
 
         // Signed contracts are legally final: once a PDF exists for them, it must never be
         // regenerated or overwritten, no matter who calls this with $force = true.
-        if ($contractStatus === 'signiert' || !$force) {
+        if (in_array($contractStatus, ['signiert', 'bestaetigt'], true) || !$force) {
             return $existing;
         }
     }

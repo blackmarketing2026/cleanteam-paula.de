@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -7,116 +6,29 @@ require_once __DIR__ . '/../includes/crypto.php';
 require_once __DIR__ . '/../includes/SmtpMailer.php';
 require_once __DIR__ . '/../includes/email_template.php';
 require_once __DIR__ . '/../includes/email_settings.php';
+require_once __DIR__ . '/../includes/quote_pdf.php';
 
-require_login();
-require_method('POST');
-
-$pdo = db();
-ensure_offers_existing_contract_columns($pdo);
+require_login(); require_method('POST');
+$pdo = db(); ensure_offers_existing_contract_columns($pdo); ensure_quote_workflow_columns($pdo);
 email_delivery_assert_allowed($pdo, 'offer');
-
 $offerId = (string) ($_GET['id'] ?? '');
-if ($offerId === '') {
-    json_error('Vertrags-ID fehlt.', 422);
-}
-
-$stmt = $pdo->prepare(
-    'SELECT o.*, c.name AS c_name, c.email AS c_email, c.salutation AS c_salutation, c.contact_last_name AS c_contact_last_name
-     FROM offers o INNER JOIN customers c ON c.id = o.customer_id WHERE o.id = :id'
-);
-$stmt->execute(['id' => $offerId]);
-$offer = $stmt->fetch();
-
-if (!$offer) {
-    json_error('Vertrag wurde nicht gefunden.', 404);
-}
-
-$requestBody = read_json_body();
-$toEmail = trim((string) ($requestBody['toEmail'] ?? ''));
-if ($toEmail === '') {
-    $toEmail = trim((string) $offer['c_email']);
-}
-
-if ($toEmail === '' || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
-    json_error('Bitte eine gültige Ziel-E-Mail-Adresse eintragen.', 422);
-}
-
-$settingsStmt = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1');
-$settings = $settingsStmt->fetch();
-
-if (!$settings || $settings['host'] === '' || $settings['username'] === '' || ($settings['password_encrypted'] ?? '') === '') {
-    json_error('Bitte zuerst das E-Mail-Versand-Konto unter Einstellungen > E-Mails einrichten.', 422);
-}
-
-$publicUrl = base_url() . '/o.php?token=' . $offer['token'];
-$validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))
-    ->setTimezone(new DateTimeZone('Europe/Berlin'))
-    ->format('d.m.Y \u\m H:i \U\h\r');
-$validityDays = (int) ($offer['validity_days'] ?? 14);
-$validityHours = (int) ($offer['validity_hours'] ?? 0);
-$validityParts = [];
-if ($validityDays > 0) {
-    $validityParts[] = $validityDays . ' ' . ($validityDays === 1 ? 'Tag' : 'Tage');
-}
-if ($validityHours > 0) {
-    $validityParts[] = $validityHours . ' ' . ($validityHours === 1 ? 'Stunde' : 'Stunden');
-}
-$validityLabel = implode(' und ', $validityParts);
-$contactName = $offer['c_salutation'] . ' ' . $offer['c_contact_last_name'];
-
-$companyName = trim((string) $offer['c_name']);
-$subject = !empty($offer['is_existing_contract'])
-    ? 'Vertragsunterlagen CleanTeam für Firma ' . $companyName
-    : 'Angebot CleanTeam für Firma ' . $companyName;
-
-$bodyContent = !empty($offer['is_existing_contract'])
-    ? '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
-        . '<p>unter folgendem Link finden Sie Ihre aktualisierten Vertragsunterlagen. Dort können Sie die Angaben prüfen und den Vertrag digital unterzeichnen:</p>'
-        . email_button_html($publicUrl, 'Vertragsunterlagen öffnen')
-    : '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
-    . '<p>mein Name ist Frau Seidler, ich bin Ihre Ansprechpartnerin bei CleanTeam. Vielen Dank für Ihr Interesse an unserem Angebot für ' . email_h($companyName) . '.</p>'
-    . '<p>Ihr Vertrag wird komplett online abgeschlossen. Sobald Sie unterschrieben haben, erhalten Sie den fertigen Vertrag automatisch als PDF per E-Mail.</p>'
-    . '<h2 style="margin:24px 0 10px 0;color:#08325f;font-size:17px;">Online-Prozess</h2>'
-    . '<p>Alle Informationen zum weiteren Ablauf finden Sie im Online-Prozess. Klicken Sie dazu einfach auf den folgenden Button:</p>'
-    . email_button_html($publicUrl, 'Jetzt Vertrag online abschließen')
-    . '<p style="color:#51657d;font-size:13px;">Der Vertragslink ist ' . email_h($validityLabel) . ' lang gültig, also bis zum ' . email_h($validUntil) . ', und kann während dieser Zeit jederzeit geöffnet werden. Danach verfällt er automatisch.</p>'
-    . '<img src="' . email_h(base_url() . '/api/track-open.php?token=' . $offer['token']) . '" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />';
-$message = render_email_template_message($pdo, $bodyContent, [
-    'title' => !empty($offer['is_existing_contract']) ? 'Ihre Vertragsunterlagen von CleanTeam' : 'Ihr Angebot von CleanTeam',
-    'preheader' => !empty($offer['is_existing_contract']) ? 'Ihre aktualisierten Vertragsunterlagen.' : 'Bitte schließen Sie Ihren Vertrag jetzt online ab.',
-    'fromName' => $settings['from_name'] ?? 'CleanTeam',
-    'signatureText' => $settings['signature'] ?? '',
-    'signatureContext' => 'offer',
-]);
-$body = $message['html'];
-
+if ($offerId === '') json_error('Kostenvoranschlag fehlt.', 422);
+$stmt = $pdo->prepare('SELECT o.*, c.name AS c_name, c.email AS c_email, c.salutation AS c_salutation, c.contact_last_name AS c_contact_last_name FROM offers o INNER JOIN customers c ON c.id = o.customer_id WHERE o.id = :id');
+$stmt->execute(['id' => $offerId]); $offer = $stmt->fetch();
+if (!$offer) json_error('Vertragsentwurf wurde nicht gefunden.', 404);
+if (($offer['quote_status'] ?? 'entwurf') === 'accepted') json_error('Der Kostenvoranschlag wurde bereits angenommen.', 409);
+$input = read_json_body(); $toEmail = trim((string) ($input['toEmail'] ?? $offer['c_email']));
+if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) json_error('Bitte eine gültige Ziel-E-Mail-Adresse eintragen.', 422);
+$settings = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1')->fetch();
+if (!$settings || $settings['host'] === '' || $settings['username'] === '' || ($settings['password_encrypted'] ?? '') === '') json_error('Bitte zuerst das E-Mail-Versand-Konto unter Einstellungen > E-Mails einrichten.', 422);
+$publicUrl = base_url() . '/o.php?token=' . $offer['token']; $contact = trim($offer['c_salutation'] . ' ' . $offer['c_contact_last_name']); $company = trim((string) $offer['c_name']);
+$bodyContent = '<p>Guten Tag ' . email_h($contact) . ',</p><p>anbei erhalten Sie Ihren Kostenvoranschlag von CleanTeam für ' . email_h($company) . '.</p><p>Bitte prüfen Sie die Angaben. Über den folgenden Button können Sie den Kostenvoranschlag online ansehen und annehmen. Danach erhalten Sie automatisch Ihre Auftragsbestätigung.</p>' . email_button_html($publicUrl, 'Kostenvoranschlag ansehen und annehmen') . '<p style="color:#51657d;font-size:13px;">Der Link ist bis ' . email_h((new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')) . ' Uhr gültig.</p><img src="' . email_h(base_url() . '/api/track-open.php?token=' . $offer['token']) . '" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />';
+$message = render_email_template_message($pdo, $bodyContent, ['title' => 'Ihr Kostenvoranschlag von CleanTeam', 'preheader' => 'Bitte prüfen und annehmen.', 'fromName' => $settings['from_name'] ?? 'CleanTeam', 'signatureText' => $settings['signature'] ?? '', 'signatureContext' => 'offer']);
 try {
-    $mailer = new SmtpMailer(
-        $settings['host'],
-        (int) $settings['smtp_port'],
-        $settings['smtp_encryption'],
-        $settings['username'],
-        decrypt_secret($settings['password_encrypted'])
-    );
-
-    $mailer->send(
-        $settings['username'],
-        $settings['from_name'],
-        $toEmail,
-        $offer['c_name'],
-        $subject,
-        $body,
-        true,
-        $message['inlineImages']
-    );
-} catch (Throwable $exception) {
-    json_error('E-Mail-Versand fehlgeschlagen: ' . $exception->getMessage(), 502);
-}
-
-$pdo->prepare('UPDATE offers SET sent_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $offerId]);
-
-// Damit der Vertrag ab dem Versand in der Vertragsliste sichtbar ist (mit Zustellungsstatus),
-// statt erst, wenn der Kunde den Link zum ersten Mal oeffnet.
-ensure_contract_for_offer($pdo, $offer);
-
+    $mailer = new SmtpMailer($settings['host'], (int) $settings['smtp_port'], $settings['smtp_encryption'], $settings['username'], decrypt_secret($settings['password_encrypted']));
+    $customerStmt = $pdo->prepare('SELECT * FROM customers WHERE id = :id'); $customerStmt->execute(['id' => $offer['customer_id']]);
+    $quote = save_quote_pdf($pdo, $offer, $customerStmt->fetch());
+    $mailer->sendWithAttachment($settings['username'], $settings['from_name'], $toEmail, $company, 'Kostenvoranschlag CleanTeam für Firma ' . $company, $message['html'], $quote['filename'], $quote['content'], 'application/pdf', $message['inlineImages']);
+} catch (Throwable $exception) { json_error('E-Mail-Versand fehlgeschlagen: ' . $exception->getMessage(), 502); }
+$pdo->prepare("UPDATE offers SET sent_at = UTC_TIMESTAMP(), quote_status = 'sent' WHERE id = :id")->execute(['id' => $offerId]);
 json_response(['ok' => true, 'sentAt' => now_iso(), 'sentTo' => $toEmail]);

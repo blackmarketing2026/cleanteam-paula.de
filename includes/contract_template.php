@@ -600,6 +600,9 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
         : 'ohne gesonderte Vertretungsangabe';
 
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
+    $isOrderConfirmation = $contract !== null && $contract['status'] === 'bestaetigt';
+    $documentTitle = $isOrderConfirmation ? 'Auftragsbestätigung' : 'Gebäudereinigungsvertrag';
+    $documentLead = $isOrderConfirmation ? 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:' : 'Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:';
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '–';
     $signatureImage = $isSigned && !empty($contract['signature_data'])
         ? '<img src="' . h($contract['signature_data']) . '" alt="Unterschrift" style="max-height:70px;">'
@@ -658,7 +661,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<title>Gebäudereinigungsvertrag</title>
+<title>{$documentTitle}</title>
 <style>
 {$styleCss}
 {$captureProtectionCss}
@@ -669,7 +672,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 {$logoHtml}
 <div class="doc-meta">Datum: {$currentDate}</div>
 
-<h1>Gebäudereinigungsvertrag</h1>
+<h1>{$documentTitle}</h1>
 
 <p class="parties-intro">zwischen</p>
 
@@ -684,7 +687,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 </p>
 <p class="party-designation">- im Folgenden Auftraggeber genannt -</p>
 
-<p>Der folgende Vertrag zur Gebäudereinigung wird abgeschlossen:</p>
+<p>{$documentLead}</p>
 
 {$templateBody}
 

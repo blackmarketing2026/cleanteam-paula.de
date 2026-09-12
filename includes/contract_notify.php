@@ -176,6 +176,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
         if (!empty($context['offer']['is_existing_contract'])) {
             return;
         }
+        $isOrderConfirmation = ($context['contract']['status'] ?? '') === 'bestaetigt';
 
         $customerEmail = trim((string) $context['customer']['email']);
         if ($customerEmail === '' || !filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
@@ -198,15 +199,17 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
         $downloadUrl = $downloadToken !== ''
             ? base_url() . '/contract.php?token=' . rawurlencode($downloadToken) . '&format=pdf&download=1'
             : '';
+        $documentLabel = $isOrderConfirmation ? 'Ihre Auftragsbestätigung' : 'Ihren unterschriebenen Vertrag';
+        $downloadLabel = $isOrderConfirmation ? 'Auftragsbestätigung herunterladen' : 'Vertrag herunterladen';
 
-        $messageContent = '<p style="margin:0 0 14px 0;">Willkommen bei CleanTeam!</p>'
+        $messageContent = '<p style="margin:0 0 14px 0;">' . ($isOrderConfirmation ? 'Vielen Dank für Ihre Annahme!' : 'Willkommen bei CleanTeam!') . '</p>'
             . '<p>Mein Name ist ' . email_h($senderName) . '. Ich bin Ihr Ansprechpartner f&uuml;r Ihren Vertrag.</p>'
-            . '<p>Sie finden Ihren unterschriebenen Vertrag im Anhang dieser E-Mail. Alternativ k&ouml;nnen Sie ihn auch jederzeit &uuml;ber den folgenden Button herunterladen:</p>'
-            . ($downloadUrl !== '' ? email_button_html($downloadUrl, 'Vertrag herunterladen') : '')
+            . '<p>Sie finden ' . $documentLabel . ' im Anhang dieser E-Mail. Alternativ können Sie das Dokument jederzeit über den folgenden Button herunterladen:</p>'
+            . ($downloadUrl !== '' ? email_button_html($downloadUrl, $downloadLabel) : '')
             . '<p>Bei Fragen stehe ich Ihnen gerne zur Verf&uuml;gung &ndash; per E-Mail oder direkt telefonisch im B&uuml;ro.</p>';
         $message = render_email_template_message($pdo, $messageContent, [
-            'title' => 'Willkommen bei CleanTeam',
-            'preheader' => 'Willkommen bei CleanTeam.',
+            'title' => $isOrderConfirmation ? 'Ihre Auftragsbestätigung von CleanTeam' : 'Willkommen bei CleanTeam',
+            'preheader' => $isOrderConfirmation ? 'Ihre Auftragsbestätigung steht bereit.' : 'Willkommen bei CleanTeam.',
             'fromName' => $smtp['from_name'] ?? 'CleanTeam',
             'signatureText' => $smtp['signature'] ?? '',
             'signatureContext' => 'contract_customer',
@@ -225,7 +228,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             $smtp['from_name'],
             $customerEmail,
             $context['customer']['name'],
-            'Willkommen bei CleanTeam',
+            $isOrderConfirmation ? 'Ihre Auftragsbestätigung von CleanTeam' : 'Willkommen bei CleanTeam',
             $message['html'],
             (string) $pdf['filename'],
             (string) $pdf['content'],

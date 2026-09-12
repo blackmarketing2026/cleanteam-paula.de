@@ -22,7 +22,7 @@ require_once __DIR__ . '/../includes/SmtpMailer.php';
 require_once __DIR__ . '/../includes/email_template.php';
 require_once __DIR__ . '/../includes/email_settings.php';
 
-const REMINDER_STOP_STATUSES = ['signiert', 'daten_abgelehnt', 'intervall_abgelehnt', 'datenschutz_abgelehnt', 'berechtigung_abgelehnt'];
+const REMINDER_STOP_STATUSES = ['signiert', 'bestaetigt', 'daten_abgelehnt', 'intervall_abgelehnt', 'datenschutz_abgelehnt', 'berechtigung_abgelehnt'];
 
 $configuredSecret = trim((string) (config()['cron_secret'] ?? ''));
 $providedSecret = trim((string) ($_GET['key'] ?? ''));
@@ -39,6 +39,7 @@ if (!in_array($stage, ['1', '2', '3'], true)) {
 $pdo = db();
 ensure_offers_reminder_columns($pdo);
 ensure_offers_existing_contract_columns($pdo);
+ensure_quote_workflow_columns($pdo);
 
 $stopPlaceholders = implode(',', array_fill(0, count(REMINDER_STOP_STATUSES), '?'));
 
@@ -47,7 +48,7 @@ if ($stage === '1') {
             FROM offers o
             INNER JOIN customers c ON c.id = o.customer_id
             LEFT JOIN contracts ct ON ct.offer_id = o.id
-            WHERE o.sent_at IS NOT NULL AND COALESCE(o.is_existing_contract, 0) = 0
+            WHERE o.sent_at IS NOT NULL AND COALESCE(o.is_existing_contract, 0) = 0 AND COALESCE(o.quote_status, 'entwurf') = 'sent'
               AND o.reminder1_sent_at IS NULL
               AND o.expires_at > UTC_TIMESTAMP()
               AND DATE(o.sent_at) < CURDATE()
@@ -57,7 +58,7 @@ if ($stage === '1') {
             FROM offers o
             INNER JOIN customers c ON c.id = o.customer_id
             LEFT JOIN contracts ct ON ct.offer_id = o.id
-            WHERE o.sent_at IS NOT NULL AND COALESCE(o.is_existing_contract, 0) = 0
+            WHERE o.sent_at IS NOT NULL AND COALESCE(o.is_existing_contract, 0) = 0 AND COALESCE(o.quote_status, 'entwurf') = 'sent'
               AND o.reminder1_sent_at IS NOT NULL
               AND o.reminder2_sent_at IS NULL
               AND o.expires_at > UTC_TIMESTAMP()
@@ -68,7 +69,7 @@ if ($stage === '1') {
             FROM offers o
             INNER JOIN customers c ON c.id = o.customer_id
             LEFT JOIN contracts ct ON ct.offer_id = o.id
-            WHERE o.sent_at IS NOT NULL AND COALESCE(o.is_existing_contract, 0) = 0
+            WHERE o.sent_at IS NOT NULL AND COALESCE(o.is_existing_contract, 0) = 0 AND COALESCE(o.quote_status, 'entwurf') = 'sent'
               AND o.reminder2_sent_at IS NOT NULL
               AND o.reminder3_sent_at IS NULL
               AND o.expires_at > UTC_TIMESTAMP()

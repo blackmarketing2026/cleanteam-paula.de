@@ -4,6 +4,7 @@ const CONTRACT_STATUS_LABELS = {
   intervall_abgelehnt: "Rückfrage: Intervall prüfen",
   datenschutz_abgelehnt: "Rückfrage: Datenschutz",
   signiert: "Signiert",
+  bestaetigt: "Auftragsbestätigung erstellt",
 };
 
 const REJECTED_CONTRACT_STATUSES = ["daten_abgelehnt", "intervall_abgelehnt", "datenschutz_abgelehnt"];
@@ -361,7 +362,7 @@ function getOffer(id) {
 function signedContractOfferIds() {
   const ids = new Set(
     state.data.contracts
-      .filter((contract) => contract.status === "signiert")
+      .filter((contract) => ["signiert", "bestaetigt"].includes(contract.status))
       .map((contract) => contract.offer?.id || contract.offerId)
       .filter(Boolean),
   );
@@ -639,7 +640,7 @@ function renderMetrics() {
 
   els.metricOffers.textContent = savedOffers.length;
   els.metricContracts.textContent = state.data.contracts.length;
-  els.metricSigned.textContent = state.data.contracts.filter((contract) => contract.status === "signiert").length;
+  els.metricSigned.textContent = state.data.contracts.filter((contract) => ["signiert", "bestaetigt"].includes(contract.status)).length;
   els.metricFollowups.textContent = state.data.contracts.filter((contract) =>
     REJECTED_CONTRACT_STATUSES.includes(contract.status),
   ).length;
@@ -1222,8 +1223,8 @@ function renderOfferCard(offer) {
   const sentLabel = offer.isExistingContract
     ? "Manuelle Weitergabe per Link"
     : offer.sentAt
-    ? `Gesendet am ${formatDate(offer.sentAt)}`
-    : "Noch nicht per E-Mail versendet";
+    ? `Kostenvoranschlag gesendet am ${formatDate(offer.sentAt)}`
+    : "Kostenvoranschlag noch nicht versendet";
 
   const contractActions = offer.contractId
     ? `
@@ -1262,13 +1263,13 @@ function renderOfferCard(offer) {
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
-        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `offer.php?offerId=${encodeURIComponent(offer.id)}`}" target="_blank" rel="noopener">
+        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `quote.php?offerId=${encodeURIComponent(offer.id)}`}" target="_blank" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
-          Vertrag Vorschau
+          Kostenvoranschlag Vorschau
         </a>
         <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
-          Vertrag senden
+          Kostenvoranschlag senden
         </button>
         ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
@@ -1399,7 +1400,7 @@ function contractSortValue(contract, key) {
 }
 
 function contractBadgeClass(status) {
-  if (status === "signiert") {
+  if (status === "signiert" || status === "bestaetigt") {
     return "success";
   }
   if (REJECTED_CONTRACT_STATUSES.includes(status)) {
@@ -1451,7 +1452,7 @@ function renderContractRow(contract) {
   const selected = contract.id === state.selectedContractId ? " selected" : "";
   const badgeClass = contractBadgeClass(contract.status);
   const signedAt = contract.signedAt ? formatDate(contract.signedAt) : "Noch offen";
-  const documentActions = contract.status === "signiert"
+  const documentActions = ["signiert", "bestaetigt"].includes(contract.status)
     ? `
         <a class="primary-button" href="contract.php?contractId=${encodeURIComponent(contract.id)}&document=cleanteam&format=pdf" target="_blank" rel="noopener">
           <i data-lucide="file-check-2" aria-hidden="true"></i>
@@ -1767,7 +1768,7 @@ async function sendOffer(id, toEmail) {
     } catch (error) {
       // Der Versand war erfolgreich; ein spätes Listen-Refresh darf den Nutzer nicht irritieren.
     }
-    showToast(`Vertrag wurde an ${result.sentTo || toEmail} versendet.`);
+    showToast(`Kostenvoranschlag wurde an ${result.sentTo || toEmail} versendet.`);
     return true;
   } catch (error) {
     showToast(error.message);

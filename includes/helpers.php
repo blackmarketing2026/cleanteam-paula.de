@@ -111,6 +111,22 @@ function ensure_contract_for_offer(PDO $pdo, array $offer): array
     return $stmt->fetch();
 }
 
+function ensure_quote_workflow_columns(PDO $pdo): void
+{
+    $columns = [
+        'quote_status' => "ALTER TABLE offers ADD COLUMN quote_status VARCHAR(20) NOT NULL DEFAULT 'entwurf' AFTER sent_at",
+        'quote_accepted_at' => 'ALTER TABLE offers ADD COLUMN quote_accepted_at DATETIME NULL AFTER quote_status',
+        'quote_accepted_ip' => 'ALTER TABLE offers ADD COLUMN quote_accepted_ip VARCHAR(64) NULL AFTER quote_accepted_at',
+        'quote_accepted_user_agent' => 'ALTER TABLE offers ADD COLUMN quote_accepted_user_agent VARCHAR(255) NULL AFTER quote_accepted_ip',
+    ];
+    foreach ($columns as $column => $sql) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
 function ensure_offers_interval_label_length(PDO $pdo): void
 {
     $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'interval_label'");

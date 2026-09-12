@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includes/contract_pdf.php';
 require_once __DIR__ . '/../includes/ftp_export.php';
 
 require_once __DIR__ . '/../includes/contract_signers.php';
+require_once __DIR__ . '/../includes/quote_pdf.php';
 
 $pdo = db();
 ensure_offers_existing_contract_columns($pdo);
@@ -145,6 +146,8 @@ function public_state(array $offer, ?array $contract): array
             'price' => (float) $offer['price'],
             'expiresAt' => to_iso($offer['expires_at']),
             'expired' => offer_is_expired($offer),
+            'quoteStatus' => $offer['quote_status'] ?? 'entwurf',
+            'quoteAcceptedAt' => to_iso($offer['quote_accepted_at'] ?? null),
             'customer' => [
                 'name' => $offer['c_name'],
                 'email' => $offer['c_email'],
@@ -190,8 +193,12 @@ ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
 ensure_contracts_authorized_signer_columns($pdo);
+ensure_quote_workflow_columns($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
+    if (empty($offer['is_existing_contract']) && ($offer['quote_status'] ?? 'entwurf') === 'entwurf') {
+        json_error('Dieser Kostenvoranschlag wurde noch nicht versendet.', 404);
+    }
     $contract = load_contract($pdo, $offer['id']);
     if ($contract !== null && normalize_current_step((string) $contract['current_step']) === 'signatur'
         && $contract['current_step'] !== 'signatur') {
@@ -210,6 +217,35 @@ if ($method === 'GET' && $action === 'offer') {
 
 if (offer_is_expired($offer) && $method === 'POST') {
     json_error('Vertragslink abgelaufen. Bitte kontaktieren Sie das Clean-Team.', 410);
+}
+
+if ($method === 'POST' && $action === 'accept-quote') {
+    if (!empty($offer['is_existing_contract'])) {
+        json_error('Dieser Link verwendet weiterhin den Bestandsvertragsprozess.', 409);
+    }
+    if (($offer['quote_status'] ?? 'entwurf') !== 'sent') {
+        json_error('Der Kostenvoranschlag wurde noch nicht versendet.', 409);
+    }
+    // Die Hilfsfunktion enthält eine Kompatibilitätsbereinigung mit DDL und muss daher
+    // außerhalb der nachfolgenden Annahme-Transaktion laufen.
+    $contract = ensure_contract_for_offer($pdo, $offer);
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare("UPDATE contracts SET status = 'bestaetigt', current_step = 'fertig', terms_accepted_at = UTC_TIMESTAMP(), signed_at = UTC_TIMESTAMP() WHERE id = :id")
+            ->execute(['id' => $contract['id']]);
+        $pdo->prepare("UPDATE offers SET quote_status = 'accepted', quote_accepted_at = UTC_TIMESTAMP(), quote_accepted_ip = :ip, quote_accepted_user_agent = :ua WHERE id = :id")
+            ->execute(['id' => $offer['id'], 'ip' => substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 64), 'ua' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255)]);
+        $pdo->commit();
+    } catch (Throwable $exception) {
+        $pdo->rollBack(); throw $exception;
+    }
+    $contract = load_contract($pdo, $offer['id']);
+    save_contract_pdfs($pdo, $contract['id'], true);
+    notify_contract_created($pdo, $contract['id']);
+    notify_customer_contract_signed($pdo, $contract['id']);
+    export_contract_to_ftp($pdo, $contract['id']);
+    $offer = load_offer($pdo, $token);
+    json_response(public_state($offer, $contract));
 }
 
 if ($method === 'POST' && $action === 'start') {
