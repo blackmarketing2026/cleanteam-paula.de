@@ -640,9 +640,11 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
             . '<img src="' . h($signer['signatureDataUrl']) . '" alt="Unterschrift Person ' . ($index + 2) . '" style="max-height:70px;">';
     }
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
-    $contractorSignatureImage = $contractorSignatureDataUrl !== null
+    $contractorSignatureImage = empty($options['excludeContractorSignature']) && $contractorSignatureDataUrl !== null
         ? '<img src="' . h($contractorSignatureDataUrl) . '" alt="Unterschrift Thomas Mündlein" style="max-height:70px;">'
-        : '<span class="sign-placeholder">CleanTeam-Unterschrift noch nicht hinterlegt</span>';
+        : (empty($options['excludeContractorSignature'])
+            ? '<span class="sign-placeholder">CleanTeam-Unterschrift noch nicht hinterlegt</span>'
+            : '');
 
     $managingDirectorsInline = h(implode(', ', CONTRACTOR['managing_directors']));
     $contractorLegalName = h(CONTRACTOR['legal_name']);
