@@ -16,7 +16,7 @@ $customer = $pdo->prepare('SELECT * FROM customers WHERE id = :id'); $customer->
 $customer = $customer->fetch();
 if (!$customer) { http_response_code(404); echo 'Kunde nicht gefunden.'; exit; }
 if (($offer['quote_status'] ?? 'entwurf') === 'entwurf') {
-    $quote = ['filename' => quote_pdf_filename(contract_customer_display_name($customer)), 'content' => render_quote_pdf($offer, $customer, get_contract_template_contractor_signature_data($pdo))];
+    $quote = ['filename' => quote_pdf_filename(contract_customer_display_name($customer)), 'content' => render_quote_pdf($offer, $customer)];
 } else {
     $quote = save_quote_pdf($pdo, $offer, $customer);
 }

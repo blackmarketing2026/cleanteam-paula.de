@@ -408,8 +408,7 @@ function updateSignerControls() {
 
 function renderQuoteDetails() {
   const offer = state.offer;
-  const gross = offer.vatApplicable === false ? offer.price : offer.price * 1.19;
-  els.quoteDetails.innerHTML = `<div class="public-service-card"><h3>Leistung und Preis</h3>${renderFactGrid([["Leistungsbeginn", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"], ["Reinigungsintervall", offer.interval], ["Monatlicher Preis netto", formatCurrency(offer.price)], ["Monatlicher Preis brutto", formatCurrency(gross)]])}</div><div class="public-service-card"><h3>Leistungsbeschreibung</h3><p class="public-service-text">${escapeHtml(offer.notes || "")}</p></div>`;
+  els.quoteDetails.innerHTML = `<div class="public-service-card"><h3>Leistung und Preis</h3>${renderFactGrid([["Leistungsbeginn", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"], ["Reinigungsintervall", offer.interval], ["Monatlicher Preis netto", formatCurrency(offer.price)]])}</div><div class="public-service-card"><h3>Leistungsbeschreibung</h3><p class="public-service-text">${escapeHtml(offer.notes || "")}</p></div>`;
   els.quoteAcceptanceCheck.checked = false;
   els.acceptQuote.disabled = true;
 }

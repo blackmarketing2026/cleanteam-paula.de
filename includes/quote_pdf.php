@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/contract_pdf.php';
 
+const QUOTE_FIXED_NUMBER = '8680';
+const QUOTE_FIXED_CUSTOMER_NUMBER = 'K2130';
+const QUOTE_VALIDITY_DAYS = 14;
+
 function ensure_quote_documents_table(PDO $pdo): void
 {
     $pdo->exec('CREATE TABLE IF NOT EXISTS quote_documents (
@@ -24,52 +28,39 @@ function quote_pdf_logo_path(): ?string
     return is_file($path) ? $path : null;
 }
 
-function render_quote_pdf(array $offer, array $customer, ?string $contractorSignatureDataUrl = null): string
+function render_quote_pdf(array $offer, array $customer): string
 {
     $pdf = new SimplePdfDocument();
-    $pdf->quoteHeader([
-        CONTRACTOR['legal_name'], CONTRACTOR['trade_description'],
-        CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'],
-        CONTRACTOR['website'],
-    ], contract_format_date($offer['created_at']), contract_format_date($offer['expires_at']), quote_pdf_logo_path());
-
-    $pdf->quoteSectionHeading('Empfänger');
-    $pdf->keyValue('Firma', contract_customer_display_name($customer));
-    $pdf->keyValue('Ansprechpartner', contract_signatory_display($customer));
-    $pdf->keyValue('Objekt', trim($customer['address'] . ' ' . $customer['house_number'] . ', ' . $customer['zip'] . ' ' . $customer['city'], ' ,'));
-    $pdf->keyValue('Projekt', 'Regelmäßige Gebäudereinigung');
-    $pdf->keyValue('Reinigungsintervall', (string) $offer['interval_label']);
-    if ((int) $offer['square_meters'] > 0) $pdf->keyValue('Reinigungsfläche', (int) $offer['square_meters'] . ' m²');
+    $pdf->quoteLetterhead($customer, contract_current_date(), quote_pdf_logo_path(), [
+        'locations' => [
+            ['Clean Team Gebäudereinigung', 'Meisterbetrieb', 'Ober der Mühle 30', '42699 Solingen'],
+            ['Clean Team Wuppertal', 'Kleine Lagerstraße 5', '42119 Wuppertal'],
+            ['CleanTeam Haan', 'Bergische Straße 8', '42781 Haan'],
+        ],
+        'email' => 'info@cleanteam-group.com',
+        'website' => 'www.cleanteam-group.com',
+        'certificate' => 'ISO 14001:2015',
+        'contact' => 'Fabio Donato',
+        'senderLine' => 'Clean Team Group - Meisterbetrieb für Gebäudereinigung - Ober der Mühle 30 - 42699 Solingen',
+        'quoteNumber' => QUOTE_FIXED_NUMBER,
+        'customerNumber' => QUOTE_FIXED_CUSTOMER_NUMBER,
+    ]);
+    $pdf->quoteIntroduction();
 
     $net = (float) $offer['price'];
-    $vatApplicable = !isset($offer['vat_applicable']) || (int) $offer['vat_applicable'] === 1;
-    $vat = $vatApplicable ? round($net * VAT_RATE / 100, 2) : 0.0;
-    $gross = $net + $vat;
-    $pdf->spacer(8.0);
-    $pdf->quotePriceTable('Monatliche Gebäudereinigung', '1 Monat', contract_format_money($net), contract_format_money($net));
-    $pdf->quoteTotal(contract_format_money($net), $vatApplicable ? contract_format_money($vat) : null, contract_format_money($gross));
-
-    $pdf->quoteSectionHeading('Leistungsbeschreibung');
-    $pdf->paragraph((string) $offer['notes']);
-
-    $startDate = !empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'nach Absprache';
-    if (!empty($offer['is_existing_contract']) && !empty($offer['original_start_date'])) {
-        $startDate = 'Bestandsleistung, ursprünglicher Beginn ' . contract_format_date($offer['original_start_date']);
-    }
-    $pdf->quoteSectionHeading('Rahmenbedingungen');
-    $pdf->keyValue('Ausführungsbeginn', $startDate);
-    $pdf->spacer(14.0);
-    $pdf->paragraph('Freundliche Grüße');
-    if (!$pdf->quoteSignature($contractorSignatureDataUrl, contract_contractor_signature_name(), CONTRACTOR['legal_name'])) {
-        $pdf->paragraph(contract_contractor_signature_name() . ', ' . CONTRACTOR['legal_name'], 9.5);
-    }
+    $pdf->quoteServiceTable((string) ($offer['notes'] ?? ''), (string) ($offer['interval_label'] ?? ''), contract_format_money($net));
+    $pdf->quoteNetTotal(contract_format_money($net));
+    $pdf->quoteRemarkAndManagement(
+        'Alle genannten Preise verstehen sich als Nettobeträge zuzüglich Mehrwertsteuer. Die Bereitstellung von Reinigungsmitteln sowie die Anfahrtskosten sind im Preis enthalten. Toilettenpapier, Seife und spezielle Müllsäcke werden vom Auftraggeber zur Verfügung gestellt.',
+        'Thomas Mündlein'
+    );
     return $pdf->output();
 }
 
 function save_quote_pdf(PDO $pdo, array $offer, array $customer): array
 {
     ensure_quote_documents_table($pdo);
-    $content = render_quote_pdf($offer, $customer, get_contract_template_contractor_signature_data($pdo));
+    $content = render_quote_pdf($offer, $customer);
     $filename = quote_pdf_filename(contract_customer_display_name($customer));
     $stmt = $pdo->prepare(
         'INSERT INTO quote_documents (id, offer_id, filename, mime_type, content, sha256, generated_at)

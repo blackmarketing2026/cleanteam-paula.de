@@ -14,6 +14,13 @@ function source_between(string $source, string $start, string $end): string
 $publicApi = file_get_contents(__DIR__ . '/../api/public.php');
 $sendOffer = file_get_contents(__DIR__ . '/../api/send-offer.php');
 $publicJs = file_get_contents(__DIR__ . '/../public.js');
+$quotePdf = file_get_contents(__DIR__ . '/../includes/quote_pdf.php');
+
+if (!str_contains($sendOffer, 'QUOTE_VALIDITY_DAYS')
+    || !str_contains($sendOffer, 'validity_hours = 0')
+    || !str_contains($quotePdf, "const QUOTE_VALIDITY_DAYS = 14;")) {
+    throw new RuntimeException('Beim KVA-Versand wird die feste Gültigkeit von 14 Tagen nicht gesetzt.');
+}
 
 $acceptBlock = source_between(
     $publicApi,
@@ -51,6 +58,9 @@ if (!str_contains($publicJs, 'startsQuoteContract')
     || !str_contains($publicJs, '["entwurf", "sent"].includes(data.offer.quoteStatus)')
     || str_contains($publicJs, 'Kostenvoranschlag angenommen')) {
     throw new RuntimeException('Die öffentliche Oberfläche bildet den Signaturstatus nicht korrekt ab.');
+}
+if (str_contains($publicJs, 'offer.price * 1.19') || str_contains($publicJs, 'Monatlicher Preis brutto')) {
+    throw new RuntimeException('Die KVA-Webansicht darf den Nettopreis nicht zu einem Bruttopreis hochrechnen.');
 }
 
 if (str_contains($sendOffer, 'Der Kostenvoranschlag wurde bereits angenommen.')

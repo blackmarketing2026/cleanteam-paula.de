@@ -26,6 +26,14 @@ if ($sendAsQuote && empty($offer['quote_token'])) {
     $offer['quote_token'] = generate_token();
     $pdo->prepare('UPDATE offers SET quote_token = :token WHERE id = :id')->execute(['token' => $offer['quote_token'], 'id' => $offerId]);
 }
+if ($sendAsQuote) {
+    $pdo->prepare(
+        'UPDATE offers SET validity_days = :validity_days, validity_hours = 0,
+            expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY) WHERE id = :id'
+    )->execute(['validity_days' => QUOTE_VALIDITY_DAYS, 'validity_days2' => QUOTE_VALIDITY_DAYS, 'id' => $offerId]);
+    $stmt->execute(['id' => $offerId]);
+    $offer = $stmt->fetch();
+}
 $input = read_json_body(); $toEmail = trim((string) ($input['toEmail'] ?? $offer['c_email']));
 if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) json_error('Bitte eine gültige Ziel-E-Mail-Adresse eintragen.', 422);
 $settings = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1')->fetch();

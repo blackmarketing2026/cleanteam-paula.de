@@ -5,7 +5,6 @@ $pdf = file_get_contents(__DIR__ . '/../includes/contract_pdf.php');
 $publicPage = file_get_contents(__DIR__ . '/../o.php');
 $publicJs = file_get_contents(__DIR__ . '/../public.js');
 $notification = file_get_contents(__DIR__ . '/../includes/contract_notify.php');
-$quotePdf = file_get_contents(__DIR__ . '/../includes/quote_pdf.php');
 $contractPage = file_get_contents(__DIR__ . '/../contract.php');
 
 foreach ([$template, $pdf] as $documentSource) {
@@ -24,8 +23,7 @@ if (!str_contains($publicPage, 'Auftragsbest&auml;tigung unterschreiben')
 
 if (str_contains($contractPage, 'excludeContractorSignature')
     || !str_contains($template, 'Unterschrift Thomas Mündlein')
-    || !str_contains($pdf, 'get_contract_template_contractor_signature_data')
-    || !str_contains($quotePdf, 'get_contract_template_contractor_signature_data')) {
+    || !str_contains($pdf, 'get_contract_template_contractor_signature_data')) {
     throw new RuntimeException('Die Unterschrift von Thomas ist nicht in allen vorgesehenen Dokumenten eingebunden.');
 }
 

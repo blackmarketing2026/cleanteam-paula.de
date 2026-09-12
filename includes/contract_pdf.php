@@ -181,6 +181,185 @@ final class SimplePdfDocument
         $this->y -= ($lineCount * $lineHeight) + 3.0;
     }
 
+    public function quoteLetterhead(array $customer, string $date, ?string $logoPath, array $details): void
+    {
+        $this->ensureSpace(250.0);
+        $top = $this->y;
+        $this->imageFileAt($logoPath ?? '', self::MARGIN_LEFT + 18.0, $top + 4.0, 190.0, 116.0);
+
+        $this->write("0.06 0.18 0.45 rg\n");
+        $this->line('Group', 224.0, $top - 99.0, 17.0, 'F1');
+        $this->line('GEBÄUDEREINIGUNG - MEISTERBETRIEB', self::MARGIN_LEFT + 18.0, $top - 121.0, 7.5, 'F2');
+        $this->write("0 0 0 rg\n");
+
+        $rightX = 360.0;
+        $rightY = $top;
+        foreach ($details['locations'] ?? [] as $location) {
+            foreach ($location as $index => $line) {
+                $this->line((string) $line, $rightX, $rightY, 7.4, $index === 0 ? 'F2' : 'F1');
+                $rightY -= 10.0;
+            }
+            $rightY -= 7.0;
+        }
+
+        $contactY = $top - 138.0;
+        foreach ([
+            'E-Mail: ' . ($details['email'] ?? ''),
+            'Internet: ' . ($details['website'] ?? ''),
+            'Zertifikat: ' . ($details['certificate'] ?? ''),
+            'Ansprechpartner: ' . ($details['contact'] ?? ''),
+        ] as $index => $line) {
+            $this->line($line, $rightX, $contactY - ($index * 10.0), 7.4, $index >= 2 ? 'F2' : 'F1');
+        }
+
+        $senderLine = (string) ($details['senderLine'] ?? '');
+        $this->line($senderLine, self::MARGIN_LEFT, $top - 146.0, 6.7, 'F1');
+        $recipientY = $top - 169.0;
+        $this->line((string) ($customer['name'] ?? ''), self::MARGIN_LEFT, $recipientY, 9.0, 'F1');
+        $this->line(trim((string) ($customer['address'] ?? '') . ' ' . (string) ($customer['house_number'] ?? '')), self::MARGIN_LEFT, $recipientY - 14.0, 9.0, 'F1');
+        $this->line(trim((string) ($customer['zip'] ?? '') . ' ' . (string) ($customer['city'] ?? '')), self::MARGIN_LEFT, $recipientY - 28.0, 9.0, 'F1');
+        $this->line('Datum: ' . $date, $rightX, $recipientY - 24.0, 9.0, 'F1');
+
+        $referenceY = $top - 224.0;
+        $this->write("0.06 0.18 0.45 rg\n");
+        $this->line('Kostenvoranschlag Nr.: ' . ($details['quoteNumber'] ?? ''), self::MARGIN_LEFT, $referenceY, 9.5, 'F2');
+        $this->line('Kunden-Nr.: ' . ($details['customerNumber'] ?? ''), 300.0, $referenceY, 9.5, 'F2');
+        $this->write("0.25 0.56 0.10 RG 1.5 w\n");
+        $this->drawLine(self::MARGIN_LEFT, $referenceY - 9.0, self::PAGE_WIDTH - self::MARGIN_RIGHT, $referenceY - 9.0);
+        $this->write("0 0 0 rg 0 0 0 RG 1 w\n");
+        $this->y = $referenceY - 25.0;
+    }
+
+    public function quoteIntroduction(): void
+    {
+        $this->line('Sehr geehrte Damen und Herren,', self::MARGIN_LEFT, $this->y, 9.3, 'F1');
+        $this->y -= 14.0;
+        $this->line('herzlichen Dank für Ihr Interesse an unseren Reinigungsleistungen.', self::MARGIN_LEFT, $this->y, 9.3, 'F1');
+        $this->y -= 25.0;
+        $this->write("0.06 0.18 0.45 rg\n");
+        $this->line('Hier ist unser Dienstleistungsangebot:', self::MARGIN_LEFT, $this->y, 11.0, 'F2');
+        $this->write("0 0 0 rg\n");
+        $this->y -= 15.0;
+        $this->paragraph('Wir freuen uns, wenn Ihnen unser Angebot zusagt. Für Fragen oder weitere Wünsche steht Ihnen unser Ansprechpartner gerne zur Verfügung.', 8.7);
+    }
+
+    public function quoteServiceTable(string $description, string $interval, string $netPrice): void
+    {
+        $fontSize = 8.2;
+        $lineHeight = 10.5;
+        $descriptionLines = [];
+        $items = preg_split('/\R+/u', trim($description)) ?: [];
+        foreach ($items as $item) {
+            $item = trim((string) $item);
+            if ($item === '') {
+                continue;
+            }
+            $prefix = count($items) > 1 && !preg_match('/^(?:[-*]|\d+[.)])\s/u', $item) ? '- ' : '';
+            foreach ($this->wrap($prefix . $item, $fontSize, 286.0) as $line) {
+                $descriptionLines[] = $line;
+            }
+        }
+        if ($descriptionLines === []) {
+            $descriptionLines = ['-'];
+        }
+
+        $intervalLines = [];
+        $intervalLine = '';
+        foreach (preg_split('/\s+/u', trim($interval)) ?: [] as $word) {
+            $candidate = $intervalLine === '' ? $word : $intervalLine . ' ' . $word;
+            if ($intervalLine !== '' && $this->textLength($candidate) > 13) {
+                $intervalLines[] = $intervalLine;
+                $intervalLine = $word;
+            } else {
+                $intervalLine = $candidate;
+            }
+        }
+        if ($intervalLine !== '') {
+            $intervalLines[] = $intervalLine;
+        }
+        if ($intervalLines === []) {
+            $intervalLines = ['-'];
+        }
+        $remaining = $descriptionLines;
+        do {
+            if ($this->y < 190.0) {
+                $this->addPage();
+            }
+            $reservedAfterTable = count($remaining) === count($descriptionLines) ? 112.0 : 70.0;
+            $maxLines = max(3, (int) floor(($this->y - self::MARGIN_BOTTOM - $reservedAfterTable - 42.0) / $lineHeight));
+            $chunk = array_splice($remaining, 0, $maxLines);
+            $rowLineCount = max(count($chunk), count($intervalLines), 2);
+            $rowHeight = max(50.0, ($rowLineCount * $lineHeight) + 16.0);
+
+            $x = self::MARGIN_LEFT;
+            $width = self::PAGE_WIDTH - self::MARGIN_LEFT - self::MARGIN_RIGHT;
+            $headerHeight = 24.0;
+            $headerBottom = $this->y - $headerHeight;
+            $rowBottom = $headerBottom - $rowHeight;
+            $columnOffsets = [36.0, 340.0, 420.0];
+
+            $this->write(sprintf("0.76 0.77 0.78 rg %.2F %.2F %.2F %.2F re f\n", $x, $headerBottom, $width, $headerHeight));
+            $this->write("0.06 0.18 0.45 RG 0.9 w\n");
+            $this->write(sprintf("%.2F %.2F %.2F %.2F re S\n", $x, $rowBottom, $width, $headerHeight + $rowHeight));
+            $this->drawLine($x, $headerBottom, $x + $width, $headerBottom);
+            foreach ($columnOffsets as $offset) {
+                $this->drawLine($x + $offset, $rowBottom, $x + $offset, $this->y);
+            }
+            $this->write("0 0 0 rg 0 0 0 RG 1 w\n");
+
+            $this->line('Pos.', $x + 7.0, $headerBottom + 8.0, 8.5, 'F2');
+            $this->line('Leistungsbeschreibung', $x + 43.0, $headerBottom + 8.0, 8.5, 'F2');
+            $this->line('Intervall', $x + 347.0, $headerBottom + 8.0, 8.5, 'F2');
+            $this->line('Preis netto', $x + 427.0, $headerBottom + 8.0, 8.5, 'F2');
+            $this->line('1', $x + 14.0, $headerBottom - 18.0, $fontSize, 'F1');
+            foreach ($chunk as $index => $line) {
+                $this->line($line, $x + 43.0, $headerBottom - 16.0 - ($index * $lineHeight), $fontSize, 'F1');
+            }
+            foreach ($intervalLines as $index => $line) {
+                $this->line($line, $x + 347.0, $headerBottom - 16.0 - ($index * $lineHeight), $fontSize, 'F1');
+            }
+            $priceX = $x + $width - 8.0 - ($this->textLength($netPrice) * $fontSize * 0.48);
+            $this->line($netPrice, $priceX, $headerBottom - 18.0, $fontSize, 'F1');
+            $this->y = $rowBottom - 10.0;
+        } while ($remaining !== []);
+    }
+
+    public function quoteNetTotal(string $netPrice): void
+    {
+        $this->ensureSpace(48.0);
+        $x = 326.0;
+        $width = self::PAGE_WIDTH - self::MARGIN_RIGHT - $x;
+        $boxBottom = $this->y - 31.0;
+        $this->write(sprintf("0.85 0.86 0.87 rg %.2F %.2F %.2F 31 re f\n", $x, $boxBottom, $width));
+        $this->write(sprintf("0.25 0.56 0.10 rg %.2F %.2F 5 31 re f\n", $x, $boxBottom));
+        $this->write("0.06 0.18 0.45 rg\n");
+        $this->line('Pauschalpreis netto:', $x + 12.0, $boxBottom + 11.0, 9.5, 'F2');
+        $priceX = self::PAGE_WIDTH - self::MARGIN_RIGHT - 9.0 - ($this->textLength($netPrice) * 9.5 * 0.48);
+        $this->line($netPrice, $priceX, $boxBottom + 11.0, 9.5, 'F2');
+        $this->write("0 0 0 rg\n");
+        $this->y = $boxBottom - 13.0;
+    }
+
+    public function quoteRemarkAndManagement(string $remark, string $managingDirector): void
+    {
+        $remarkLines = $this->wrap($this->normalizeWhitespace($remark), 7.8, self::PAGE_WIDTH - self::MARGIN_LEFT - self::MARGIN_RIGHT);
+        $requiredHeight = 28.0 + (count($remarkLines) * 10.0) + 45.0;
+        $this->ensureSpace($requiredHeight);
+        $this->write("0.06 0.18 0.45 rg\n");
+        $this->line('Bemerkung', self::MARGIN_LEFT, $this->y, 9.0, 'F2');
+        $this->write("0 0 0 rg\n");
+        $this->y -= 13.0;
+        foreach ($remarkLines as $line) {
+            $this->line($line, self::MARGIN_LEFT, $this->y, 7.8, 'F1');
+            $this->y -= 10.0;
+        }
+        $this->y -= 18.0;
+        $this->line('Geschäftsführung', self::MARGIN_LEFT, $this->y, 7.5, 'F1');
+        $this->y -= 11.0;
+        $this->line($managingDirector, self::MARGIN_LEFT, $this->y, 8.5, 'F2');
+        $this->y -= 14.0;
+    }
+
     public function quoteHeader(array $companyLines, string $date, string $validUntil, ?string $logoPath = null): void
     {
         $this->ensureSpace(170.0);
