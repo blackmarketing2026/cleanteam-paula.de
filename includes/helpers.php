@@ -111,6 +111,24 @@ function ensure_contract_for_offer(PDO $pdo, array $offer): array
     return $stmt->fetch();
 }
 
+function invalidate_offer_generated_documents(PDO $pdo, string $offerId): void
+{
+    $quoteDocuments = $pdo->query("SHOW TABLES LIKE 'quote_documents'");
+    if ($quoteDocuments->fetch()) {
+        $pdo->prepare('DELETE FROM quote_documents WHERE offer_id = :offer_id')
+            ->execute(['offer_id' => $offerId]);
+    }
+
+    $contractDocuments = $pdo->query("SHOW TABLES LIKE 'contract_documents'");
+    if ($contractDocuments->fetch()) {
+        $pdo->prepare(
+            'DELETE cd FROM contract_documents cd
+             INNER JOIN contracts c ON c.id = cd.contract_id
+             WHERE c.offer_id = :offer_id'
+        )->execute(['offer_id' => $offerId]);
+    }
+}
+
 function ensure_quote_workflow_columns(PDO $pdo): void
 {
     $columns = [

@@ -232,16 +232,11 @@ if ($method === 'PUT') {
         json_error('Vertrags-ID fehlt.', 422);
     }
 
-    $stmt = $pdo->prepare('SELECT id, customer_id, is_existing_contract, quote_status, sent_at FROM offers WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, customer_id, is_existing_contract, sent_at FROM offers WHERE id = :id');
     $stmt->execute(['id' => $id]);
     $existing = $stmt->fetch();
     if (!$existing) {
         json_error('Vertragsentwurf wurde nicht gefunden.', 404);
-    }
-
-    ensure_quote_workflow_columns($pdo);
-    if (empty($existing['is_existing_contract']) && ($existing['quote_status'] ?? 'entwurf') !== 'entwurf') {
-        json_error('Ein bereits versendeter Kostenvoranschlag kann nicht mehr geändert werden. Bitte einen neuen Entwurf anlegen.', 409);
     }
 
     $body = read_json_body();
@@ -292,42 +287,51 @@ if ($method === 'PUT') {
         ? sprintf('%04d-%02d-01', $originalStartYear, $originalStartMonth)
         : null;
 
-    $pdo->prepare(
-        'UPDATE customers SET name = :name, contact_last_name = :contact, email = :email,
-            address = :address, zip = :zip, city = :city WHERE id = :id'
-    )->execute([
-        'name' => $customerName,
-        'contact' => $contactPerson,
-        'email' => $email,
-        'address' => $address,
-        'zip' => $zip,
-        'city' => $city,
-        'id' => $existing['customer_id'],
-    ]);
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare(
+            'UPDATE customers SET name = :name, contact_last_name = :contact, email = :email,
+                address = :address, zip = :zip, city = :city WHERE id = :id'
+        )->execute([
+            'name' => $customerName,
+            'contact' => $contactPerson,
+            'email' => $email,
+            'address' => $address,
+            'zip' => $zip,
+            'city' => $city,
+            'id' => $existing['customer_id'],
+        ]);
 
-    $pdo->prepare(
-        'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
-            original_start_date = :original_start_date,
-            price = :price, base_price = :base_price, vat_applicable = :vat_applicable, notes = :notes,
-            customer_obligations_note = :customer_obligations_note,
-            validity_days = :validity_days, validity_hours = :validity_hours,
-            expires_at = CASE WHEN is_existing_contract = 1 THEN expires_at ELSE DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) END WHERE id = :id'
-    )->execute([
-        'square_meters' => $squareMeters,
-        'interval_label' => $intervalLabel,
-        'start_date' => $isExistingContract ? null : $startDate,
-        'original_start_date' => $originalStartDate,
-        'price' => $price,
-        'base_price' => $price,
-        'vat_applicable' => $vatApplicable ? 1 : 0,
-        'notes' => format_service_text($serviceText),
-        'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
-        'validity_days' => $validityDays,
-        'validity_days2' => $validityDays,
-        'validity_hours' => $validityHours,
-        'validity_hours2' => $validityHours,
-        'id' => $id,
-    ]);
+        $pdo->prepare(
+            'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
+                original_start_date = :original_start_date,
+                price = :price, base_price = :base_price, vat_applicable = :vat_applicable, notes = :notes,
+                customer_obligations_note = :customer_obligations_note,
+                validity_days = :validity_days, validity_hours = :validity_hours,
+                expires_at = CASE WHEN is_existing_contract = 1 THEN expires_at ELSE DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) END WHERE id = :id'
+        )->execute([
+            'square_meters' => $squareMeters,
+            'interval_label' => $intervalLabel,
+            'start_date' => $isExistingContract ? null : $startDate,
+            'original_start_date' => $originalStartDate,
+            'price' => $price,
+            'base_price' => $price,
+            'vat_applicable' => $vatApplicable ? 1 : 0,
+            'notes' => format_service_text($serviceText),
+            'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
+            'validity_days' => $validityDays,
+            'validity_days2' => $validityDays,
+            'validity_hours' => $validityHours,
+            'validity_hours2' => $validityHours,
+            'id' => $id,
+        ]);
+
+        invalidate_offer_generated_documents($pdo, $id);
+        $pdo->commit();
+    } catch (Throwable $exception) {
+        $pdo->rollBack();
+        throw $exception;
+    }
 
     $stmt = $pdo->prepare(OFFER_SELECT . ' WHERE o.id = :id');
     $stmt->execute(['id' => $id]);
