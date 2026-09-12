@@ -38,15 +38,15 @@ if ($isPublicTokenAccess) {
         exit;
     }
 
-    if (strtotime($offer['expires_at'] . ' UTC') < time() && ($offer['quote_status'] ?? '') !== 'accepted') {
+    $stmt = $pdo->prepare('SELECT * FROM contracts WHERE offer_id = :offer_id');
+    $stmt->execute(['offer_id' => $offer['id']]);
+    $contract = $stmt->fetch();
+
+    if (strtotime($offer['expires_at'] . ' UTC') < time() && ($contract['status'] ?? '') !== 'signiert') {
         http_response_code(410);
         echo 'Vertragslink abgelaufen. Bitte kontaktieren Sie das Clean-Team.';
         exit;
     }
-
-    $stmt = $pdo->prepare('SELECT * FROM contracts WHERE offer_id = :offer_id');
-    $stmt->execute(['offer_id' => $offer['id']]);
-    $contract = $stmt->fetch();
 
     if (!$contract) {
         http_response_code(404);

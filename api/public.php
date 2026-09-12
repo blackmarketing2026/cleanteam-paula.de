@@ -236,6 +236,16 @@ if ($method === 'GET' && $action === 'offer') {
         $contract = migrate_legacy_quote_confirmation($pdo, $offer, $contract);
         $offer = load_offer($pdo, $token);
     }
+    if (($offer['quote_status'] ?? '') === 'accepted') {
+        $fallbackStatus = $contract !== null && ($contract['status'] ?? '') !== 'signiert'
+            ? 'signing'
+            : 'sent';
+        $pdo->prepare(
+            'UPDATE offers SET quote_status = :quote_status, quote_accepted_at = NULL,
+                quote_accepted_ip = NULL, quote_accepted_user_agent = NULL WHERE id = :id'
+        )->execute(['quote_status' => $fallbackStatus, 'id' => $offer['id']]);
+        $offer = load_offer($pdo, $token);
+    }
     if ($contract !== null && normalize_current_step((string) $contract['current_step']) === 'signatur'
         && $contract['current_step'] !== 'signatur') {
         $nextStep = empty($contract['privacy_accepted_at']) ? 'datenschutz' : 'signatur';
@@ -260,7 +270,7 @@ if ($method === 'POST' && $action === 'accept-quote') {
     if (($offer['quote_status'] ?? 'entwurf') === 'signing') {
         json_response(public_state($offer, load_contract($pdo, $offer['id'])));
     }
-    if (($offer['quote_status'] ?? 'entwurf') !== 'sent') {
+    if (!in_array(($offer['quote_status'] ?? 'entwurf'), ['entwurf', 'sent'], true)) {
         json_error('Der Kostenvoranschlag wurde noch nicht versendet.', 409);
     }
     if (empty($offer['agb_snapshot_text'])) {
@@ -268,10 +278,7 @@ if ($method === 'POST' && $action === 'accept-quote') {
         $offer = load_offer($pdo, $token);
     }
     $contract = ensure_contract_for_offer($pdo, $offer);
-    if (($contract['status'] ?? '') === 'signiert') {
-        $pdo->prepare("UPDATE offers SET quote_status = 'accepted', quote_accepted_at = UTC_TIMESTAMP(), quote_accepted_ip = :ip, quote_accepted_user_agent = :ua WHERE id = :id")
-            ->execute(['id' => $offer['id'], 'ip' => substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 64), 'ua' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255)]);
-    } else {
+    if (($contract['status'] ?? '') !== 'signiert') {
         $pdo->prepare("UPDATE offers SET quote_status = 'signing', quote_accepted_at = NULL, quote_accepted_ip = NULL, quote_accepted_user_agent = NULL WHERE id = :id")
             ->execute(['id' => $offer['id']]);
     }
@@ -431,10 +438,10 @@ if ($method === 'POST' && $action === 'sign') {
             $pdo->rollBack();
             json_error('Der Vertrag wurde bereits abgeschlossen oder der Schritt hat sich geaendert.', 409);
         }
-        if (($offer['quote_status'] ?? '') === 'signing') {
-            $pdo->prepare("UPDATE offers SET quote_status = 'accepted', quote_accepted_at = UTC_TIMESTAMP(), quote_accepted_ip = :ip, quote_accepted_user_agent = :ua WHERE id = :id")
-                ->execute(['id' => $offer['id'], 'ip' => substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 64), 'ua' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255)]);
-        }
+        $pdo->prepare(
+            "UPDATE offers SET quote_status = CASE WHEN quote_status = 'signing' THEN 'sent' ELSE quote_status END,
+                quote_accepted_at = NULL, quote_accepted_ip = NULL, quote_accepted_user_agent = NULL WHERE id = :id"
+        )->execute(['id' => $offer['id']]);
         $pdo->commit();
     } catch (Throwable $exception) {
         if ($pdo->inTransaction()) $pdo->rollBack();

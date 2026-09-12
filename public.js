@@ -237,12 +237,18 @@ function routeToState(data) {
     finalText.textContent = "Der Vertrag wurde erfolgreich unterschrieben. Den vollständigen Vertrag können Sie unten einsehen, ausdrucken oder als PDF speichern.";
   }
 
-  if (data.offer.expired && data.offer.quoteStatus !== "accepted") {
-    showExpiredLink();
+  const contract = data.contract;
+
+  if (contract && contract.status === "signiert") {
+    renderFinalContract();
+    showScreen("fertig");
     return;
   }
 
-  const contract = data.contract;
+  if (data.offer.expired) {
+    showExpiredLink();
+    return;
+  }
 
   if (data.accessMode === "quote") {
     if (data.offer.quoteStatus === "sent") {
@@ -260,12 +266,6 @@ function routeToState(data) {
   }
 
   if (!contract) {
-    return;
-  }
-
-  if (contract.status === "signiert") {
-    renderFinalContract();
-    showScreen("fertig");
     return;
   }
 
@@ -305,7 +305,7 @@ async function loadOffer() {
   try {
     const data = await api("offer");
     if (data.accessMode === "quote" && !data.offer.expired) {
-      if (startsQuoteContract && data.offer.quoteStatus === "sent") {
+      if (startsQuoteContract && ["entwurf", "sent"].includes(data.offer.quoteStatus)) {
         const started = await api("accept-quote", {});
         routeToState(started);
         return;
