@@ -8,8 +8,9 @@ $pdo = db(); ensure_quote_workflow_columns($pdo);
 $offerId = trim((string) ($_GET['offerId'] ?? '')); $token = trim((string) ($_GET['token'] ?? ''));
 if ($token === '' && current_user_id() === null) { header('Location: /index.html'); exit; }
 if ($offerId === '' && $token === '') { http_response_code(400); echo 'Kostenvoranschlag fehlt.'; exit; }
-$stmt = $pdo->prepare($token !== '' ? 'SELECT * FROM offers WHERE token = :value' : 'SELECT * FROM offers WHERE id = :value');
-$stmt->execute(['value' => $token !== '' ? $token : $offerId]); $offer = $stmt->fetch();
+$stmt = $pdo->prepare($token !== '' ? 'SELECT * FROM offers WHERE token = :value OR quote_token = :value2' : 'SELECT * FROM offers WHERE id = :value');
+$params = ['value' => $token !== '' ? $token : $offerId]; if ($token !== '') $params['value2'] = $token;
+$stmt->execute($params); $offer = $stmt->fetch();
 if (!$offer) { http_response_code(404); echo 'Kostenvoranschlag nicht gefunden.'; exit; }
 $customer = $pdo->prepare('SELECT * FROM customers WHERE id = :id'); $customer->execute(['id' => $offer['customer_id']]);
 $customer = $customer->fetch();

@@ -181,6 +181,69 @@ final class SimplePdfDocument
         $this->y -= ($lineCount * $lineHeight) + 3.0;
     }
 
+    public function quoteHeader(array $companyLines, string $number, string $date, string $validUntil): void
+    {
+        $this->ensureSpace(118.0);
+        $top = $this->y;
+        foreach ($companyLines as $index => $text) {
+            $this->line((string) $text, self::MARGIN_LEFT, $top - ($index * 17.0), $index === 0 ? 13.0 : 9.5, $index === 0 ? 'F2' : 'F1');
+        }
+        $titleX = 330.0;
+        $this->write("0.03 0.19 0.39 rg\n");
+        $this->line('KOSTENVORANSCHLAG', $titleX, $top, 18.0, 'F2');
+        $this->write("0 0 0 rg\n");
+        $this->drawLine($titleX, $top - 9.0, self::PAGE_WIDTH - self::MARGIN_RIGHT, $top - 9.0);
+        $this->line('Nr.: ' . $number, 390.0, $top - 31.0, 9.5, 'F2');
+        $this->line('Datum: ' . $date, 390.0, $top - 48.0, 9.5, 'F1');
+        $this->line('Gültig bis: ' . $validUntil, 390.0, $top - 65.0, 9.5, 'F1');
+        $this->y = $top - 102.0;
+    }
+
+    public function quotePriceTable(string $description, string $quantity, string $unitPrice, string $total): void
+    {
+        $this->ensureSpace(82.0);
+        $x = self::MARGIN_LEFT; $width = self::PAGE_WIDTH - self::MARGIN_LEFT - self::MARGIN_RIGHT;
+        $headerY = $this->y - 24.0;
+        $this->write(sprintf("0.03 0.19 0.39 rg %.2F %.2F %.2F 24 re f 1 1 1 rg\n", $x, $headerY, $width));
+        $this->line('Pos.', $x + 8.0, $headerY + 8.0, 9.0, 'F2');
+        $this->line('Leistung', $x + 48.0, $headerY + 8.0, 9.0, 'F2');
+        $this->line('Menge', $x + 294.0, $headerY + 8.0, 9.0, 'F2');
+        $this->line('Einzelpreis', $x + 354.0, $headerY + 8.0, 9.0, 'F2');
+        $this->line('Gesamt', $x + 438.0, $headerY + 8.0, 9.0, 'F2');
+        $this->write("0 0 0 rg 0.65 0.72 0.80 RG\n");
+        $rowBottom = $headerY - 42.0;
+        $this->write(sprintf("%.2F %.2F %.2F 42 re S\n", $x, $rowBottom, $width));
+        foreach ([40.0, 286.0, 346.0, 430.0] as $offset) $this->drawLine($x + $offset, $rowBottom, $x + $offset, $headerY);
+        $this->write("0 0 0 RG\n");
+        $this->line('1', $x + 16.0, $rowBottom + 16.0, 9.5, 'F1');
+        $lines = $this->wrap($description, 9.0, 228.0);
+        foreach (array_slice($lines, 0, 2) as $i => $line) $this->line($line, $x + 48.0, $rowBottom + 24.0 - ($i * 13.0), 9.0, 'F1');
+        $this->line($quantity, $x + 294.0, $rowBottom + 16.0, 9.0, 'F1');
+        $this->line($unitPrice, $x + 354.0, $rowBottom + 16.0, 9.0, 'F1');
+        $this->line($total, $x + 438.0, $rowBottom + 16.0, 9.0, 'F1');
+        $this->y = $rowBottom - 12.0;
+    }
+
+    public function quoteTotal(string $net, ?string $vat, string $gross): void
+    {
+        $this->ensureSpace(72.0);
+        $x = 315.0;
+        $this->line('Zwischensumme netto:', $x, $this->y, 10.0, 'F1');
+        $this->line($net, 476.0, $this->y, 10.0, 'F1');
+        $this->y -= 18.0;
+        if ($vat !== null) {
+            $this->line('zzgl. 19 % Umsatzsteuer:', $x, $this->y, 10.0, 'F1');
+            $this->line($vat, 476.0, $this->y, 10.0, 'F1');
+            $this->y -= 18.0;
+        }
+        $boxY = $this->y - 21.0;
+        $this->write(sprintf("0.89 0.93 0.97 rg %.2F %.2F %.2F 28 re f 0.03 0.19 0.39 rg\n", $x - 8.0, $boxY, self::PAGE_WIDTH - self::MARGIN_RIGHT - $x + 8.0));
+        $this->line('Voraussichtlicher Gesamtbetrag:', $x, $boxY + 9.0, 10.0, 'F2');
+        $this->line($gross, 476.0, $boxY + 9.0, 10.0, 'F2');
+        $this->write("0 0 0 rg\n");
+        $this->y = $boxY - 14.0;
+    }
+
     public function signatureImage(?string $dataUrl): bool
     {
         $image = $this->parsePngDataUrl($dataUrl);

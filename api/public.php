@@ -43,9 +43,9 @@ function load_offer(PDO $pdo, string $token): array
             c.zip AS c_zip, c.city AS c_city
          FROM offers o
          INNER JOIN customers c ON c.id = o.customer_id
-         WHERE o.token = :token'
+         WHERE o.token = :token OR o.quote_token = :token2'
     );
-    $stmt->execute(['token' => $token]);
+    $stmt->execute(['token' => $token, 'token2' => $token]);
     $offer = $stmt->fetch();
 
     if (!$offer) {
@@ -123,6 +123,7 @@ function offer_is_expired(array $offer): bool
 
 function public_state(array $offer, ?array $contract): array
 {
+    global $token;
     $currentStep = $contract['current_step'] ?? null;
     if ($currentStep !== null) {
         $currentStep = normalize_current_step($currentStep);
@@ -130,6 +131,7 @@ function public_state(array $offer, ?array $contract): array
 
     return [
         'serverNow' => gmdate('Y-m-d\TH:i:s\Z'),
+        'accessMode' => !empty($offer['quote_token']) && hash_equals((string) $offer['quote_token'], $token) ? 'quote' : 'contract',
         'offer' => [
             'squareMeters' => (int) $offer['square_meters'],
             'interval' => $offer['interval_label'],
@@ -189,12 +191,13 @@ function require_active_contract(?array $contract): array
     return $contract;
 }
 
+ensure_quote_workflow_columns($pdo);
 $offer = load_offer($pdo, $token);
+$isQuoteAccess = !empty($offer['quote_token']) && hash_equals((string) $offer['quote_token'], $token);
 ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
 ensure_contracts_authorized_signer_columns($pdo);
-ensure_quote_workflow_columns($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
     $contract = load_contract($pdo, $offer['id']);
@@ -218,9 +221,7 @@ if (offer_is_expired($offer) && $method === 'POST') {
 }
 
 if ($method === 'POST' && $action === 'accept-quote') {
-    if (!empty($offer['is_existing_contract'])) {
-        json_error('Dieser Link verwendet weiterhin den Bestandsvertragsprozess.', 409);
-    }
+    if (!$isQuoteAccess) json_error('Diese Aktion ist nur über den Kostenvoranschlagslink möglich.', 409);
     if (($offer['quote_status'] ?? 'entwurf') !== 'sent') {
         json_error('Der Kostenvoranschlag wurde noch nicht versendet.', 409);
     }
@@ -244,6 +245,10 @@ if ($method === 'POST' && $action === 'accept-quote') {
     export_contract_to_ftp($pdo, $contract['id']);
     $offer = load_offer($pdo, $token);
     json_response(public_state($offer, $contract));
+}
+
+if ($isQuoteAccess && $method === 'POST') {
+    json_error('Für diesen Kostenvoranschlag ist nur die Annahme vorgesehen.', 409);
 }
 
 if ($method === 'POST' && $action === 'start') {

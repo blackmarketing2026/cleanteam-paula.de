@@ -54,6 +54,7 @@ header('Cache-Control: no-store, private');
           <h2>Ihr Kostenvoranschlag</h2>
           <p class="muted">Bitte prüfen Sie die folgenden Angaben. Bei Annahme erstellen wir automatisch Ihre Auftragsbestätigung.</p>
           <div id="quote-details" class="public-service-summary"></div>
+          <div class="form-actions"><a id="quote-pdf-link" class="secondary-button" href="#" target="_blank" rel="noopener">Kostenvoranschlag als PDF ansehen</a></div>
           <label class="modal-field"><input id="quote-acceptance-check" type="checkbox" /> Ich nehme diesen Kostenvoranschlag an.</label>
           <div class="form-actions"><button id="accept-quote" class="primary-button" type="button" disabled>Kostenvoranschlag annehmen</button></div>
         </section>

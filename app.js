@@ -1221,11 +1221,11 @@ function renderOffers() {
 
 function renderOfferCard(offer) {
   const validity = offerValidity(offer);
-  const sentLabel = offer.isExistingContract
-    ? "Manuelle Weitergabe per Link"
-    : offer.sentAt
-    ? `${offer.quoteStatus === "sent" ? "Kostenvoranschlag" : "Vertrag"} gesendet am ${formatDate(offer.sentAt)}`
-    : "Noch nicht per E-Mail versendet";
+  const deliveryLabels = [];
+  if (offer.isExistingContract) deliveryLabels.push("Manuelle Weitergabe per Link");
+  else if (offer.sentAt) deliveryLabels.push(`Vertrag gesendet am ${formatDate(offer.sentAt)}`);
+  if (offer.quoteSentAt) deliveryLabels.push(`Kostenvoranschlag gesendet am ${formatDate(offer.quoteSentAt)}`);
+  const sentLabel = deliveryLabels.length ? deliveryLabels.join(" · ") : "Noch nicht per E-Mail versendet";
 
   const contractActions = offer.contractId
     ? `
@@ -1268,11 +1268,12 @@ function renderOfferCard(offer) {
           <i data-lucide="eye" aria-hidden="true"></i>
           Vertrag Vorschau
         </a>
-        ${offer.quoteStatus === "sent" ? "" : `<button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
+        <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
           Vertrag verschicken
-        </button>`}
-        ${offer.isExistingContract || offer.contractId || offer.quoteStatus !== "entwurf" ? "" : `<button class="secondary-button" type="button" data-action="send-quote" data-id="${escapeHtml(offer.id)}"><i data-lucide="file-output" aria-hidden="true"></i>Kostenvoranschlag verschicken</button>`}
+        </button>
+        <a class="secondary-button" href="quote.php?offerId=${encodeURIComponent(offer.id)}" target="_blank" rel="noopener"><i data-lucide="receipt-text" aria-hidden="true"></i>Kostenvoranschlag ansehen</a>
+        <button class="secondary-button" type="button" data-action="send-quote" data-id="${escapeHtml(offer.id)}"><i data-lucide="file-output" aria-hidden="true"></i>Kostenvoranschlag verschicken</button>
         ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="link" aria-hidden="true"></i>

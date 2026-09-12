@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS offers (
   validity_hours TINYINT UNSIGNED NOT NULL DEFAULT 0,
   sent_at DATETIME NULL,
   quote_status VARCHAR(20) NOT NULL DEFAULT 'entwurf',
+  quote_token VARCHAR(64) NULL,
+  quote_sent_at DATETIME NULL,
   quote_accepted_at DATETIME NULL,
   quote_accepted_ip VARCHAR(64) NULL,
   quote_accepted_user_agent VARCHAR(255) NULL,
@@ -63,6 +65,7 @@ CREATE TABLE IF NOT EXISTS offers (
   reminder3_sent_at DATETIME NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uniq_offers_token (token),
+  UNIQUE KEY uniq_offers_quote_token (quote_token),
   KEY idx_offers_customer (customer_id),
   -- Bewusst kein ON DELETE CASCADE: ein Kunde mit bestehenden Kostenvoranschlaegen/Vertraegen
   -- darf nicht geloescht werden, damit Vertragshistorie nicht verloren geht.

@@ -27,8 +27,9 @@ if ($isPublicTokenAccess) {
     // Kunden-Vertragswizards). Der Token beweist bereits den Zugriff auf genau diesen Vertragsentwurf,
     // dieselbe Berechtigung wie api/public.php verwendet, daher keine zusaetzliche Admin-Session
     // noetig.
-    $stmt = $pdo->prepare('SELECT * FROM offers WHERE token = :token');
-    $stmt->execute(['token' => $token]);
+    ensure_quote_workflow_columns($pdo);
+    $stmt = $pdo->prepare('SELECT * FROM offers WHERE token = :token OR quote_token = :quote_token');
+    $stmt->execute(['token' => $token, 'quote_token' => $token]);
     $offer = $stmt->fetch();
 
     if (!$offer) {

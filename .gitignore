@@ -1,3 +1,5 @@
 config.php
 .htpasswd
 uploads/
+tmp/
+output/pdf/

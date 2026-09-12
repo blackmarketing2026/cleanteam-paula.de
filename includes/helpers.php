@@ -115,6 +115,8 @@ function ensure_quote_workflow_columns(PDO $pdo): void
 {
     $columns = [
         'quote_status' => "ALTER TABLE offers ADD COLUMN quote_status VARCHAR(20) NOT NULL DEFAULT 'entwurf' AFTER sent_at",
+        'quote_token' => 'ALTER TABLE offers ADD COLUMN quote_token VARCHAR(64) NULL AFTER quote_status',
+        'quote_sent_at' => 'ALTER TABLE offers ADD COLUMN quote_sent_at DATETIME NULL AFTER quote_token',
         'quote_accepted_at' => 'ALTER TABLE offers ADD COLUMN quote_accepted_at DATETIME NULL AFTER quote_status',
         'quote_accepted_ip' => 'ALTER TABLE offers ADD COLUMN quote_accepted_ip VARCHAR(64) NULL AFTER quote_accepted_at',
         'quote_accepted_user_agent' => 'ALTER TABLE offers ADD COLUMN quote_accepted_user_agent VARCHAR(255) NULL AFTER quote_accepted_ip',
@@ -124,6 +126,10 @@ function ensure_quote_workflow_columns(PDO $pdo): void
         if (!$stmt->fetch()) {
             $pdo->exec($sql);
         }
+    }
+    $index = $pdo->query("SHOW INDEX FROM offers WHERE Key_name = 'uniq_offers_quote_token'");
+    if (!$index->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD UNIQUE KEY uniq_offers_quote_token (quote_token)');
     }
 }
 

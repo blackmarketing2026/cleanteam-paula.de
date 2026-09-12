@@ -97,6 +97,8 @@ function offer_row_to_json(array $row): array
         'validityHours' => (int) ($row['validity_hours'] ?? 0),
         'sentAt' => to_iso($row['sent_at']),
         'quoteStatus' => $row['quote_status'] ?? 'entwurf',
+        'quoteSentAt' => to_iso($row['quote_sent_at'] ?? null),
+        'quotePublicUrl' => !empty($row['quote_token']) ? base_url() . '/o.php?token=' . $row['quote_token'] : null,
         'quoteAcceptedAt' => to_iso($row['quote_accepted_at'] ?? null),
         'contractId' => $row['contract_id'],
         'contractStatus' => $row['contract_status'],

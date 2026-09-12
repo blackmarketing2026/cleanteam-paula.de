@@ -32,6 +32,7 @@ const els = {
   quoteDetails: document.querySelector("#quote-details"),
   quoteAcceptanceCheck: document.querySelector("#quote-acceptance-check"),
   acceptQuote: document.querySelector("#accept-quote"),
+  quotePdfLink: document.querySelector("#quote-pdf-link"),
 };
 
 const signatureInk = new WeakSet();
@@ -242,10 +243,11 @@ function routeToState(data) {
 
   const contract = data.contract;
 
-  if (!data.offer.isExistingContract) {
+  if (data.accessMode === "quote") {
     if (data.offer.quoteStatus === "sent") {
       document.title = "CleanTeam - Ihr Kostenvoranschlag";
       document.querySelector("#public-document-label").textContent = "Ihr persönlicher Kostenvoranschlag";
+      els.quotePdfLink.href = `quote.php?token=${encodeURIComponent(token)}`;
       renderQuoteDetails();
       showScreen("kostenvoranschlag");
       return;
@@ -305,7 +307,7 @@ function routeToState(data) {
 async function loadOffer() {
   try {
     const data = await api("offer");
-    if (!data.offer.isExistingContract && ["sent", "accepted"].includes(data.offer.quoteStatus) && !data.offer.expired) {
+    if (data.accessMode === "quote" && !data.offer.expired) {
       routeToState(data);
       return;
     }
