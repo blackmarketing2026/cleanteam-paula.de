@@ -181,22 +181,48 @@ final class SimplePdfDocument
         $this->y -= ($lineCount * $lineHeight) + 3.0;
     }
 
-    public function quoteHeader(array $companyLines, string $number, string $date, string $validUntil): void
+    public function quoteHeader(array $companyLines, string $number, string $date, string $validUntil, ?string $logoPath = null): void
     {
-        $this->ensureSpace(118.0);
+        $this->ensureSpace(170.0);
         $top = $this->y;
+        $hasLogo = $logoPath !== null && $this->imageFileAt($logoPath, self::MARGIN_LEFT, $top + 8.0, 124.0, 88.0);
+        $companyTop = $hasLogo ? $top - 96.0 : $top;
         foreach ($companyLines as $index => $text) {
-            $this->line((string) $text, self::MARGIN_LEFT, $top - ($index * 17.0), $index === 0 ? 13.0 : 9.5, $index === 0 ? 'F2' : 'F1');
+            if ($index === 0) {
+                $this->write("0.25 0.56 0.10 rg\n");
+            }
+            $this->line((string) $text, self::MARGIN_LEFT, $companyTop - ($index * 15.0), $index === 0 ? 11.0 : 8.8, $index === 0 ? 'F2' : 'F1');
+            if ($index === 0) {
+                $this->write("0 0 0 rg\n");
+            }
         }
         $titleX = 330.0;
-        $this->write("0.03 0.19 0.39 rg\n");
+        $this->write("0.06 0.18 0.45 rg\n");
         $this->line('KOSTENVORANSCHLAG', $titleX, $top, 18.0, 'F2');
-        $this->write("0 0 0 rg\n");
+        $this->write("0.25 0.56 0.10 RG 2 w\n");
         $this->drawLine($titleX, $top - 9.0, self::PAGE_WIDTH - self::MARGIN_RIGHT, $top - 9.0);
+        $this->write("0.06 0.18 0.45 rg 0 0 0 RG 1 w\n");
         $this->line('Nr.: ' . $number, 390.0, $top - 31.0, 9.5, 'F2');
+        $this->write("0 0 0 rg\n");
         $this->line('Datum: ' . $date, 390.0, $top - 48.0, 9.5, 'F1');
         $this->line('Gültig bis: ' . $validUntil, 390.0, $top - 65.0, 9.5, 'F1');
-        $this->y = $top - 102.0;
+        $dividerY = $top - 153.0;
+        $this->write("0.25 0.56 0.10 RG 1.5 w\n");
+        $this->drawLine(self::MARGIN_LEFT, $dividerY, self::PAGE_WIDTH - self::MARGIN_RIGHT, $dividerY);
+        $this->write("0 0 0 RG 1 w\n");
+        $this->y = $dividerY - 16.0;
+    }
+
+    public function quoteSectionHeading(string $text): void
+    {
+        $this->ensureSpace(25.0);
+        $this->y -= 8.0;
+        $this->write("0.25 0.56 0.10 rg\n");
+        $this->write(sprintf("%.2F %.2F 4 14 re f\n", self::MARGIN_LEFT, $this->y - 2.0));
+        $this->write("0.06 0.18 0.45 rg\n");
+        $this->line($text, self::MARGIN_LEFT + 12.0, $this->y, 12.0, 'F2');
+        $this->write("0 0 0 rg\n");
+        $this->y -= 17.0;
     }
 
     public function quotePriceTable(string $description, string $quantity, string $unitPrice, string $total): void
@@ -204,7 +230,8 @@ final class SimplePdfDocument
         $this->ensureSpace(82.0);
         $x = self::MARGIN_LEFT; $width = self::PAGE_WIDTH - self::MARGIN_LEFT - self::MARGIN_RIGHT;
         $headerY = $this->y - 24.0;
-        $this->write(sprintf("0.03 0.19 0.39 rg %.2F %.2F %.2F 24 re f 1 1 1 rg\n", $x, $headerY, $width));
+        $this->write(sprintf("0.06 0.18 0.45 rg %.2F %.2F %.2F 24 re f\n", $x, $headerY, $width));
+        $this->write(sprintf("0.25 0.56 0.10 rg %.2F %.2F %.2F 4 re f 1 1 1 rg\n", $x, $headerY + 20.0, $width));
         $this->line('Pos.', $x + 8.0, $headerY + 8.0, 9.0, 'F2');
         $this->line('Leistung', $x + 48.0, $headerY + 8.0, 9.0, 'F2');
         $this->line('Menge', $x + 294.0, $headerY + 8.0, 9.0, 'F2');
@@ -237,7 +264,9 @@ final class SimplePdfDocument
             $this->y -= 18.0;
         }
         $boxY = $this->y - 21.0;
-        $this->write(sprintf("0.89 0.93 0.97 rg %.2F %.2F %.2F 28 re f 0.03 0.19 0.39 rg\n", $x - 8.0, $boxY, self::PAGE_WIDTH - self::MARGIN_RIGHT - $x + 8.0));
+        $this->write(sprintf("0.91 0.96 0.88 rg %.2F %.2F %.2F 28 re f\n", $x - 8.0, $boxY, self::PAGE_WIDTH - self::MARGIN_RIGHT - $x + 8.0));
+        $this->write(sprintf("0.25 0.56 0.10 rg %.2F %.2F 5 28 re f\n", $x - 8.0, $boxY));
+        $this->write("0.06 0.18 0.45 rg\n");
         $this->line('Voraussichtlicher Gesamtbetrag:', $x, $boxY + 9.0, 10.0, 'F2');
         $this->line($gross, 476.0, $boxY + 9.0, 10.0, 'F2');
         $this->write("0 0 0 rg\n");
@@ -305,6 +334,31 @@ final class SimplePdfDocument
             $name
         ));
         $this->y -= $height + 12.0;
+
+        return true;
+    }
+
+    private function imageFileAt(string $path, float $x, float $top, float $maxWidth, float $maxHeight): bool
+    {
+        $image = $this->parseImageFile($path);
+        if ($image === null) {
+            return false;
+        }
+
+        $ratio = min($maxWidth / $image['width'], $maxHeight / $image['height'], 1.0);
+        $width = max(1.0, $image['width'] * $ratio);
+        $height = max(1.0, $image['height'] * $ratio);
+        $name = 'Im' . (count($this->images) + 1);
+        $this->images[$name] = $image;
+        $this->pages[$this->pageIndex]['images'][$name] = true;
+        $this->write(sprintf(
+            "q %.2F 0 0 %.2F %.2F %.2F cm /%s Do Q\n",
+            $width,
+            $height,
+            $x,
+            $top - $height,
+            $name
+        ));
 
         return true;
     }

@@ -25,6 +25,12 @@ function quote_reference(array $offer): string
     return 'KV-' . $year . '-' . ($suffix !== '' ? $suffix : '000001');
 }
 
+function quote_pdf_logo_path(): ?string
+{
+    $path = __DIR__ . '/../assets/cleanteam-logo.jpg';
+    return is_file($path) ? $path : null;
+}
+
 function render_quote_pdf(array $offer, array $customer): string
 {
     $pdf = new SimplePdfDocument();
@@ -32,9 +38,9 @@ function render_quote_pdf(array $offer, array $customer): string
         CONTRACTOR['legal_name'], CONTRACTOR['trade_description'],
         CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'],
         CONTRACTOR['website'],
-    ], quote_reference($offer), contract_format_date($offer['created_at']), contract_format_date($offer['expires_at']));
+    ], quote_reference($offer), contract_format_date($offer['created_at']), contract_format_date($offer['expires_at']), quote_pdf_logo_path());
 
-    $pdf->subheading('An:');
+    $pdf->quoteSectionHeading('Empfänger');
     $pdf->keyValue('Firma', contract_customer_display_name($customer));
     $pdf->keyValue('Ansprechpartner', contract_signatory_display($customer));
     $pdf->keyValue('Objekt', trim($customer['address'] . ' ' . $customer['house_number'] . ', ' . $customer['zip'] . ' ' . $customer['city'], ' ,'));
@@ -50,17 +56,17 @@ function render_quote_pdf(array $offer, array $customer): string
     $pdf->quotePriceTable('Monatliche Gebäudereinigung gemäß Leistungsbeschreibung', '1 Monat', contract_format_money($net), contract_format_money($net));
     $pdf->quoteTotal(contract_format_money($net), $vatApplicable ? contract_format_money($vat) : null, contract_format_money($gross));
 
-    $pdf->heading('Leistungsbeschreibung');
+    $pdf->quoteSectionHeading('Leistungsbeschreibung');
     $pdf->paragraph((string) $offer['notes']);
     if (trim((string) ($offer['customer_obligations_note'] ?? '')) !== '') {
-        $pdf->heading('Pflichten des Auftraggebers');
+        $pdf->quoteSectionHeading('Pflichten des Auftraggebers');
         $pdf->paragraph((string) $offer['customer_obligations_note']);
     }
     $startDate = !empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'nach Absprache';
     if (!empty($offer['is_existing_contract']) && !empty($offer['original_start_date'])) {
         $startDate = 'Bestandsleistung, ursprünglicher Beginn ' . contract_format_date($offer['original_start_date']);
     }
-    $pdf->heading('Rahmenbedingungen');
+    $pdf->quoteSectionHeading('Rahmenbedingungen');
     $pdf->keyValue('Ausführungsbeginn', $startDate);
     $pdf->keyValue('Zahlungsbedingungen', PAYMENT_DUE_DAYS . ' Tage nach Rechnungstellung');
     $pdf->keyValue('Preisgrundlage', 'Monatliche Pauschale');
