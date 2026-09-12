@@ -191,6 +191,37 @@ function require_active_contract(?array $contract): array
     return $contract;
 }
 
+function migrate_legacy_quote_confirmation(PDO $pdo, array $offer, array $contract): array
+{
+    if (($offer['quote_status'] ?? '') !== 'accepted'
+        || ($contract['status'] ?? '') !== 'bestaetigt'
+        || !empty($contract['signature_data'])) {
+        return $contract;
+    }
+
+    ensure_contract_documents_table($pdo);
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('DELETE FROM contract_documents WHERE contract_id = :contract_id')
+            ->execute(['contract_id' => $contract['id']]);
+        $pdo->prepare(
+            "UPDATE contracts SET status = 'entwurf', current_step = 'datenschutz', signed_at = NULL,
+                terms_accepted_at = NULL, privacy_accepted_at = NULL, data_confirmed = 0,
+                interval_confirmed = 0, signature_data = NULL WHERE id = :id"
+        )->execute(['id' => $contract['id']]);
+        $pdo->prepare(
+            "UPDATE offers SET quote_status = 'signing', quote_accepted_at = NULL,
+                quote_accepted_ip = NULL, quote_accepted_user_agent = NULL WHERE id = :id"
+        )->execute(['id' => $offer['id']]);
+        $pdo->commit();
+    } catch (Throwable $exception) {
+        $pdo->rollBack();
+        throw $exception;
+    }
+
+    return load_contract($pdo, $offer['id']);
+}
+
 ensure_quote_workflow_columns($pdo);
 $offer = load_offer($pdo, $token);
 $isQuoteAccess = !empty($offer['quote_token']) && hash_equals((string) $offer['quote_token'], $token);
@@ -201,6 +232,10 @@ ensure_contracts_authorized_signer_columns($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
     $contract = load_contract($pdo, $offer['id']);
+    if ($isQuoteAccess && $contract !== null) {
+        $contract = migrate_legacy_quote_confirmation($pdo, $offer, $contract);
+        $offer = load_offer($pdo, $token);
+    }
     if ($contract !== null && normalize_current_step((string) $contract['current_step']) === 'signatur'
         && $contract['current_step'] !== 'signatur') {
         $nextStep = empty($contract['privacy_accepted_at']) ? 'datenschutz' : 'signatur';
@@ -222,33 +257,26 @@ if (offer_is_expired($offer) && $method === 'POST') {
 
 if ($method === 'POST' && $action === 'accept-quote') {
     if (!$isQuoteAccess) json_error('Diese Aktion ist nur über den Kostenvoranschlagslink möglich.', 409);
+    if (($offer['quote_status'] ?? 'entwurf') === 'signing') {
+        json_response(public_state($offer, load_contract($pdo, $offer['id'])));
+    }
     if (($offer['quote_status'] ?? 'entwurf') !== 'sent') {
         json_error('Der Kostenvoranschlag wurde noch nicht versendet.', 409);
     }
-    // Die Hilfsfunktion enthält eine Kompatibilitätsbereinigung mit DDL und muss daher
-    // außerhalb der nachfolgenden Annahme-Transaktion laufen.
     $contract = ensure_contract_for_offer($pdo, $offer);
-    $pdo->beginTransaction();
-    try {
-        $pdo->prepare("UPDATE contracts SET status = 'bestaetigt', current_step = 'fertig', terms_accepted_at = UTC_TIMESTAMP(), signed_at = UTC_TIMESTAMP() WHERE id = :id")
-            ->execute(['id' => $contract['id']]);
+    if (($contract['status'] ?? '') === 'signiert') {
         $pdo->prepare("UPDATE offers SET quote_status = 'accepted', quote_accepted_at = UTC_TIMESTAMP(), quote_accepted_ip = :ip, quote_accepted_user_agent = :ua WHERE id = :id")
             ->execute(['id' => $offer['id'], 'ip' => substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 64), 'ua' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255)]);
-        $pdo->commit();
-    } catch (Throwable $exception) {
-        $pdo->rollBack(); throw $exception;
+    } else {
+        $pdo->prepare("UPDATE offers SET quote_status = 'signing', quote_accepted_at = NULL, quote_accepted_ip = NULL, quote_accepted_user_agent = NULL WHERE id = :id")
+            ->execute(['id' => $offer['id']]);
     }
-    $contract = load_contract($pdo, $offer['id']);
-    save_contract_pdfs($pdo, $contract['id'], true);
-    notify_contract_created($pdo, $contract['id']);
-    notify_customer_contract_signed($pdo, $contract['id']);
-    export_contract_to_ftp($pdo, $contract['id']);
     $offer = load_offer($pdo, $token);
-    json_response(public_state($offer, $contract));
+    json_response(public_state($offer, load_contract($pdo, $offer['id'])));
 }
 
-if ($isQuoteAccess && $method === 'POST') {
-    json_error('Für diesen Kostenvoranschlag ist nur die Annahme vorgesehen.', 409);
+if ($isQuoteAccess && $method === 'POST' && ($offer['quote_status'] ?? '') !== 'signing') {
+    json_error('Bitte starten Sie den Online-Vertragsabschluss über den Kostenvoranschlag.', 409);
 }
 
 if ($method === 'POST' && $action === 'start') {
@@ -382,15 +410,27 @@ if ($method === 'POST' && $action === 'sign') {
     $secondName = $signers[0]['name'] ?? null;
     $secondSignature = $signers[0]['signatureDataUrl'] ?? null;
 
-    $stmt = $pdo->prepare(
-        "UPDATE contracts SET additional_signers = :additional_signers, second_signer_name = :second_name, second_signature_data = :second_signature,
-        second_signed_at = CASE WHEN :two_signers = 1 THEN UTC_TIMESTAMP() ELSE NULL END, status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, current_step = 'fertig' WHERE id = :id AND status <> 'signiert' AND current_step = 'signatur'"
-    );
-    $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id'],
-        'second_name' => $secondName, 'second_signature' => $secondSignature, 'two_signers' => (int) (count($signers) > 0),
-        'additional_signers' => json_encode($signers, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
-    if ($stmt->rowCount() !== 1) {
-        json_error('Der Vertrag wurde bereits abgeschlossen oder der Schritt hat sich geaendert.', 409);
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare(
+            "UPDATE contracts SET additional_signers = :additional_signers, second_signer_name = :second_name, second_signature_data = :second_signature,
+            second_signed_at = CASE WHEN :two_signers = 1 THEN UTC_TIMESTAMP() ELSE NULL END, status = 'signiert', signed_at = UTC_TIMESTAMP(), terms_accepted_at = COALESCE(terms_accepted_at, UTC_TIMESTAMP()), signature_data = :signature, current_step = 'fertig' WHERE id = :id AND status <> 'signiert' AND current_step = 'signatur'"
+        );
+        $stmt->execute(['signature' => $signatureDataUrl, 'id' => $contract['id'],
+            'second_name' => $secondName, 'second_signature' => $secondSignature, 'two_signers' => (int) (count($signers) > 0),
+            'additional_signers' => json_encode($signers, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+        if ($stmt->rowCount() !== 1) {
+            $pdo->rollBack();
+            json_error('Der Vertrag wurde bereits abgeschlossen oder der Schritt hat sich geaendert.', 409);
+        }
+        if (($offer['quote_status'] ?? '') === 'signing') {
+            $pdo->prepare("UPDATE offers SET quote_status = 'accepted', quote_accepted_at = UTC_TIMESTAMP(), quote_accepted_ip = :ip, quote_accepted_user_agent = :ua WHERE id = :id")
+                ->execute(['id' => $offer['id'], 'ip' => substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 64), 'ua' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255)]);
+        }
+        $pdo->commit();
+    } catch (Throwable $exception) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $exception;
     }
     save_contract_pdfs($pdo, $contract['id'], true);
     notify_contract_created($pdo, $contract['id']);
@@ -399,6 +439,7 @@ if ($method === 'POST' && $action === 'sign') {
     }
     export_contract_to_ftp($pdo, $contract['id']);
 
+    $offer = load_offer($pdo, $token);
     json_response(public_state($offer, load_contract($pdo, $offer['id'])));
 }
 

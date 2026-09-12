@@ -1,4 +1,5 @@
 const token = document.body.dataset.token || "";
+const startsQuoteContract = new URLSearchParams(window.location.search).get("start") === "online-contract";
 
 const state = {
   offer: null,
@@ -252,13 +253,17 @@ function routeToState(data) {
       showScreen("kostenvoranschlag");
       return;
     }
-    if (contract && contract.status === "bestaetigt") {
+    if (data.offer.quoteStatus === "accepted" && contract && contract.status === "signiert") {
       renderFinalContract();
-      document.querySelector("#screen-fertig h2").textContent = "Ihre Auftragsbestätigung";
-      document.querySelector("#screen-fertig p").textContent = "Vielen Dank für Ihre Annahme. Ihre Auftragsbestätigung steht zum Download bereit.";
-      els.printFinalContract.textContent = "Auftragsbestätigung öffnen / als PDF speichern";
+      document.querySelector("#screen-fertig h2").textContent = "Kostenvoranschlag angenommen";
+      document.querySelector("#screen-fertig p").textContent = "Vielen Dank. Mit Ihrer Unterschrift wurde der Kostenvoranschlag angenommen und der Vertrag erfolgreich abgeschlossen.";
+      els.printFinalContract.textContent = "Unterschriebenen Vertrag öffnen / als PDF speichern";
       showScreen("fertig");
       return;
+    }
+    if (data.offer.quoteStatus === "signing") {
+      document.title = "CleanTeam - Vertrag online abschließen";
+      document.querySelector("#public-document-label").textContent = "Vertrag online abschließen";
     }
   }
 
@@ -308,6 +313,11 @@ async function loadOffer() {
   try {
     const data = await api("offer");
     if (data.accessMode === "quote" && !data.offer.expired) {
+      if (startsQuoteContract && data.offer.quoteStatus === "sent") {
+        const started = await api("accept-quote", {});
+        routeToState(started);
+        return;
+      }
       routeToState(data);
       return;
     }
