@@ -53,23 +53,15 @@ function render_quote_pdf(array $offer, array $customer): string
     $vat = $vatApplicable ? round($net * VAT_RATE / 100, 2) : 0.0;
     $gross = $net + $vat;
     $pdf->spacer(8.0);
-    $pdf->quotePriceTable('Monatliche Gebäudereinigung gemäß Leistungsbeschreibung', '1 Monat', contract_format_money($net), contract_format_money($net));
+    $pdf->quotePriceTable('Monatliche Gebäudereinigung', '1 Monat', contract_format_money($net), contract_format_money($net));
     $pdf->quoteTotal(contract_format_money($net), $vatApplicable ? contract_format_money($vat) : null, contract_format_money($gross));
 
-    $pdf->quoteSectionHeading('Leistungsbeschreibung');
-    $pdf->paragraph((string) $offer['notes']);
-    if (trim((string) ($offer['customer_obligations_note'] ?? '')) !== '') {
-        $pdf->quoteSectionHeading('Pflichten des Auftraggebers');
-        $pdf->paragraph((string) $offer['customer_obligations_note']);
-    }
     $startDate = !empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'nach Absprache';
     if (!empty($offer['is_existing_contract']) && !empty($offer['original_start_date'])) {
         $startDate = 'Bestandsleistung, ursprünglicher Beginn ' . contract_format_date($offer['original_start_date']);
     }
     $pdf->quoteSectionHeading('Rahmenbedingungen');
     $pdf->keyValue('Ausführungsbeginn', $startDate);
-    $pdf->keyValue('Zahlungsbedingungen', PAYMENT_DUE_DAYS . ' Tage nach Rechnungstellung');
-    $pdf->keyValue('Preisgrundlage', 'Monatliche Pauschale');
     $pdf->paragraph('Hinweis: Dieser Kostenvoranschlag basiert auf den im Vertragsentwurf erfassten Leistungsdaten. Änderungen oder zusätzliche Leistungen werden vor Ausführung abgestimmt.', 9.5);
     $pdf->paragraph('Bitte nehmen Sie den Kostenvoranschlag über den zugesandten Link an. Danach erhalten Sie automatisch Ihre Auftragsbestätigung.', 9.5);
     $pdf->spacer(8.0);

@@ -14,6 +14,9 @@ if (!str_starts_with($pdf, '%PDF-1.4') || strlen($pdf) < 3000) throw new Runtime
 if (quote_reference($offer) !== 'KV-2026-123456') throw new RuntimeException('KVA-Nummer ist nicht stabil.');
 if (quote_pdf_logo_path() === null || !str_contains($pdf, '/Subtype /Image')) throw new RuntimeException('CleanTeam-Logo wurde nicht in das KVA-PDF eingebettet.');
 if (!str_contains($pdf, '0.25 0.56 0.10 rg') || !str_contains($pdf, '0.06 0.18 0.45 rg')) throw new RuntimeException('CleanTeam-Farben fehlen im KVA-PDF.');
+foreach (['Leistungsbeschreibung', 'Pflichten des Auftraggebers', 'Zahlungsbedingungen', 'Preisgrundlage'] as $omittedText) {
+    if (str_contains($pdf, $omittedText)) throw new RuntimeException($omittedText . ' darf im KVA-PDF nicht ausgegeben werden.');
+}
 $outputPath = getenv('QUOTE_PDF_OUTPUT');
 if (is_string($outputPath) && $outputPath !== '') file_put_contents($outputPath, $pdf);
 echo "PASS: quote PDF generation, reference, pricing layout and contract-form data\n";
