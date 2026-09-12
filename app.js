@@ -1272,7 +1272,7 @@ function renderOfferCard(offer) {
           <i data-lucide="send" aria-hidden="true"></i>
           Vertrag verschicken
         </button>
-        <a class="secondary-button" href="quote.php?offerId=${encodeURIComponent(offer.id)}" target="_blank" rel="noopener"><i data-lucide="receipt-text" aria-hidden="true"></i>Kostenvoranschlag ansehen</a>
+        <a class="secondary-button" href="quote.php?offerId=${encodeURIComponent(offer.id)}&v=cleanteam-2" target="_blank" rel="noopener"><i data-lucide="receipt-text" aria-hidden="true"></i>Kostenvoranschlag ansehen</a>
         <button class="secondary-button" type="button" data-action="send-quote" data-id="${escapeHtml(offer.id)}"><i data-lucide="file-output" aria-hidden="true"></i>Kostenvoranschlag verschicken</button>
         ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">

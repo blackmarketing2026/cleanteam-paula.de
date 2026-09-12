@@ -20,4 +20,10 @@ if (($offer['quote_status'] ?? 'entwurf') === 'entwurf') {
 } else {
     $quote = save_quote_pdf($pdo, $offer, $customer);
 }
-header('Content-Type: application/pdf'); header('Content-Length: ' . strlen($quote['content'])); header('Content-Disposition: inline; filename="' . str_replace('"', '', $quote['filename']) . '"'); echo $quote['content'];
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+header('Content-Type: application/pdf');
+header('Content-Length: ' . strlen($quote['content']));
+header('Content-Disposition: inline; filename="' . str_replace('"', '', $quote['filename']) . '"');
+echo $quote['content'];

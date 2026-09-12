@@ -80,11 +80,24 @@ function render_quote_pdf(array $offer, array $customer): string
 function save_quote_pdf(PDO $pdo, array $offer, array $customer): array
 {
     ensure_quote_documents_table($pdo);
-    $stmt = $pdo->prepare('SELECT * FROM quote_documents WHERE offer_id = :id'); $stmt->execute(['id' => $offer['id']]);
-    $existing = $stmt->fetch(); if ($existing) return $existing;
     $content = render_quote_pdf($offer, $customer);
-    $stmt = $pdo->prepare('INSERT INTO quote_documents (id, offer_id, filename, mime_type, content, sha256, generated_at) VALUES (:id,:offer_id,:filename,\'application/pdf\',:content,:sha256,UTC_TIMESTAMP())');
-    $stmt->execute(['id' => generate_id('quote-document'), 'offer_id' => $offer['id'], 'filename' => quote_pdf_filename(contract_customer_display_name($customer)), 'content' => $content, 'sha256' => hash('sha256', $content)]);
+    $filename = quote_pdf_filename(contract_customer_display_name($customer));
+    $stmt = $pdo->prepare(
+        'INSERT INTO quote_documents (id, offer_id, filename, mime_type, content, sha256, generated_at)
+         VALUES (:id,:offer_id,:filename,\'application/pdf\',:content,:sha256,UTC_TIMESTAMP())
+         ON DUPLICATE KEY UPDATE filename = :updated_filename, mime_type = \'application/pdf\', content = :updated_content,
+            sha256 = :updated_sha256, generated_at = UTC_TIMESTAMP()'
+    );
+    $stmt->execute([
+        'id' => generate_id('quote-document'),
+        'offer_id' => $offer['id'],
+        'filename' => $filename,
+        'content' => $content,
+        'sha256' => hash('sha256', $content),
+        'updated_filename' => $filename,
+        'updated_content' => $content,
+        'updated_sha256' => hash('sha256', $content),
+    ]);
     $stmt = $pdo->prepare('SELECT * FROM quote_documents WHERE offer_id = :id'); $stmt->execute(['id' => $offer['id']]);
     return $stmt->fetch();
 }
