@@ -17,7 +17,11 @@ if ($offerId === '') json_error('Kostenvoranschlag fehlt.', 422);
 $stmt = $pdo->prepare('SELECT o.*, c.name AS c_name, c.email AS c_email, c.salutation AS c_salutation, c.contact_last_name AS c_contact_last_name FROM offers o INNER JOIN customers c ON c.id = o.customer_id WHERE o.id = :id');
 $stmt->execute(['id' => $offerId]); $offer = $stmt->fetch();
 if (!$offer) json_error('Vertragsentwurf wurde nicht gefunden.', 404);
-if ($sendAsQuote && ($offer['quote_status'] ?? 'entwurf') === 'accepted') json_error('Der Kostenvoranschlag wurde bereits angenommen.', 409);
+if (empty($offer['agb_snapshot_text'])) {
+    refresh_offer_agb_snapshot($pdo, $offerId);
+    $stmt->execute(['id' => $offerId]);
+    $offer = $stmt->fetch();
+}
 if ($sendAsQuote && empty($offer['quote_token'])) {
     $offer['quote_token'] = generate_token();
     $pdo->prepare('UPDATE offers SET quote_token = :token WHERE id = :id')->execute(['token' => $offer['quote_token'], 'id' => $offerId]);
@@ -45,6 +49,6 @@ try {
         $mailer->send($settings['username'], $settings['from_name'], $toEmail, $company, 'Vertragsunterlagen CleanTeam für Firma ' . $company, $message['html'], true, $message['inlineImages']);
     }
 } catch (Throwable $exception) { json_error('E-Mail-Versand fehlgeschlagen: ' . $exception->getMessage(), 502); }
-$pdo->prepare($sendAsQuote ? "UPDATE offers SET quote_sent_at = UTC_TIMESTAMP(), quote_status = CASE WHEN quote_status = 'signing' THEN 'signing' ELSE 'sent' END WHERE id = :id" : 'UPDATE offers SET sent_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $offerId]);
+$pdo->prepare($sendAsQuote ? "UPDATE offers SET quote_sent_at = UTC_TIMESTAMP(), quote_status = CASE WHEN quote_status IN ('signing', 'accepted') THEN quote_status ELSE 'sent' END WHERE id = :id" : 'UPDATE offers SET sent_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $offerId]);
 if (!$sendAsQuote) ensure_contract_for_offer($pdo, $offer);
 json_response(['ok' => true, 'sentAt' => now_iso(), 'sentTo' => $toEmail]);

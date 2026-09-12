@@ -263,6 +263,10 @@ if ($method === 'POST' && $action === 'accept-quote') {
     if (($offer['quote_status'] ?? 'entwurf') !== 'sent') {
         json_error('Der Kostenvoranschlag wurde noch nicht versendet.', 409);
     }
+    if (empty($offer['agb_snapshot_text'])) {
+        refresh_offer_agb_snapshot($pdo, $offer['id']);
+        $offer = load_offer($pdo, $token);
+    }
     $contract = ensure_contract_for_offer($pdo, $offer);
     if (($contract['status'] ?? '') === 'signiert') {
         $pdo->prepare("UPDATE offers SET quote_status = 'accepted', quote_accepted_at = UTC_TIMESTAMP(), quote_accepted_ip = :ip, quote_accepted_user_agent = :ua WHERE id = :id")
@@ -280,6 +284,10 @@ if ($isQuoteAccess && $method === 'POST' && ($offer['quote_status'] ?? '') !== '
 }
 
 if ($method === 'POST' && $action === 'start') {
+    if (empty($offer['agb_snapshot_text'])) {
+        refresh_offer_agb_snapshot($pdo, $offer['id']);
+        $offer = load_offer($pdo, $token);
+    }
     $contract = ensure_contract_for_offer($pdo, $offer);
     json_response(public_state($offer, $contract));
 }

@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS offers (
   start_date DATE NULL,
   original_start_date DATE NULL,
   notes TEXT NULL,
+  agb_snapshot_text LONGTEXT NULL,
+  agb_snapshot_captured_at DATETIME NULL,
   base_price DECIMAL(10,2) NOT NULL DEFAULT 0,
   price_adjustment DECIMAL(10,2) NOT NULL DEFAULT 0,
   price_adjustment_note VARCHAR(255) NULL,

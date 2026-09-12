@@ -1264,7 +1264,7 @@ function renderOfferCard(offer) {
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
-        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `contract.php?offerId=${encodeURIComponent(offer.id)}`}" target="_blank" rel="noopener">
+        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `contract.php?offerId=${encodeURIComponent(offer.id)}&preview=1`}" target="_blank" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
           Vertrag Vorschau
         </a>
@@ -2145,7 +2145,7 @@ async function deleteContract(id) {
     ? `von ${contract.customer.name}`
     : "diesen Vertrag";
   const firstConfirmed = window.confirm(
-    `Vertrag ${contractLabel} wirklich l\u00f6schen? Die gespeicherten Vertragsdokumente werden ebenfalls entfernt.`,
+    `Vertrag ${contractLabel} wirklich l\u00f6schen? Vertragsdokumente, Unterschriften, Signaturprotokoll, Zeitstempel und der gespeicherte AGB-Nachweis werden ebenfalls entfernt.`,
   );
   if (!firstConfirmed) {
     return;
@@ -2164,7 +2164,7 @@ async function deleteContract(id) {
       state.selectedContractId = null;
     }
     await loadAll();
-    showToast("Vertrag wurde gel\u00f6scht. Der Vertragsentwurf ist wieder f\u00fcr einen neuen Vertrag frei.");
+    showToast("Vertrag und Abschlussdaten wurden gel\u00f6scht. Der Vertragsentwurf startet wieder vollst\u00e4ndig von vorn.");
   } catch (error) {
     showToast(error.message);
   }

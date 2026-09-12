@@ -31,6 +31,33 @@ const PRICE_ADJUSTMENT_NOTICE_MONTHS = 1;
 const WAGE_INCREASE_MIN_PERCENT = 5;
 const WAGE_INCREASE_MAX_PERCENT = 10;
 
+function ensure_offer_agb_snapshot_storage(PDO $pdo): void
+{
+    $columns = [
+        'agb_snapshot_text' => 'ALTER TABLE offers ADD COLUMN agb_snapshot_text LONGTEXT NULL AFTER notes',
+        'agb_snapshot_captured_at' => 'ALTER TABLE offers ADD COLUMN agb_snapshot_captured_at DATETIME NULL AFTER agb_snapshot_text',
+    ];
+
+    foreach ($columns as $column => $sql) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE '{$column}'");
+        if (!$stmt->fetch()) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
+function refresh_offer_agb_snapshot(PDO $pdo, string $offerId): void
+{
+    ensure_offer_agb_snapshot_storage($pdo);
+    $snapshotText = fetch_agb_text_snapshot();
+    if ($snapshotText === null) {
+        return;
+    }
+
+    $pdo->prepare('UPDATE offers SET agb_snapshot_text = :text, agb_snapshot_captured_at = UTC_TIMESTAMP() WHERE id = :id')
+        ->execute(['text' => $snapshotText, 'id' => $offerId]);
+}
+
 // Holt den aktuellen Textinhalt der AGB-Seite als Nachweis, was zum Zeitpunkt der Vertragserstellung
 // dort stand (falls die Seite sich spaeter aendert). Wird einmalig bei Vertragserstellung aufgerufen
 // und mit dem Angebot gespeichert - kein Live-Abruf bei jedem Dokumentenaufruf.
@@ -638,7 +665,9 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
         ? h($representationNote) . ' (i. V. ' . $signatoryName . ')'
         : $signatoryName;
 
-    $protocolHtml = $isCleanTeamCopy ? render_signature_protocol_html($offer, $customer, $contract) : '';
+    $protocolHtml = $isCleanTeamCopy && $isSigned && empty($options['excludeProtocol'])
+        ? render_signature_protocol_html($offer, $customer, $contract)
+        : '';
     $logoHtml = contract_logo_html();
     $currentDate = h(contract_current_date());
 

@@ -253,14 +253,6 @@ function routeToState(data) {
       showScreen("kostenvoranschlag");
       return;
     }
-    if (data.offer.quoteStatus === "accepted" && contract && contract.status === "signiert") {
-      renderFinalContract();
-      document.querySelector("#screen-fertig h2").textContent = "Kostenvoranschlag angenommen";
-      document.querySelector("#screen-fertig p").textContent = "Vielen Dank. Mit Ihrer Unterschrift wurde der Kostenvoranschlag angenommen und der Vertrag erfolgreich abgeschlossen.";
-      els.printFinalContract.textContent = "Unterschriebenen Vertrag öffnen / als PDF speichern";
-      showScreen("fertig");
-      return;
-    }
     if (data.offer.quoteStatus === "signing") {
       document.title = "CleanTeam - Vertrag online abschließen";
       document.querySelector("#public-document-label").textContent = "Vertrag online abschließen";

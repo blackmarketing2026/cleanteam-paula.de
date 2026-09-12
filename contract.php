@@ -134,5 +134,6 @@ if ($format === 'pdf') {
 echo render_contract_document($offer, $customer, $contract, [
     'audience' => $documentAudience,
     'excludeAgb' => $isPreview,
+    'excludeProtocol' => $isPreview,
     'captureProtected' => $isPreview,
 ]);

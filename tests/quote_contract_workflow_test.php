@@ -45,8 +45,13 @@ if (!str_contains($sendOffer, "&start=online-contract")
 }
 
 if (!str_contains($publicJs, 'startsQuoteContract')
-    || !str_contains($publicJs, 'data.offer.quoteStatus === "accepted" && contract && contract.status === "signiert"')) {
+    || str_contains($publicJs, 'Kostenvoranschlag angenommen')) {
     throw new RuntimeException('Die öffentliche Oberfläche bildet den Signaturstatus nicht korrekt ab.');
+}
+
+if (str_contains($sendOffer, 'Der Kostenvoranschlag wurde bereits angenommen.')
+    || !str_contains($sendOffer, "quote_status IN ('signing', 'accepted') THEN quote_status")) {
+    throw new RuntimeException('Ein Kostenvoranschlag muss auch nach der Vertragsunterschrift erneut versendet werden können.');
 }
 
 echo "PASS: quote starts online contract flow and is accepted only after signature\n";

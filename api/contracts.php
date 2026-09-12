@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/contract_signers.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/contract_template.php';
 
 require_login();
 
@@ -125,10 +126,18 @@ ensure_offers_customer_obligations_column($pdo);
 ensure_offers_email_opened_at_column($pdo);
 ensure_offers_reminder_columns($pdo);
 ensure_offers_existing_contract_columns($pdo);
+ensure_offer_agb_snapshot_storage($pdo);
+ensure_quote_workflow_columns($pdo);
 
 function contract_documents_table_exists(PDO $pdo): bool
 {
     $stmt = $pdo->query("SHOW TABLES LIKE 'contract_documents'");
+    return (bool) $stmt->fetch();
+}
+
+function quote_documents_table_exists(PDO $pdo): bool
+{
+    $stmt = $pdo->query("SHOW TABLES LIKE 'quote_documents'");
     return (bool) $stmt->fetch();
 }
 
@@ -260,9 +269,21 @@ if ($method === 'DELETE') {
         $stmt = $pdo->prepare('DELETE FROM contracts WHERE id = :id');
         $stmt->execute(['id' => $id]);
 
-        // Der bestehende Kundenlink bleibt auch nach dem Loeschen des Vertrags erhalten.
-        $pdo->prepare('UPDATE offers SET sent_at = NULL, email_opened_at = NULL WHERE id = :offer_id')
-            ->execute(['offer_id' => $row['offer_id']]);
+        if (quote_documents_table_exists($pdo)) {
+            $stmt = $pdo->prepare('DELETE FROM quote_documents WHERE offer_id = :offer_id');
+            $stmt->execute(['offer_id' => $row['offer_id']]);
+        }
+
+        $pdo->prepare(
+            "UPDATE offers SET token = :token, sent_at = NULL, email_opened_at = NULL,
+                reminder1_sent_at = NULL, reminder2_sent_at = NULL, reminder3_sent_at = NULL,
+                quote_status = 'entwurf', quote_token = NULL, quote_sent_at = NULL,
+                quote_accepted_at = NULL, quote_accepted_ip = NULL, quote_accepted_user_agent = NULL,
+                agb_snapshot_text = NULL, agb_snapshot_captured_at = NULL,
+                expires_at = CASE WHEN is_existing_contract = 1 THEN expires_at
+                    ELSE DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL validity_days DAY), INTERVAL validity_hours HOUR) END
+             WHERE id = :offer_id"
+        )->execute(['token' => generate_token(), 'offer_id' => $row['offer_id']]);
 
         $pdo->commit();
     } catch (Throwable $exception) {
@@ -270,7 +291,7 @@ if ($method === 'DELETE') {
         throw $exception;
     }
 
-    json_response(['ok' => true]);
+    json_response(['ok' => true, 'reset' => true]);
 }
 
 json_error('Methode nicht erlaubt.', 405);
