@@ -18,13 +18,6 @@ function quote_pdf_filename(string $customerName): string
     return 'CleanTeam Kostenvoranschlag - ' . $name . '.pdf';
 }
 
-function quote_reference(array $offer): string
-{
-    $year = substr((string) ($offer['created_at'] ?? gmdate('Y')), 0, 4);
-    $suffix = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', (string) $offer['id']), -6));
-    return 'KV-' . $year . '-' . ($suffix !== '' ? $suffix : '000001');
-}
-
 function quote_pdf_logo_path(): ?string
 {
     $path = __DIR__ . '/../assets/cleanteam-logo.jpg';
@@ -38,7 +31,7 @@ function render_quote_pdf(array $offer, array $customer): string
         CONTRACTOR['legal_name'], CONTRACTOR['trade_description'],
         CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'],
         CONTRACTOR['website'],
-    ], quote_reference($offer), contract_format_date($offer['created_at']), contract_format_date($offer['expires_at']), quote_pdf_logo_path());
+    ], contract_format_date($offer['created_at']), contract_format_date($offer['expires_at']), quote_pdf_logo_path());
 
     $pdf->quoteSectionHeading('Empfänger');
     $pdf->keyValue('Firma', contract_customer_display_name($customer));
@@ -55,6 +48,9 @@ function render_quote_pdf(array $offer, array $customer): string
     $pdf->spacer(8.0);
     $pdf->quotePriceTable('Monatliche Gebäudereinigung', '1 Monat', contract_format_money($net), contract_format_money($net));
     $pdf->quoteTotal(contract_format_money($net), $vatApplicable ? contract_format_money($vat) : null, contract_format_money($gross));
+
+    $pdf->quoteSectionHeading('Leistungsbeschreibung');
+    $pdf->paragraph((string) $offer['notes']);
 
     $startDate = !empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'nach Absprache';
     if (!empty($offer['is_existing_contract']) && !empty($offer['original_start_date'])) {

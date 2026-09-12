@@ -181,7 +181,7 @@ final class SimplePdfDocument
         $this->y -= ($lineCount * $lineHeight) + 3.0;
     }
 
-    public function quoteHeader(array $companyLines, string $number, string $date, string $validUntil, ?string $logoPath = null): void
+    public function quoteHeader(array $companyLines, string $date, string $validUntil, ?string $logoPath = null): void
     {
         $this->ensureSpace(170.0);
         $top = $this->y;
@@ -201,11 +201,10 @@ final class SimplePdfDocument
         $this->line('KOSTENVORANSCHLAG', $titleX, $top, 18.0, 'F2');
         $this->write("0.25 0.56 0.10 RG 2 w\n");
         $this->drawLine($titleX, $top - 9.0, self::PAGE_WIDTH - self::MARGIN_RIGHT, $top - 9.0);
-        $this->write("0.06 0.18 0.45 rg 0 0 0 RG 1 w\n");
-        $this->line('Nr.: ' . $number, 390.0, $top - 31.0, 9.5, 'F2');
         $this->write("0 0 0 rg\n");
-        $this->line('Datum: ' . $date, 390.0, $top - 48.0, 9.5, 'F1');
-        $this->line('Gültig bis: ' . $validUntil, 390.0, $top - 65.0, 9.5, 'F1');
+        $this->write("0 0 0 RG 1 w\n");
+        $this->line('Datum: ' . $date, 390.0, $top - 31.0, 9.5, 'F1');
+        $this->line('Gültig bis: ' . $validUntil, 390.0, $top - 48.0, 9.5, 'F1');
         $dividerY = $top - 153.0;
         $this->write("0.25 0.56 0.10 RG 1.5 w\n");
         $this->drawLine(self::MARGIN_LEFT, $dividerY, self::PAGE_WIDTH - self::MARGIN_RIGHT, $dividerY);

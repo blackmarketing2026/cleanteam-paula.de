@@ -11,10 +11,11 @@ $customer = ['name' => 'Test GmbH', 'salutation' => '', 'contact_last_name' => '
 
 $pdf = render_quote_pdf($offer, $customer);
 if (!str_starts_with($pdf, '%PDF-1.4') || strlen($pdf) < 3000) throw new RuntimeException('KVA-PDF wurde nicht korrekt erzeugt.');
-if (quote_reference($offer) !== 'KV-2026-123456') throw new RuntimeException('KVA-Nummer ist nicht stabil.');
+if (str_contains($pdf, 'Nr.:') || str_contains($pdf, 'KV-2026-')) throw new RuntimeException('KVA-Nummer darf nicht im PDF ausgegeben werden.');
 if (quote_pdf_logo_path() === null || !str_contains($pdf, '/Subtype /Image')) throw new RuntimeException('CleanTeam-Logo wurde nicht in das KVA-PDF eingebettet.');
 if (!str_contains($pdf, '0.25 0.56 0.10 rg') || !str_contains($pdf, '0.06 0.18 0.45 rg')) throw new RuntimeException('CleanTeam-Farben fehlen im KVA-PDF.');
-foreach (['Leistungsbeschreibung', 'Pflichten des Auftraggebers', 'Zahlungsbedingungen', 'Preisgrundlage'] as $omittedText) {
+if (!str_contains($pdf, 'Leistungsbeschreibung')) throw new RuntimeException('Leistungsbeschreibung fehlt im KVA-PDF.');
+foreach (['Pflichten des Auftraggebers', 'Zahlungsbedingungen', 'Preisgrundlage'] as $omittedText) {
     if (str_contains($pdf, $omittedText)) throw new RuntimeException($omittedText . ' darf im KVA-PDF nicht ausgegeben werden.');
 }
 $outputPath = getenv('QUOTE_PDF_OUTPUT');
