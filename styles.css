@@ -1814,6 +1814,14 @@ button.compact-item.selected {
   line-height: 1.1;
 }
 
+.modal-price-preview {
+  margin: 14px 0 18px;
+}
+
+.modal-price-preview strong {
+  font-size: 18px;
+}
+
 .empty-state {
   display: grid;
   min-height: 136px;

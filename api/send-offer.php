@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includes/email_settings.php';
 require_once __DIR__ . '/../includes/quote_pdf.php';
 
 require_login(); require_method('POST');
-$pdo = db(); ensure_offers_existing_contract_columns($pdo); ensure_quote_workflow_columns($pdo);
+$pdo = db(); ensure_offers_existing_contract_columns($pdo); ensure_offers_discount_column($pdo); ensure_quote_workflow_columns($pdo);
 $sendAsQuote = defined('SEND_AS_QUOTE') && SEND_AS_QUOTE === true;
 email_delivery_assert_allowed($pdo, 'offer');
 $offerId = (string) ($_GET['id'] ?? '');

@@ -1,9 +1,11 @@
 <?php
 require_once __DIR__ . '/../includes/quote_pdf.php';
+restore_exception_handler();
 
 $offer = ['id' => 'offer-fixture-123456', 'created_at' => '2026-09-12 10:00:00', 'expires_at' => '2026-09-26 10:00:00',
     'start_date' => '2026-10-01', 'original_start_date' => null, 'is_existing_contract' => 0,
-    'interval_label' => 'Zweimal wöchentlich', 'square_meters' => 555, 'price' => 640.0,
+    'interval_label' => 'Zweimal wöchentlich', 'square_meters' => 555,
+    'base_price' => 400.0, 'discount_percent' => 8.0, 'price' => 368.0,
     'vat_applicable' => 1, 'notes' => implode("\n", [
         'Sanitäranlagen und WCs werden hygienisch gereinigt und desinfiziert.',
         'Freistehende Schreibtische werden entstaubt.',
@@ -30,6 +32,9 @@ foreach (['Hinweis: Dieser Kostenvoranschlag', 'Bitte nehmen Sie den Kostenvoran
     if (str_contains($pdf, $omittedSentence)) throw new RuntimeException('Entfernter KVA-Hinweis wird weiterhin ausgegeben.');
 }
 if (!str_contains($pdf, 'Leistungsbeschreibung')) throw new RuntimeException('Leistungsbeschreibung fehlt im KVA-PDF.');
+foreach (['Gesamtpreis netto', 'Rabatt', '8 %', 'Endpreis netto', '400,00', '32,00', '368,00'] as $priceText) {
+    if (!str_contains($pdf, $priceText)) throw new RuntimeException('Rabattdarstellung im KVA-PDF fehlt: ' . $priceText);
+}
 foreach (['Pflichten des Auftraggebers', 'Zahlungsbedingungen', 'Preisgrundlage'] as $omittedText) {
     if (str_contains($pdf, $omittedText)) throw new RuntimeException($omittedText . ' darf im KVA-PDF nicht ausgegeben werden.');
 }
@@ -43,6 +48,14 @@ if (str_contains($pdf, 'Gültig bis:') || str_contains($pdf, 'KOSTENVORANSCHLAG'
     || str_contains($pdf, 'Voraussichtlicher Gesamtbetrag') || str_contains($pdf, '761,60')
     || str_contains($pdf, 'IBAN')) {
     throw new RuntimeException('Das KVA enthält weiterhin Gültigkeit oder hochgerechnete Bruttopreise.');
+}
+$offerWithoutDiscount = $offer;
+$offerWithoutDiscount['base_price'] = 400.0;
+$offerWithoutDiscount['discount_percent'] = 0.0;
+$offerWithoutDiscount['price'] = 400.0;
+$pdfWithoutDiscount = render_quote_pdf($offerWithoutDiscount, $customer);
+if (!str_contains($pdfWithoutDiscount, 'Pauschalpreis netto') || str_contains($pdfWithoutDiscount, 'Rabatt (')) {
+    throw new RuntimeException('KVA ohne Rabatt muss nur den unveränderten Nettopreis ausgeben.');
 }
 $outputPath = getenv('QUOTE_PDF_OUTPUT');
 if (is_string($outputPath) && $outputPath !== '') file_put_contents($outputPath, $pdf);

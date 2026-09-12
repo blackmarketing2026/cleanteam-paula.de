@@ -11,6 +11,7 @@ require_once __DIR__ . '/../includes/quote_pdf.php';
 
 $pdo = db();
 ensure_offers_existing_contract_columns($pdo);
+ensure_offers_discount_column($pdo);
 ensure_contracts_second_signer_columns($pdo);
 $method = $_SERVER['REQUEST_METHOD'];
 $action = (string) ($_GET['action'] ?? '');
@@ -143,6 +144,7 @@ function public_state(array $offer, ?array $contract): array
             'basePrice' => isset($offer['base_price']) && (float) $offer['base_price'] > 0
                 ? (float) $offer['base_price']
                 : (float) $offer['price'],
+            'discountPercent' => (float) ($offer['discount_percent'] ?? 0),
             'priceAdjustment' => (float) ($offer['price_adjustment'] ?? 0),
             'priceAdjustmentNote' => $offer['price_adjustment_note'] ?? null,
             'price' => (float) $offer['price'],

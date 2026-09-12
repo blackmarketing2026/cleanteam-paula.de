@@ -9,6 +9,7 @@ require_login();
 require_method('POST');
 
 $pdo = db();
+ensure_offers_discount_column($pdo);
 ensure_offers_interval_label_length($pdo);
 ensure_offers_vat_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
@@ -23,7 +24,9 @@ $zip = trim((string) ($body['zip'] ?? ''));
 $city = trim((string) ($body['city'] ?? ''));
 $squareMeters = max(0, (int) ($body['squareMeters'] ?? 0));
 $interval = trim((string) ($body['interval'] ?? ''));
-$price = round((float) ($body['price'] ?? 0), 2);
+$basePrice = round((float) ($body['basePrice'] ?? $body['price'] ?? 0), 2);
+$discountPercent = round((float) ($body['discountPercent'] ?? 0), 2);
+$price = offer_discounted_price($basePrice, $discountPercent);
 $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
 $startMonth = (int) ($body['originalStartMonth'] ?? 0);
 $startYear = (int) ($body['originalStartYear'] ?? 0);
@@ -37,8 +40,11 @@ if ($customerName === '' || $contactPerson === '' || $email === '' || $address =
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     json_error('Bitte eine gültige E-Mail-Adresse eintragen.', 422);
 }
-if ($price <= 0) {
-    json_error('Bitte den monatlichen Preis eintragen.', 422);
+if ($basePrice <= 0) {
+    json_error('Bitte den monatlichen Gesamtpreis eintragen.', 422);
+}
+if ($discountPercent < 0 || $discountPercent >= 100) {
+    json_error('Der Rabatt muss zwischen 0 und 99,99 Prozent liegen.', 422);
 }
 $currentYear = (int) gmdate('Y');
 if ($startMonth < 1 || $startMonth > 12 || $startYear < 1900 || $startYear > $currentYear) {
@@ -58,16 +64,17 @@ try {
     $id = generate_id('offer');
     $pdo->prepare(
         'INSERT INTO offers (id, customer_id, is_existing_contract, square_meters, interval_label, service, start_date,
-            original_start_date, notes, customer_obligations_note, base_price, price_adjustment, price_adjustment_note,
+            original_start_date, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note,
             price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
          VALUES (:id, :customer_id, 1, :square_meters, :interval_label, :service, NULL, :original_start_date,
-            :notes, :obligations, :price, 0, NULL, :price2, :vat, :token, UTC_TIMESTAMP(), \'2099-12-31 23:59:59\', 0, 0)'
+            :notes, :obligations, :base_price, :discount_percent, 0, NULL, :price, :vat, :token, UTC_TIMESTAMP(), \'2099-12-31 23:59:59\', 0, 0)'
     )->execute([
         'id' => $id, 'customer_id' => $customerId, 'square_meters' => $squareMeters,
         'interval_label' => $interval, 'service' => 'Individuelle Leistung', 'original_start_date' => $originalStartDate,
         'notes' => format_service_text($serviceText),
         'obligations' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
-        'price' => $price, 'price2' => $price, 'vat' => $vatApplicable ? 1 : 0, 'token' => generate_token(),
+        'base_price' => $basePrice, 'discount_percent' => $discountPercent,
+        'price' => $price, 'vat' => $vatApplicable ? 1 : 0, 'token' => generate_token(),
     ]);
 
     $agbSnapshotText = fetch_agb_text_snapshot();

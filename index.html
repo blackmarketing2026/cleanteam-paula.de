@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=email-series-20260908-5" />
+    <link rel="stylesheet" href="styles.css?v=discount-pricing-20260912" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -281,9 +281,18 @@
                 </select>
               </label>
               <label>
-                Preis (monatlich, netto) *
+                Gesamtpreis (monatlich, netto) *
                 <input id="offer-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" />
               </label>
+              <label>
+                Rabatt in Prozent
+                <input id="offer-discount" type="number" min="0" max="99.99" step="0.01" value="0" />
+              </label>
+              <div class="price-preview span-2" aria-live="polite">
+                <div><span>Gesamtpreis</span><strong id="offer-base-price-preview">0,00&nbsp;&euro;</strong></div>
+                <div><span>Rabatt</span><strong id="offer-discount-amount-preview">0,00&nbsp;&euro;</strong></div>
+                <div><span>Preis nach Rabatt</span><strong id="offer-final-price-preview">0,00&nbsp;&euro;</strong></div>
+              </div>
               <label>
                 Beginn der Dienstleistung *
                 <input id="offer-start-date" type="date" required />
@@ -390,7 +399,13 @@
               <label>Ort *<input id="existing-offer-city" type="text" required placeholder="Solingen" /></label>
               <label>Quadratmeter<input id="existing-offer-square-meters" type="number" min="0" step="1" placeholder="optional" /></label>
               <label>Reinigungsintervall *<select id="existing-offer-interval" required><option value="">Bitte w&auml;hlen</option><option>T&auml;glich</option><option>Einmal w&ouml;chentlich</option><option>Zweimal w&ouml;chentlich</option><option>Dreimal w&ouml;chentlich</option><option>Viermal w&ouml;chentlich</option><option>14-t&auml;gig</option></select></label>
-              <label>Preis (monatlich, netto) *<input id="existing-offer-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" /></label>
+              <label>Gesamtpreis (monatlich, netto) *<input id="existing-offer-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" /></label>
+              <label>Rabatt in Prozent<input id="existing-offer-discount" type="number" min="0" max="99.99" step="0.01" value="0" /></label>
+              <div class="price-preview span-2" aria-live="polite">
+                <div><span>Gesamtpreis</span><strong id="existing-offer-base-price-preview">0,00&nbsp;&euro;</strong></div>
+                <div><span>Rabatt</span><strong id="existing-offer-discount-amount-preview">0,00&nbsp;&euro;</strong></div>
+                <div><span>Preis nach Rabatt</span><strong id="existing-offer-final-price-preview">0,00&nbsp;&euro;</strong></div>
+              </div>
               <label>Umsatzsteuer berechnen? *<select id="existing-offer-vat" required><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
               <label>Urspr&uuml;nglicher Vertragsbeginn &ndash; Monat *<select id="existing-offer-start-month" required><option value="">Bitte w&auml;hlen</option><option value="1">Januar</option><option value="2">Februar</option><option value="3">M&auml;rz</option><option value="4">April</option><option value="5">Mai</option><option value="6">Juni</option><option value="7">Juli</option><option value="8">August</option><option value="9">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Dezember</option></select></label>
               <label>Urspr&uuml;nglicher Vertragsbeginn &ndash; Jahr *<input id="existing-offer-start-year" type="number" min="1900" step="1" required placeholder="z. B. 2018" /></label>
@@ -1214,9 +1229,18 @@
           </select>
         </label>
         <label class="modal-field">
-          Preis (monatlich, netto) *
+          Gesamtpreis (monatlich, netto) *
           <input id="contract-correction-price" type="number" min="0" step="0.01" required />
         </label>
+        <label class="modal-field">
+          Rabatt in Prozent
+          <input id="contract-correction-discount" type="number" min="0" max="99.99" step="0.01" value="0" />
+        </label>
+        <div class="price-preview modal-price-preview" aria-live="polite">
+          <div><span>Gesamtpreis</span><strong id="contract-correction-base-price-preview">0,00&nbsp;&euro;</strong></div>
+          <div><span>Rabatt</span><strong id="contract-correction-discount-amount-preview">0,00&nbsp;&euro;</strong></div>
+          <div><span>Preis nach Rabatt</span><strong id="contract-correction-final-price-preview">0,00&nbsp;&euro;</strong></div>
+        </div>
         <label class="modal-field">
           Beginn der Dienstleistung *
           <input id="contract-correction-start-date" type="date" required />
@@ -1292,9 +1316,18 @@
           </select>
         </label>
         <label class="modal-field">
-          Preis (monatlich, netto) *
+          Gesamtpreis (monatlich, netto) *
           <input id="offer-edit-price" type="number" min="0" step="0.01" required />
         </label>
+        <label class="modal-field">
+          Rabatt in Prozent
+          <input id="offer-edit-discount" type="number" min="0" max="99.99" step="0.01" value="0" />
+        </label>
+        <div class="price-preview modal-price-preview" aria-live="polite">
+          <div><span>Gesamtpreis</span><strong id="offer-edit-base-price-preview">0,00&nbsp;&euro;</strong></div>
+          <div><span>Rabatt</span><strong id="offer-edit-discount-amount-preview">0,00&nbsp;&euro;</strong></div>
+          <div><span>Preis nach Rabatt</span><strong id="offer-edit-final-price-preview">0,00&nbsp;&euro;</strong></div>
+        </div>
         <label id="offer-edit-start-date-field" class="modal-field">
           Beginn der Dienstleistung *
           <input id="offer-edit-start-date" type="date" required />
@@ -1450,7 +1483,7 @@
     </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=contract-reset-20260912"></script>
+    <script src="app.js?v=discount-pricing-20260912"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

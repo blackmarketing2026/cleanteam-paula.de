@@ -324,18 +324,36 @@ final class SimplePdfDocument
         } while ($remaining !== []);
     }
 
-    public function quoteNetTotal(string $netPrice): void
+    public function quoteNetTotal(string $netPrice, ?string $basePrice = null, float $discountPercent = 0.0, ?string $discountAmount = null): void
     {
-        $this->ensureSpace(48.0);
+        $hasDiscount = $discountPercent > 0.0 && $basePrice !== null && $discountAmount !== null;
+        $boxHeight = $hasDiscount ? 66.0 : 31.0;
+        $this->ensureSpace($boxHeight + 17.0);
         $x = 326.0;
         $width = self::PAGE_WIDTH - self::MARGIN_RIGHT - $x;
-        $boxBottom = $this->y - 31.0;
-        $this->write(sprintf("0.85 0.86 0.87 rg %.2F %.2F %.2F 31 re f\n", $x, $boxBottom, $width));
-        $this->write(sprintf("0.25 0.56 0.10 rg %.2F %.2F 5 31 re f\n", $x, $boxBottom));
+        $boxBottom = $this->y - $boxHeight;
+        $this->write(sprintf("0.85 0.86 0.87 rg %.2F %.2F %.2F %.2F re f\n", $x, $boxBottom, $width, $boxHeight));
+        $this->write(sprintf("0.25 0.56 0.10 rg %.2F %.2F 5 %.2F re f\n", $x, $boxBottom, $boxHeight));
         $this->write("0.06 0.18 0.45 rg\n");
-        $this->line('Pauschalpreis netto:', $x + 12.0, $boxBottom + 11.0, 9.5, 'F2');
-        $priceX = self::PAGE_WIDTH - self::MARGIN_RIGHT - 9.0 - ($this->textLength($netPrice) * 9.5 * 0.48);
-        $this->line($netPrice, $priceX, $boxBottom + 11.0, 9.5, 'F2');
+        if ($hasDiscount) {
+            $discountLabel = 'Rabatt (' . rtrim(rtrim(number_format($discountPercent, 2, ',', '.'), '0'), ',') . ' %):';
+            $rows = [
+                ['Gesamtpreis netto:', $basePrice, 'F1'],
+                [$discountLabel, '- ' . $discountAmount, 'F1'],
+                ['Endpreis netto:', $netPrice, 'F2'],
+            ];
+            foreach ($rows as $index => [$label, $value, $font]) {
+                $rowY = $boxBottom + $boxHeight - 18.0 - ($index * 18.0);
+                $fontSize = $font === 'F2' ? 9.5 : 8.8;
+                $this->line($label, $x + 12.0, $rowY, $fontSize, $font);
+                $priceX = self::PAGE_WIDTH - self::MARGIN_RIGHT - 9.0 - ($this->textLength($value) * $fontSize * 0.48);
+                $this->line($value, $priceX, $rowY, $fontSize, $font);
+            }
+        } else {
+            $this->line('Pauschalpreis netto:', $x + 12.0, $boxBottom + 11.0, 9.5, 'F2');
+            $priceX = self::PAGE_WIDTH - self::MARGIN_RIGHT - 9.0 - ($this->textLength($netPrice) * 9.5 * 0.48);
+            $this->line($netPrice, $priceX, $boxBottom + 11.0, 9.5, 'F2');
+        }
         $this->write("0 0 0 rg\n");
         $this->y = $boxBottom - 13.0;
     }

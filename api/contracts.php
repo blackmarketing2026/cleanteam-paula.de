@@ -49,7 +49,7 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
 
 const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.is_existing_contract, o.original_start_date, o.notes AS offer_notes,
     o.customer_obligations_note AS offer_customer_obligations_note,
-    o.price, o.vat_applicable, o.created_at AS offer_created_at, o.token,
+    o.base_price, o.discount_percent, o.price, o.vat_applicable, o.created_at AS offer_created_at, o.token,
     o.sent_at AS offer_sent_at, o.email_opened_at AS offer_email_opened_at,
     c.name AS c_name, c.email AS c_email, c.phone AS c_phone, c.salutation AS c_salutation,
     c.contact_last_name AS c_contact_last_name, c.address AS c_address, c.house_number AS c_house_number,
@@ -107,6 +107,10 @@ function contract_row_to_json(array $row): array
             'originalStartDate' => $row['original_start_date'] ?? null,
             'notes' => $row['offer_notes'],
             'customerObligationsNote' => $row['offer_customer_obligations_note'],
+            'basePrice' => isset($row['base_price']) && (float) $row['base_price'] > 0
+                ? (float) $row['base_price']
+                : (float) $row['price'],
+            'discountPercent' => (float) ($row['discount_percent'] ?? 0),
             'price' => (float) $row['price'],
             'vatApplicable' => !isset($row['vat_applicable']) || (int) $row['vat_applicable'] === 1,
             'createdAt' => to_iso($row['offer_created_at']),
@@ -121,6 +125,7 @@ ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
 ensure_contracts_number_column_dropped($pdo);
 ensure_offers_interval_label_length($pdo);
+ensure_offers_discount_column($pdo);
 ensure_offers_vat_column($pdo);
 ensure_offers_customer_obligations_column($pdo);
 ensure_offers_email_opened_at_column($pdo);
@@ -180,6 +185,9 @@ if ($method === 'PATCH') {
         $pdo->prepare("UPDATE contracts SET status = 'entwurf', current_step = :step WHERE id = :id")
             ->execute(['step' => $restartStepByStatus[$status], 'id' => $id]);
     } elseif ($action === 'update-contact') {
+        if (in_array((string) $row['status'], ['signiert', 'bestaetigt'], true)) {
+            json_error('Eine bereits unterschriebene Auftragsbestätigung kann nicht mehr geändert werden.', 409);
+        }
         $customerName = trim((string) ($body['customerName'] ?? ''));
         $contactPerson = trim((string) ($body['contactPerson'] ?? ''));
         $email = trim((string) ($body['email'] ?? ''));
@@ -188,7 +196,9 @@ if ($method === 'PATCH') {
         $city = trim((string) ($body['city'] ?? ''));
         $squareMeters = (int) ($body['squareMeters'] ?? 0);
         $interval = trim((string) ($body['interval'] ?? ''));
-        $price = round((float) ($body['price'] ?? 0), 2);
+        $basePrice = round((float) ($body['basePrice'] ?? $body['price'] ?? 0), 2);
+        $discountPercent = round((float) ($body['discountPercent'] ?? 0), 2);
+        $price = offer_discounted_price($basePrice, $discountPercent);
         $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
         $startDate = trim((string) ($body['startDate'] ?? ''));
         $serviceText = trim((string) ($body['serviceText'] ?? ''));
@@ -204,8 +214,11 @@ if ($method === 'PATCH') {
             || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
             json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
         }
-        if ($price <= 0) {
-            json_error('Bitte den monatlichen Preis eintragen.', 422);
+        if ($basePrice <= 0) {
+            json_error('Bitte den monatlichen Gesamtpreis eintragen.', 422);
+        }
+        if ($discountPercent < 0 || $discountPercent >= 100) {
+            json_error('Der Rabatt muss zwischen 0 und 99,99 Prozent liegen.', 422);
         }
         if ($startDate === '' || strtotime($startDate) === false) {
             json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
@@ -227,13 +240,14 @@ if ($method === 'PATCH') {
             ]);
 
             $pdo->prepare(
-                'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date, price = :price, base_price = :base_price, vat_applicable = :vat_applicable, notes = :notes, customer_obligations_note = :customer_obligations_note WHERE id = :id'
+                'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date, price = :price, base_price = :base_price, discount_percent = :discount_percent, vat_applicable = :vat_applicable, notes = :notes, customer_obligations_note = :customer_obligations_note WHERE id = :id'
             )->execute([
                     'square_meters' => $squareMeters,
                     'interval_label' => $intervalLabel,
                     'start_date' => $startDate,
                     'price' => $price,
-                    'base_price' => $price,
+                    'base_price' => $basePrice,
+                    'discount_percent' => $discountPercent,
                     'vat_applicable' => $vatApplicable ? 1 : 0,
                     'notes' => format_service_text($serviceText),
                     'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,

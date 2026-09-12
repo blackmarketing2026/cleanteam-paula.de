@@ -85,6 +85,7 @@ function offer_row_to_json(array $row): array
         'notes' => $row['notes'],
         'customerObligationsNote' => $row['customer_obligations_note'],
         'basePrice' => $basePrice,
+        'discountPercent' => (float) ($row['discount_percent'] ?? 0),
         'priceAdjustment' => (float) ($row['price_adjustment'] ?? 0),
         'priceAdjustmentNote' => $row['price_adjustment_note'] ?? null,
         'price' => $price,
@@ -114,6 +115,7 @@ const OFFER_SELECT = 'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone 
     LEFT JOIN contracts ct ON ct.offer_id = o.id';
 
 ensure_offers_pricing_columns($pdo);
+ensure_offers_discount_column($pdo);
 ensure_offers_interval_label_length($pdo);
 ensure_offers_vat_column($pdo);
 ensure_offers_agb_snapshot_columns($pdo);
@@ -138,7 +140,9 @@ if ($method === 'POST') {
     $zip = trim((string) ($body['zip'] ?? ''));
     $city = trim((string) ($body['city'] ?? ''));
     $squareMeters = (int) ($body['squareMeters'] ?? 0);
-    $price = round((float) ($body['price'] ?? 0), 2);
+    $basePrice = round((float) ($body['basePrice'] ?? $body['price'] ?? 0), 2);
+    $discountPercent = round((float) ($body['discountPercent'] ?? 0), 2);
+    $price = offer_discounted_price($basePrice, $discountPercent);
     $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
     $startDate = trim((string) ($body['startDate'] ?? ''));
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
@@ -158,8 +162,11 @@ if ($method === 'POST') {
         json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
     }
 
-    if ($price <= 0) {
-        json_error('Bitte den monatlichen Preis eintragen.', 422);
+    if ($basePrice <= 0) {
+        json_error('Bitte den monatlichen Gesamtpreis eintragen.', 422);
+    }
+    if ($discountPercent < 0 || $discountPercent >= 100) {
+        json_error('Der Rabatt muss zwischen 0 und 99,99 Prozent liegen.', 422);
     }
 
     if ($startDate === '' || strtotime($startDate) === false) {
@@ -193,8 +200,8 @@ if ($method === 'POST') {
     $token = generate_token();
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, customer_obligations_note, base_price, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :customer_obligations_note, :base_price, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), INTERVAL :validity_hours HOUR), :validity_days2, :validity_hours2)'
+        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :customer_obligations_note, :base_price, :discount_percent, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), INTERVAL :validity_hours HOUR), :validity_days2, :validity_hours2)'
     );
     $stmt->execute([
         'id' => $id,
@@ -205,7 +212,8 @@ if ($method === 'POST') {
         'start_date' => $startDate,
         'notes' => format_service_text($serviceText),
         'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
-        'base_price' => $price,
+        'base_price' => $basePrice,
+        'discount_percent' => $discountPercent,
         'price' => $price,
         'vat_applicable' => $vatApplicable ? 1 : 0,
         'token' => $token,
@@ -232,11 +240,17 @@ if ($method === 'PUT') {
         json_error('Vertrags-ID fehlt.', 422);
     }
 
-    $stmt = $pdo->prepare('SELECT id, customer_id, is_existing_contract, sent_at FROM offers WHERE id = :id');
+    $stmt = $pdo->prepare(
+        'SELECT o.id, o.customer_id, o.is_existing_contract, o.sent_at, ct.status AS contract_status
+         FROM offers o LEFT JOIN contracts ct ON ct.offer_id = o.id WHERE o.id = :id'
+    );
     $stmt->execute(['id' => $id]);
     $existing = $stmt->fetch();
     if (!$existing) {
         json_error('Vertragsentwurf wurde nicht gefunden.', 404);
+    }
+    if (in_array((string) ($existing['contract_status'] ?? ''), ['signiert', 'bestaetigt'], true)) {
+        json_error('Eine bereits unterschriebene Auftragsbestätigung kann nicht mehr geändert werden.', 409);
     }
 
     $body = read_json_body();
@@ -247,7 +261,9 @@ if ($method === 'PUT') {
     $zip = trim((string) ($body['zip'] ?? ''));
     $city = trim((string) ($body['city'] ?? ''));
     $squareMeters = (int) ($body['squareMeters'] ?? 0);
-    $price = round((float) ($body['price'] ?? 0), 2);
+    $basePrice = round((float) ($body['basePrice'] ?? $body['price'] ?? 0), 2);
+    $discountPercent = round((float) ($body['discountPercent'] ?? 0), 2);
+    $price = offer_discounted_price($basePrice, $discountPercent);
     $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
     $startDate = trim((string) ($body['startDate'] ?? ''));
     $serviceText = trim((string) ($body['serviceText'] ?? ''));
@@ -269,8 +285,11 @@ if ($method === 'PUT') {
         || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
         json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
     }
-    if ($price <= 0) {
-        json_error('Bitte den monatlichen Preis eintragen.', 422);
+    if ($basePrice <= 0) {
+        json_error('Bitte den monatlichen Gesamtpreis eintragen.', 422);
+    }
+    if ($discountPercent < 0 || $discountPercent >= 100) {
+        json_error('Der Rabatt muss zwischen 0 und 99,99 Prozent liegen.', 422);
     }
     if (!$isExistingContract && ($startDate === '' || strtotime($startDate) === false)) {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
@@ -305,7 +324,7 @@ if ($method === 'PUT') {
         $pdo->prepare(
             'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
                 original_start_date = :original_start_date,
-                price = :price, base_price = :base_price, vat_applicable = :vat_applicable, notes = :notes,
+                price = :price, base_price = :base_price, discount_percent = :discount_percent, vat_applicable = :vat_applicable, notes = :notes,
                 customer_obligations_note = :customer_obligations_note,
                 validity_days = :validity_days, validity_hours = :validity_hours,
                 expires_at = CASE WHEN is_existing_contract = 1 THEN expires_at ELSE DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) END WHERE id = :id'
@@ -315,7 +334,8 @@ if ($method === 'PUT') {
             'start_date' => $isExistingContract ? null : $startDate,
             'original_start_date' => $originalStartDate,
             'price' => $price,
-            'base_price' => $price,
+            'base_price' => $basePrice,
+            'discount_percent' => $discountPercent,
             'vat_applicable' => $vatApplicable ? 1 : 0,
             'notes' => format_service_text($serviceText),
             'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,

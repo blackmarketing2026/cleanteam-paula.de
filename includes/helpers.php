@@ -129,6 +129,19 @@ function invalidate_offer_generated_documents(PDO $pdo, string $offerId): void
     }
 }
 
+function ensure_offers_discount_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'discount_percent'");
+    if (!$stmt->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD COLUMN discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0 AFTER base_price');
+    }
+}
+
+function offer_discounted_price(float $basePrice, float $discountPercent): float
+{
+    return round($basePrice * (1 - ($discountPercent / 100)), 2);
+}
+
 function ensure_quote_workflow_columns(PDO $pdo): void
 {
     $columns = [

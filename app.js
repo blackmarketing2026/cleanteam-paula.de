@@ -56,6 +56,11 @@ const els = {
   offerReviewPanel: document.querySelector("#offer-review-panel"),
   offerForm: document.querySelector("#offer-form"),
   existingOfferForm: document.querySelector("#existing-offer-form"),
+  existingOfferPrice: document.querySelector("#existing-offer-price"),
+  existingOfferDiscount: document.querySelector("#existing-offer-discount"),
+  existingOfferBasePricePreview: document.querySelector("#existing-offer-base-price-preview"),
+  existingOfferDiscountAmountPreview: document.querySelector("#existing-offer-discount-amount-preview"),
+  existingOfferFinalPricePreview: document.querySelector("#existing-offer-final-price-preview"),
   offerCustomerName: document.querySelector("#offer-customer-name"),
   offerContactPerson: document.querySelector("#offer-contact-person"),
   offerEmail: document.querySelector("#offer-email"),
@@ -65,6 +70,10 @@ const els = {
   offerSquareMeters: document.querySelector("#offer-square-meters"),
   offerInterval: document.querySelector("#offer-interval"),
   offerPrice: document.querySelector("#offer-price"),
+  offerDiscount: document.querySelector("#offer-discount"),
+  offerBasePricePreview: document.querySelector("#offer-base-price-preview"),
+  offerDiscountAmountPreview: document.querySelector("#offer-discount-amount-preview"),
+  offerFinalPricePreview: document.querySelector("#offer-final-price-preview"),
   offerStartDate: document.querySelector("#offer-start-date"),
   offerValidityDays: document.querySelector("#offer-validity-days"),
   offerValidityHours: document.querySelector("#offer-validity-hours"),
@@ -177,6 +186,10 @@ const els = {
   contractCorrectionSquareMeters: document.querySelector("#contract-correction-square-meters"),
   contractCorrectionInterval: document.querySelector("#contract-correction-interval"),
   contractCorrectionPrice: document.querySelector("#contract-correction-price"),
+  contractCorrectionDiscount: document.querySelector("#contract-correction-discount"),
+  contractCorrectionBasePricePreview: document.querySelector("#contract-correction-base-price-preview"),
+  contractCorrectionDiscountAmountPreview: document.querySelector("#contract-correction-discount-amount-preview"),
+  contractCorrectionFinalPricePreview: document.querySelector("#contract-correction-final-price-preview"),
   contractCorrectionStartDate: document.querySelector("#contract-correction-start-date"),
   contractCorrectionVat: document.querySelector("#contract-correction-vat"),
   contractCorrectionServiceText: document.querySelector("#contract-correction-service-text"),
@@ -194,6 +207,10 @@ const els = {
   offerEditSquareMeters: document.querySelector("#offer-edit-square-meters"),
   offerEditInterval: document.querySelector("#offer-edit-interval"),
   offerEditPrice: document.querySelector("#offer-edit-price"),
+  offerEditDiscount: document.querySelector("#offer-edit-discount"),
+  offerEditBasePricePreview: document.querySelector("#offer-edit-base-price-preview"),
+  offerEditDiscountAmountPreview: document.querySelector("#offer-edit-discount-amount-preview"),
+  offerEditFinalPricePreview: document.querySelector("#offer-edit-final-price-preview"),
   offerEditStartDate: document.querySelector("#offer-edit-start-date"),
   offerEditStartDateField: document.querySelector("#offer-edit-start-date-field"),
   offerEditOriginalStartFields: document.querySelector("#offer-edit-original-start-fields"),
@@ -693,6 +710,25 @@ function optionSelected(value, currentValue) {
 
 function numericValue(value) {
   return Math.max(0, Number(value) || 0);
+}
+
+function discountPricing(basePriceValue, discountPercentValue) {
+  const basePrice = Math.max(0, Number(basePriceValue) || 0);
+  const discountPercent = Math.max(0, Number(discountPercentValue) || 0);
+  const finalPrice = Math.round((basePrice * (1 - discountPercent / 100)) * 100) / 100;
+  const discountAmount = Math.round((basePrice - finalPrice) * 100) / 100;
+  return { basePrice, discountPercent, discountAmount, finalPrice };
+}
+
+function updateDiscountPricePreview(priceInput, discountInput, baseOutput, discountOutput, finalOutput) {
+  const pricing = discountPricing(priceInput.value, discountInput.value);
+  baseOutput.textContent = formatCurrency(pricing.basePrice);
+  discountOutput.textContent = pricing.discountPercent > 0 ? `- ${formatCurrency(pricing.discountAmount)}` : formatCurrency(0);
+  finalOutput.textContent = formatCurrency(pricing.finalPrice);
+}
+
+function validDiscountPercent(value) {
+  return Number.isFinite(value) && value >= 0 && value < 100;
 }
 
 function normalizeCleaningType(value) {
@@ -1527,6 +1563,13 @@ function renderContractRow(contract) {
 function resetOfferIntake() {
   els.offerForm.reset();
   els.offerReviewForm.reset();
+  updateDiscountPricePreview(
+    els.offerPrice,
+    els.offerDiscount,
+    els.offerBasePricePreview,
+    els.offerDiscountAmountPreview,
+    els.offerFinalPricePreview,
+  );
   els.offerIntakePanel.hidden = false;
   els.offerReviewPanel.hidden = true;
 }
@@ -1535,6 +1578,19 @@ async function handleExistingOfferSubmit(event) {
   event.preventDefault();
   const value = (id) => document.querySelector(id).value.trim();
   const serviceText = value("#existing-offer-service-text");
+  const basePrice = Number(value("#existing-offer-price"));
+  const discountPercent = Number(value("#existing-offer-discount") || 0);
+
+  if (!Number.isFinite(basePrice) || basePrice <= 0) {
+    showToast("Bitte den monatlichen Gesamtpreis eintragen.");
+    document.querySelector("#existing-offer-price").focus();
+    return;
+  }
+  if (!validDiscountPercent(discountPercent)) {
+    showToast("Der Rabatt muss zwischen 0 und 99,99 Prozent liegen.");
+    document.querySelector("#existing-offer-discount").focus();
+    return;
+  }
 
   try {
     const formatted = await apiPost("api/format-text.php", { text: serviceText });
@@ -1547,7 +1603,8 @@ async function handleExistingOfferSubmit(event) {
       city: value("#existing-offer-city"),
       squareMeters: Number(value("#existing-offer-square-meters")) || 0,
       interval: value("#existing-offer-interval"),
-      price: Number(value("#existing-offer-price")),
+      basePrice,
+      discountPercent,
       vatApplicable: value("#existing-offer-vat") === "yes",
       originalStartMonth: Number(value("#existing-offer-start-month")),
       originalStartYear: Number(value("#existing-offer-start-year")),
@@ -1555,6 +1612,13 @@ async function handleExistingOfferSubmit(event) {
       customerObligationsNote: value("#existing-offer-obligations-text"),
     });
     els.existingOfferForm.reset();
+    updateDiscountPricePreview(
+      els.existingOfferPrice,
+      els.existingOfferDiscount,
+      els.existingOfferBasePricePreview,
+      els.existingOfferDiscountAmountPreview,
+      els.existingOfferFinalPricePreview,
+    );
     await loadAll();
     switchView("offers-saved");
     const offer = getOffer(result.id);
@@ -1578,7 +1642,9 @@ async function handleOfferSubmit(event) {
   const city = els.offerCity.value.trim();
   const squareMeters = Number(els.offerSquareMeters.value) || 0;
   const interval = els.offerInterval.value;
-  const price = Number(els.offerPrice.value);
+  const basePrice = Number(els.offerPrice.value);
+  const discountPercent = Number(els.offerDiscount.value || 0);
+  const pricing = discountPricing(basePrice, discountPercent);
   const startDate = els.offerStartDate.value;
   const validityDays = Number(els.offerValidityDays.value);
   const validityHours = Number(els.offerValidityHours.value);
@@ -1627,9 +1693,15 @@ async function handleOfferSubmit(event) {
     return;
   }
 
-  if (!Number.isFinite(price) || price <= 0) {
-    showToast("Bitte den monatlichen Preis eintragen.");
+  if (!Number.isFinite(basePrice) || basePrice <= 0) {
+    showToast("Bitte den monatlichen Gesamtpreis eintragen.");
     els.offerPrice.focus();
+    return;
+  }
+
+  if (!validDiscountPercent(discountPercent)) {
+    showToast("Der Rabatt muss zwischen 0 und 99,99 Prozent liegen.");
+    els.offerDiscount.focus();
     return;
   }
 
@@ -1662,7 +1734,7 @@ async function handleOfferSubmit(event) {
         <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
         <span>${escapeHtml(email)}</span>
         <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)}${squareMeters > 0 ? ` · ${squareMeters} m²` : ""} · ${escapeHtml(interval)}</span>
-        <span>${formatCurrency(price)} netto monatlich · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."} · Link gültig ${formatValidityDuration(validityDays, validityHours)}</span>
+        <span>${formatCurrency(pricing.basePrice)} Gesamtpreis${discountPercent > 0 ? ` · ${escapeHtml(String(discountPercent).replace(".", ","))} % Rabatt · ${formatCurrency(pricing.finalPrice)} nach Rabatt` : ""} · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."} · Link gültig ${formatValidityDuration(validityDays, validityHours)}</span>
       </div>
     `;
     els.offerIntakePanel.hidden = true;
@@ -1685,7 +1757,8 @@ async function handleOfferReviewSubmit(event) {
     city: els.offerCity.value.trim(),
     squareMeters: Number(els.offerSquareMeters.value) || 0,
     interval: els.offerInterval.value,
-    price: Number(els.offerPrice.value),
+    basePrice: Number(els.offerPrice.value),
+    discountPercent: Number(els.offerDiscount.value || 0),
     vatApplicable: els.offerVat.value === "yes",
     startDate: els.offerStartDate.value,
     validityDays: Number(els.offerValidityDays.value),
@@ -1923,7 +1996,15 @@ function openContractCorrectionModal(id) {
   els.contractCorrectionSquareMeters.value = contract.offer.squareMeters || "";
   ensureSelectHasValue(els.contractCorrectionInterval, contract.offer.interval);
   els.contractCorrectionInterval.value = contract.offer.interval;
-  els.contractCorrectionPrice.value = contract.offer.price;
+  els.contractCorrectionPrice.value = contract.offer.basePrice ?? contract.offer.price;
+  els.contractCorrectionDiscount.value = contract.offer.discountPercent ?? 0;
+  updateDiscountPricePreview(
+    els.contractCorrectionPrice,
+    els.contractCorrectionDiscount,
+    els.contractCorrectionBasePricePreview,
+    els.contractCorrectionDiscountAmountPreview,
+    els.contractCorrectionFinalPricePreview,
+  );
   els.contractCorrectionVat.value = contract.offer.vatApplicable === false ? "no" : "yes";
   els.contractCorrectionStartDate.value = contract.offer.startDate || "";
   els.contractCorrectionServiceText.value = contract.offer.notes || "";
@@ -1953,12 +2034,24 @@ async function handleContractCorrectionSubmit(event) {
     city: els.contractCorrectionCity.value.trim(),
     squareMeters: Number(els.contractCorrectionSquareMeters.value) || 0,
     interval,
-    price: Number(els.contractCorrectionPrice.value),
+    basePrice: Number(els.contractCorrectionPrice.value),
+    discountPercent: Number(els.contractCorrectionDiscount.value || 0),
     vatApplicable: els.contractCorrectionVat.value === "yes",
     startDate: els.contractCorrectionStartDate.value,
     serviceText: els.contractCorrectionServiceText.value.trim(),
     customerObligationsNote: els.contractCorrectionObligationsText.value.trim(),
   };
+
+  if (!Number.isFinite(payload.basePrice) || payload.basePrice <= 0) {
+    showToast("Bitte den monatlichen Gesamtpreis eintragen.");
+    els.contractCorrectionPrice.focus();
+    return;
+  }
+  if (!validDiscountPercent(payload.discountPercent)) {
+    showToast("Der Rabatt muss zwischen 0 und 99,99 Prozent liegen.");
+    els.contractCorrectionDiscount.focus();
+    return;
+  }
 
   if (!payload.startDate) {
     showToast("Bitte den Beginn der Dienstleistung eintragen.");
@@ -1993,7 +2086,15 @@ function openOfferEditModal(id) {
   els.offerEditSquareMeters.value = offer.squareMeters || "";
   ensureSelectHasValue(els.offerEditInterval, offer.interval);
   els.offerEditInterval.value = offer.interval;
-  els.offerEditPrice.value = offer.price;
+  els.offerEditPrice.value = offer.basePrice ?? offer.price;
+  els.offerEditDiscount.value = offer.discountPercent ?? 0;
+  updateDiscountPricePreview(
+    els.offerEditPrice,
+    els.offerEditDiscount,
+    els.offerEditBasePricePreview,
+    els.offerEditDiscountAmountPreview,
+    els.offerEditFinalPricePreview,
+  );
   els.offerEditVat.value = offer.vatApplicable === false ? "no" : "yes";
   els.offerEditStartDate.value = offer.startDate || "";
   els.offerEditModal.dataset.existingContract = offer.isExistingContract ? "true" : "false";
@@ -2049,7 +2150,8 @@ async function handleOfferEditSubmit(event) {
     city: els.offerEditCity.value.trim(),
     squareMeters: Number(els.offerEditSquareMeters.value) || 0,
     interval,
-    price: Number(els.offerEditPrice.value),
+    basePrice: Number(els.offerEditPrice.value),
+    discountPercent: Number(els.offerEditDiscount.value || 0),
     vatApplicable: els.offerEditVat.value === "yes",
     startDate: els.offerEditStartDate.value,
     validityDays,
@@ -2059,6 +2161,17 @@ async function handleOfferEditSubmit(event) {
     originalStartMonth: Number(els.offerEditOriginalStartMonth.value),
     originalStartYear: Number(els.offerEditOriginalStartYear.value),
   };
+
+  if (!Number.isFinite(payload.basePrice) || payload.basePrice <= 0) {
+    showToast("Bitte den monatlichen Gesamtpreis eintragen.");
+    els.offerEditPrice.focus();
+    return;
+  }
+  if (!validDiscountPercent(payload.discountPercent)) {
+    showToast("Der Rabatt muss zwischen 0 und 99,99 Prozent liegen.");
+    els.offerEditDiscount.focus();
+    return;
+  }
 
   if (!isExistingContract && !payload.startDate) {
     showToast("Bitte den Beginn der Dienstleistung eintragen.");
@@ -3379,6 +3492,17 @@ function bindEvents() {
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
   els.existingOfferForm.addEventListener("submit", handleExistingOfferSubmit);
+  [
+    [els.offerPrice, els.offerDiscount, els.offerBasePricePreview, els.offerDiscountAmountPreview, els.offerFinalPricePreview],
+    [els.existingOfferPrice, els.existingOfferDiscount, els.existingOfferBasePricePreview, els.existingOfferDiscountAmountPreview, els.existingOfferFinalPricePreview],
+    [els.contractCorrectionPrice, els.contractCorrectionDiscount, els.contractCorrectionBasePricePreview, els.contractCorrectionDiscountAmountPreview, els.contractCorrectionFinalPricePreview],
+    [els.offerEditPrice, els.offerEditDiscount, els.offerEditBasePricePreview, els.offerEditDiscountAmountPreview, els.offerEditFinalPricePreview],
+  ].forEach(([priceInput, discountInput, baseOutput, discountOutput, finalOutput]) => {
+    const update = () => updateDiscountPricePreview(priceInput, discountInput, baseOutput, discountOutput, finalOutput);
+    priceInput.addEventListener("input", update);
+    discountInput.addEventListener("input", update);
+    update();
+  });
   els.offerReviewForm.addEventListener("submit", handleOfferReviewSubmit);
   els.offerReviewBack.addEventListener("click", () => {
     els.offerIntakePanel.hidden = false;

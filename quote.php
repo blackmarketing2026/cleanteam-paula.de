@@ -4,7 +4,7 @@ require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/quote_pdf.php';
 
-$pdo = db(); ensure_quote_workflow_columns($pdo);
+$pdo = db(); ensure_offers_discount_column($pdo); ensure_quote_workflow_columns($pdo);
 $offerId = trim((string) ($_GET['offerId'] ?? '')); $token = trim((string) ($_GET['token'] ?? ''));
 if ($token === '' && current_user_id() === null) { header('Location: /index.html'); exit; }
 if ($offerId === '' && $token === '') { http_response_code(400); echo 'Kostenvoranschlag fehlt.'; exit; }

@@ -48,8 +48,19 @@ function render_quote_pdf(array $offer, array $customer): string
     $pdf->quoteIntroduction();
 
     $net = (float) $offer['price'];
-    $pdf->quoteServiceTable((string) ($offer['notes'] ?? ''), (string) ($offer['interval_label'] ?? ''), contract_format_money($net));
-    $pdf->quoteNetTotal(contract_format_money($net));
+    $baseNet = isset($offer['base_price']) && (float) $offer['base_price'] > 0
+        ? (float) $offer['base_price']
+        : $net;
+    $discountPercent = (float) ($offer['discount_percent'] ?? 0);
+    $discountAmount = max(0.0, round($baseNet - $net, 2));
+    $tablePrice = $discountPercent > 0 ? $baseNet : $net;
+    $pdf->quoteServiceTable((string) ($offer['notes'] ?? ''), (string) ($offer['interval_label'] ?? ''), contract_format_money($tablePrice));
+    $pdf->quoteNetTotal(
+        contract_format_money($net),
+        $discountPercent > 0 ? contract_format_money($baseNet) : null,
+        $discountPercent,
+        $discountPercent > 0 ? contract_format_money($discountAmount) : null
+    );
     $pdf->quoteRemarkAndManagement(
         'Alle genannten Preise verstehen sich als Nettobeträge zuzüglich Mehrwertsteuer. Die Bereitstellung von Reinigungsmitteln sowie die Anfahrtskosten sind im Preis enthalten. Toilettenpapier, Seife und spezielle Müllsäcke werden vom Auftraggeber zur Verfügung gestellt.',
         'Thomas Mündlein'

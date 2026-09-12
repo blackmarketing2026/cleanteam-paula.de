@@ -408,7 +408,15 @@ function updateSignerControls() {
 
 function renderQuoteDetails() {
   const offer = state.offer;
-  els.quoteDetails.innerHTML = `<div class="public-service-card"><h3>Leistung und Preis</h3>${renderFactGrid([["Leistungsbeginn", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"], ["Reinigungsintervall", offer.interval], ["Monatlicher Preis netto", formatCurrency(offer.price)]])}</div><div class="public-service-card"><h3>Leistungsbeschreibung</h3><p class="public-service-text">${escapeHtml(offer.notes || "")}</p></div>`;
+  const priceFacts = [["Leistungsbeginn", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"], ["Reinigungsintervall", offer.interval]];
+  if (Number(offer.discountPercent) > 0) {
+    priceFacts.push(["Gesamtpreis netto", formatCurrency(offer.basePrice)]);
+    priceFacts.push([`Rabatt (${String(offer.discountPercent).replace(".", ",")} %)`, `- ${formatCurrency(offer.basePrice - offer.price)}`]);
+    priceFacts.push(["Preis nach Rabatt netto", formatCurrency(offer.price)]);
+  } else {
+    priceFacts.push(["Monatlicher Preis netto", formatCurrency(offer.price)]);
+  }
+  els.quoteDetails.innerHTML = `<div class="public-service-card"><h3>Leistung und Preis</h3>${renderFactGrid(priceFacts)}</div><div class="public-service-card"><h3>Leistungsbeschreibung</h3><p class="public-service-text">${escapeHtml(offer.notes || "")}</p></div>`;
   els.quoteAcceptanceCheck.checked = false;
   els.acceptQuote.disabled = true;
 }
