@@ -243,7 +243,9 @@ function routeToState(data) {
   const contract = data.contract;
 
   if (!data.offer.isExistingContract) {
-    if (data.offer.quoteStatus !== "accepted") {
+    if (data.offer.quoteStatus === "sent") {
+      document.title = "CleanTeam - Ihr Kostenvoranschlag";
+      document.querySelector("#public-document-label").textContent = "Ihr persönlicher Kostenvoranschlag";
       renderQuoteDetails();
       showScreen("kostenvoranschlag");
       return;
@@ -303,7 +305,7 @@ function routeToState(data) {
 async function loadOffer() {
   try {
     const data = await api("offer");
-    if (!data.offer.isExistingContract && !data.offer.expired) {
+    if (!data.offer.isExistingContract && ["sent", "accepted"].includes(data.offer.quoteStatus) && !data.offer.expired) {
       routeToState(data);
       return;
     }

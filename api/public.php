@@ -144,6 +144,7 @@ function public_state(array $offer, ?array $contract): array
             'priceAdjustment' => (float) ($offer['price_adjustment'] ?? 0),
             'priceAdjustmentNote' => $offer['price_adjustment_note'] ?? null,
             'price' => (float) $offer['price'],
+            'vatApplicable' => !isset($offer['vat_applicable']) || (int) $offer['vat_applicable'] === 1,
             'expiresAt' => to_iso($offer['expires_at']),
             'expired' => offer_is_expired($offer),
             'quoteStatus' => $offer['quote_status'] ?? 'entwurf',
@@ -196,9 +197,6 @@ ensure_contracts_authorized_signer_columns($pdo);
 ensure_quote_workflow_columns($pdo);
 
 if ($method === 'GET' && $action === 'offer') {
-    if (empty($offer['is_existing_contract']) && ($offer['quote_status'] ?? 'entwurf') === 'entwurf') {
-        json_error('Dieser Kostenvoranschlag wurde noch nicht versendet.', 404);
-    }
     $contract = load_contract($pdo, $offer['id']);
     if ($contract !== null && normalize_current_step((string) $contract['current_step']) === 'signatur'
         && $contract['current_step'] !== 'signatur') {

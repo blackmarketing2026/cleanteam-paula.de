@@ -23,6 +23,7 @@ const state = {
   currentView: "overview",
   selectedContractId: null,
   pendingSendOfferId: null,
+  pendingSendKind: "contract",
   offerSendRecipientMode: "customer",
   contractFilters: {
     search: "",
@@ -1223,8 +1224,8 @@ function renderOfferCard(offer) {
   const sentLabel = offer.isExistingContract
     ? "Manuelle Weitergabe per Link"
     : offer.sentAt
-    ? `Kostenvoranschlag gesendet am ${formatDate(offer.sentAt)}`
-    : "Kostenvoranschlag noch nicht versendet";
+    ? `${offer.quoteStatus === "sent" ? "Kostenvoranschlag" : "Vertrag"} gesendet am ${formatDate(offer.sentAt)}`
+    : "Noch nicht per E-Mail versendet";
 
   const contractActions = offer.contractId
     ? `
@@ -1263,14 +1264,15 @@ function renderOfferCard(offer) {
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
-        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `quote.php?offerId=${encodeURIComponent(offer.id)}`}" target="_blank" rel="noopener">
+        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `contract.php?offerId=${encodeURIComponent(offer.id)}`}" target="_blank" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
-          Kostenvoranschlag Vorschau
+          Vertrag Vorschau
         </a>
-        <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
+        ${offer.quoteStatus === "sent" ? "" : `<button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
-          Kostenvoranschlag senden
-        </button>
+          Vertrag verschicken
+        </button>`}
+        ${offer.isExistingContract || offer.contractId || offer.quoteStatus !== "entwurf" ? "" : `<button class="secondary-button" type="button" data-action="send-quote" data-id="${escapeHtml(offer.id)}"><i data-lucide="file-output" aria-hidden="true"></i>Kostenvoranschlag verschicken</button>`}
         ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="link" aria-hidden="true"></i>
@@ -1720,7 +1722,7 @@ function setOfferSendRecipientMode(mode) {
   }
 }
 
-function openOfferSendModal(id) {
+function openOfferSendModal(id, kind = "contract") {
   const offer = getOffer(id);
   if (!offer) {
     showToast("Vertrag wurde nicht gefunden.");
@@ -1732,6 +1734,8 @@ function openOfferSendModal(id) {
   const customerLabel = offer.customer?.name || "Kunde";
 
   state.pendingSendOfferId = id;
+  state.pendingSendKind = kind;
+  document.querySelector("#offer-send-modal-heading").textContent = kind === "quote" ? "Kostenvoranschlag verschicken" : "Vertrag verschicken";
   els.offerSendModal.dataset.offerId = id;
   els.offerSendModal.dataset.suggestedEmail = suggestedEmail;
   els.offerSendCustomer.textContent = hasSuggestedEmail
@@ -1753,6 +1757,7 @@ function openOfferSendModal(id) {
 function closeOfferSendModal() {
   els.offerSendModal.hidden = true;
   state.pendingSendOfferId = null;
+  state.pendingSendKind = "contract";
   els.offerSendModal.dataset.offerId = "";
   els.offerSendModal.dataset.suggestedEmail = "";
   els.offerSendForm.reset();
@@ -1762,13 +1767,15 @@ function closeOfferSendModal() {
 
 async function sendOffer(id, toEmail) {
   try {
-    const result = await apiPost(`api/send-offer.php?id=${encodeURIComponent(id)}`, { toEmail });
+    const isQuote = state.pendingSendKind === "quote";
+    const endpoint = isQuote ? "api/send-quote.php" : "api/send-offer.php";
+    const result = await apiPost(`${endpoint}?id=${encodeURIComponent(id)}`, { toEmail });
     try {
       await loadAll();
     } catch (error) {
       // Der Versand war erfolgreich; ein spätes Listen-Refresh darf den Nutzer nicht irritieren.
     }
-    showToast(`Kostenvoranschlag wurde an ${result.sentTo || toEmail} versendet.`);
+    showToast(`${isQuote ? "Kostenvoranschlag" : "Vertrag"} wurde an ${result.sentTo || toEmail} versendet.`);
     return true;
   } catch (error) {
     showToast(error.message);
@@ -3266,7 +3273,11 @@ function handleRecordAction(event) {
   const { action, id } = button.dataset;
 
   if (action === "send-offer") {
-    openOfferSendModal(id);
+    openOfferSendModal(id, "contract");
+  }
+
+  if (action === "send-quote") {
+    openOfferSendModal(id, "quote");
   }
 
   if (action === "copy-offer-link") {

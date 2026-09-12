@@ -238,7 +238,7 @@ if ($method === 'PUT') {
     }
 
     ensure_quote_workflow_columns($pdo);
-    if (empty($existing['is_existing_contract']) && (($existing['quote_status'] ?? 'entwurf') !== 'entwurf' || !empty($existing['sent_at']))) {
+    if (empty($existing['is_existing_contract']) && ($existing['quote_status'] ?? 'entwurf') !== 'entwurf') {
         json_error('Ein bereits versendeter Kostenvoranschlag kann nicht mehr geändert werden. Bitte einen neuen Entwurf anlegen.', 409);
     }
 

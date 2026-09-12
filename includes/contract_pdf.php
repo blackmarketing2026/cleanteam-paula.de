@@ -761,6 +761,12 @@ function contract_pdf_filename(string $customerName, string $audience): string
 {
     $safeName = trim(preg_replace('/[\/\\\\:*?"<>|]+/', '-', $customerName) ?: '') ?: 'Kunde';
 
+    return 'cleanteam Vertrag - ' . $safeName . '.pdf';
+}
+
+function order_confirmation_pdf_filename(string $customerName): string
+{
+    $safeName = trim(preg_replace('/[\/\\\\:*?"<>|]+/', '-', $customerName) ?: '') ?: 'Kunde';
     return 'CleanTeam Auftragsbestätigung - ' . $safeName . '.pdf';
 }
 
@@ -1015,7 +1021,9 @@ function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool 
     } else {
         $content = render_contract_pdf($context['offer'], $context['customer'], $context['contract'], ['audience' => $audience]);
     }
-    $filename = contract_pdf_filename(contract_customer_display_name($context['customer']), $audience);
+    $filename = ($context['contract']['status'] ?? '') === 'bestaetigt'
+        ? order_confirmation_pdf_filename(contract_customer_display_name($context['customer']))
+        : contract_pdf_filename(contract_customer_display_name($context['customer']), $audience);
     $sha256 = hash('sha256', $content);
     $id = generate_id('contract-document');
 

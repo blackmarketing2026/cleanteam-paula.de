@@ -9,7 +9,7 @@ header('Cache-Control: no-store, private');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>CleanTeam - Ihr Kostenvoranschlag</title>
+    <title>CleanTeam - Ihr Vertrag</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -25,7 +25,7 @@ header('Cache-Control: no-store, private');
           <div class="brand-mark" aria-hidden="true"><span>CT</span></div>
           <div>
             <strong>CleanTeam</strong>
-            <span>Ihr persönlicher Kostenvoranschlag</span>
+            <span id="public-document-label">Ihr persönlicher Vertrag</span>
           </div>
         </div>
         <div id="link-validity" class="link-validity" hidden></div>
