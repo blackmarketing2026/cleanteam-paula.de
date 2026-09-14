@@ -185,11 +185,10 @@ final class SimplePdfDocument
     {
         $this->ensureSpace(250.0);
         $top = $this->y;
-        $this->imageFileAt($logoPath ?? '', self::MARGIN_LEFT + 18.0, $top + 4.0, 190.0, 116.0);
+        $this->imageFileAt($logoPath ?? '', self::MARGIN_LEFT + 18.0, $top + 4.0, 150.0, 92.0);
 
         $this->write("0.06 0.18 0.45 rg\n");
-        $this->line('Group', 224.0, $top - 99.0, 17.0, 'F1');
-        $this->line('GEBÄUDEREINIGUNG - MEISTERBETRIEB', self::MARGIN_LEFT + 18.0, $top - 121.0, 7.5, 'F2');
+        $this->line('GEBÄUDEREINIGUNG - MEISTERBETRIEB', self::MARGIN_LEFT + 18.0, $top - 101.0, 7.5, 'F2');
         $this->write("0 0 0 rg\n");
 
         $rightX = 360.0;

@@ -23,9 +23,13 @@ $customer = ['name' => 'Test GmbH', 'salutation' => '', 'contact_last_name' => '
     'address' => 'Musterstraße', 'house_number' => '8', 'zip' => '55555', 'city' => 'Musterstadt'];
 
 $pdf = render_quote_pdf($offer, $customer);
+$contractPdfSource = file_get_contents(__DIR__ . '/../includes/contract_pdf.php');
 if (!str_starts_with($pdf, '%PDF-1.4') || strlen($pdf) < 3000) throw new RuntimeException('KVA-PDF wurde nicht korrekt erzeugt.');
 if (!str_contains($pdf, '8680') || !str_contains($pdf, 'K2130')) throw new RuntimeException('Die festen KVA- und Kundennummern fehlen.');
 if (quote_pdf_logo_path() === null || !str_contains($pdf, '/Subtype /Image')) throw new RuntimeException('CleanTeam-Logo wurde nicht in das KVA-PDF eingebettet.');
+if (!str_contains($contractPdfSource, '150.0, 92.0') || str_contains($contractPdfSource, "\$this->line('Group'")) {
+    throw new RuntimeException('Das KVA-Logo ist nicht verkleinert oder der separate Group-Schriftzug ist noch vorhanden.');
+}
 if (substr_count($pdf, '/Subtype /Image') !== 1 || !str_contains($pdf, 'Thomas')) throw new RuntimeException('Das KVA muss das Logo und Thomas als Geschäftsführer ohne Unterschriftsbild enthalten.');
 if (!str_contains($pdf, '0.25 0.56 0.10 rg') || !str_contains($pdf, '0.06 0.18 0.45 rg')) throw new RuntimeException('CleanTeam-Farben fehlen im KVA-PDF.');
 foreach (['Hinweis: Dieser Kostenvoranschlag', 'Bitte nehmen Sie den Kostenvoranschlag'] as $omittedSentence) {
