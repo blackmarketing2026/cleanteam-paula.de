@@ -21,8 +21,14 @@ foreach ([
     assert_contract_list_source_contains($appJs, $needle, $message);
 }
 
-foreach (['pending-contract-list', 'signed-contract-list', 'Wartet auf Unterschrift', 'Signierte Verträge'] as $needle) {
-    assert_contract_list_source_contains($indexHtml, $needle, 'Die gruppierte Vertragsansicht ist unvollständig.');
+assert_contract_list_source_contains(
+    $indexHtml,
+    '<tbody id="contract-list"></tbody>',
+    'Die Vertragsansicht ist nicht als durchgehende Tabelle aufgebaut.'
+);
+
+foreach (['renderContractGroup("Wartet auf Unterschrift"', 'renderContractGroup("Signierte Verträge"'] as $needle) {
+    assert_contract_list_source_contains($appJs, $needle, 'Die Tabellenabschnitte sind unvollständig.');
 }
 
 assert_contract_list_source_contains(

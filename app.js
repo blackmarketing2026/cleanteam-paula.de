@@ -95,10 +95,6 @@ const els = {
   offerSendCancel: document.querySelector("#offer-send-cancel"),
   offerSendSubmit: document.querySelector("#offer-send-submit"),
   contractList: document.querySelector("#contract-list"),
-  pendingContractList: document.querySelector("#pending-contract-list"),
-  signedContractList: document.querySelector("#signed-contract-list"),
-  pendingContractCount: document.querySelector("#pending-contract-count"),
-  signedContractCount: document.querySelector("#signed-contract-count"),
   contractSearch: document.querySelector("#contract-search"),
   contractPeriodFilter: document.querySelector("#contract-period-filter"),
   contractSort: document.querySelector("#contract-sort"),
@@ -1348,31 +1344,37 @@ function renderContracts() {
   const pendingContracts = contracts.filter((contract) => !isSignedContract(contract));
   const signedContracts = contracts.filter(isSignedContract);
   els.contractCount.textContent = `${contracts.length} von ${state.data.contracts.length} Verträgen angezeigt.`;
-  els.pendingContractCount.textContent = pendingContracts.length;
-  els.signedContractCount.textContent = signedContracts.length;
   els.contractSearch.value = state.contractFilters.search;
   els.contractPeriodFilter.value = state.contractFilters.period;
   els.contractSort.value = state.contractFilters.sortKey;
   els.contractSortDirection.value = state.contractFilters.sortDirection;
 
-  els.pendingContractList.innerHTML = renderContractGroupRows(
-    pendingContracts,
-    "Keine offenen Verträge für diese Auswahl gefunden.",
-  );
-  els.signedContractList.innerHTML = renderContractGroupRows(
-    signedContracts,
-    "Keine signierten Verträge für diese Auswahl gefunden.",
-  );
+  els.contractList.innerHTML = [
+    renderContractGroup("Wartet auf Unterschrift", pendingContracts),
+    renderContractGroup("Signierte Verträge", signedContracts),
+  ].join("");
 }
 
 function isSignedContract(contract) {
   return ["signiert", "bestaetigt"].includes(contract.status);
 }
 
-function renderContractGroupRows(contracts, emptyMessage) {
-  return contracts.length
+function renderContractGroup(label, contracts) {
+  const rows = contracts.length
     ? contracts.map(renderContractRow).join("")
-    : `<tr><td colspan="8" class="table-empty">${emptyMessage}</td></tr>`;
+    : `<tr><td colspan="8" class="table-empty compact-empty">Keine Verträge in diesem Abschnitt.</td></tr>`;
+
+  return `
+    <tr class="contract-group-row">
+      <td colspan="8">
+        <div class="contract-group-label">
+          <span>${escapeHtml(label)}</span>
+          <span class="contract-group-count">${contracts.length}</span>
+        </div>
+      </td>
+    </tr>
+    ${rows}
+  `;
 }
 
 function filteredContracts() {

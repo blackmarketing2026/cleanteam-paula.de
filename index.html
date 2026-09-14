@@ -481,60 +481,22 @@
                 </label>
               </div>
             </div>
-            <div id="contract-list" class="contract-groups">
-              <section class="contract-group" aria-labelledby="pending-contracts-heading">
-                <div class="contract-group-heading">
-                  <div>
-                    <h5 id="pending-contracts-heading">Wartet auf Unterschrift</h5>
-                    <p class="muted">Verträge, deren Prozess noch beim Kunden läuft.</p>
-                  </div>
-                  <span id="pending-contract-count" class="badge warning">0</span>
-                </div>
-                <div class="table-wrap">
-                  <table class="contract-table">
-                    <thead>
-                      <tr>
-                        <th>Art</th>
-                        <th>Name</th>
-                        <th>Geschäftsführer/Inhaber</th>
-                        <th>Datum</th>
-                        <th>Signatur</th>
-                        <th>Status</th>
-                        <th>Dokumente</th>
-                        <th>Zustellung</th>
-                      </tr>
-                    </thead>
-                    <tbody id="pending-contract-list"></tbody>
-                  </table>
-                </div>
-              </section>
-
-              <section class="contract-group" aria-labelledby="signed-contracts-heading">
-                <div class="contract-group-heading">
-                  <div>
-                    <h5 id="signed-contracts-heading">Signierte Verträge</h5>
-                    <p class="muted">Verträge mit abgeschlossener Unterschrift.</p>
-                  </div>
-                  <span id="signed-contract-count" class="badge success">0</span>
-                </div>
-                <div class="table-wrap">
-                  <table class="contract-table">
-                    <thead>
-                      <tr>
-                        <th>Art</th>
-                        <th>Name</th>
-                        <th>Geschäftsführer/Inhaber</th>
-                        <th>Datum</th>
-                        <th>Signatur</th>
-                        <th>Status</th>
-                        <th>Dokumente</th>
-                        <th>Zustellung</th>
-                      </tr>
-                    </thead>
-                    <tbody id="signed-contract-list"></tbody>
-                  </table>
-                </div>
-              </section>
+            <div class="table-wrap">
+              <table class="contract-table">
+                <thead>
+                  <tr>
+                    <th>Art</th>
+                    <th>Name</th>
+                    <th>Geschäftsführer/Inhaber</th>
+                    <th>Datum</th>
+                    <th>Signatur</th>
+                    <th>Status</th>
+                    <th>Dokumente</th>
+                    <th>Zustellung</th>
+                  </tr>
+                </thead>
+                <tbody id="contract-list"></tbody>
+              </table>
             </div>
           </section>
         </section>
