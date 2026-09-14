@@ -1,5 +1,5 @@
 const CONTRACT_STATUS_LABELS = {
-  entwurf: "Wartet auf Unterschrift",
+  entwurf: "Warte auf Unterschrift vom Kunden",
   daten_abgelehnt: "Rückfrage: Daten prüfen",
   intervall_abgelehnt: "Rückfrage: Intervall prüfen",
   datenschutz_abgelehnt: "Rückfrage: Datenschutz",
@@ -1350,7 +1350,7 @@ function renderContracts() {
   els.contractSortDirection.value = state.contractFilters.sortDirection;
 
   els.contractList.innerHTML = [
-    renderContractGroup("Wartet auf Unterschrift", pendingContracts),
+    renderContractGroup("Warte auf Unterschrift vom Kunden", pendingContracts),
     renderContractGroup("Signierte Verträge", signedContracts),
   ].join("");
 }

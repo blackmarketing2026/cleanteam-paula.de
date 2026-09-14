@@ -13,7 +13,7 @@ $contractsApi = file_get_contents(__DIR__ . '/../api/contracts.php');
 $offersApi = file_get_contents(__DIR__ . '/../api/offers.php');
 
 foreach ([
-    'entwurf: "Wartet auf Unterschrift"' => 'Der offene Vertragsstatus wurde nicht umbenannt.',
+    'entwurf: "Warte auf Unterschrift vom Kunden"' => 'Der offene Vertragsstatus wurde nicht umbenannt.',
     'pendingContracts = contracts.filter' => 'Offene Verträge werden nicht separat gruppiert.',
     'signedContracts = contracts.filter' => 'Signierte Verträge werden nicht separat gruppiert.',
     'contract.status === "entwurf"' => 'Die Löschaktion wird für offene Verträge nicht ausgeblendet.',
@@ -27,7 +27,7 @@ assert_contract_list_source_contains(
     'Die Vertragsansicht ist nicht als durchgehende Tabelle aufgebaut.'
 );
 
-foreach (['renderContractGroup("Wartet auf Unterschrift"', 'renderContractGroup("Signierte Verträge"'] as $needle) {
+foreach (['renderContractGroup("Warte auf Unterschrift vom Kunden"', 'renderContractGroup("Signierte Verträge"'] as $needle) {
     assert_contract_list_source_contains($appJs, $needle, 'Die Tabellenabschnitte sind unvollständig.');
 }
 
