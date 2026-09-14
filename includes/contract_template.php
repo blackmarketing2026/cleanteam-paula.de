@@ -560,7 +560,8 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $values['logo'] = $forPdf ? '' : contract_logo_html();
     $values['zusaetzliche_pflichten_items'] = render_additional_obligations_items_html($customerObligationsNote);
     $values['zusatzhinweis_block'] = $offerNotes !== ''
-        ? '<p>' . ($forPdf ? '' : '<strong>Zusatzhinweis:</strong> ') . h($offerNotes) . '</p>'
+        ? ($forPdf ? '' : '<p><strong>Zusatzhinweis:</strong></p>')
+            . '<pre class="service-description">' . h($offerNotes) . '</pre>'
         : '';
     $values['ust_block'] = $vatApplicable
         ? 'Die monatliche Pauschalvergütung beträgt <strong>' . contract_format_money($netPrice) . ' netto</strong> zuzüglich der jeweils geltenden Umsatzsteuer'
@@ -597,6 +598,7 @@ function contract_document_style_css(): string
   ul, ol { padding-left: 20px; }
   ul li { margin-bottom: 4px; }
   ol.obligations li { margin-bottom: 14px; }
+  .service-description { margin: 0 0 14px; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
   .sign-block { display: flex; gap: 40px; margin-top: 40px; }
   .sign-col { flex: 1; }
   .sign-placeholder { color: #999; font-style: italic; }

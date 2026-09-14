@@ -52,8 +52,6 @@ const els = {
   sidebar: document.querySelector(".sidebar"),
   bottomMenuButton: document.querySelector("#bottom-menu-button"),
   mobileBackdrop: document.querySelector("#mobile-backdrop"),
-  offerIntakePanel: document.querySelector("#offer-intake-panel"),
-  offerReviewPanel: document.querySelector("#offer-review-panel"),
   offerForm: document.querySelector("#offer-form"),
   existingOfferForm: document.querySelector("#existing-offer-form"),
   existingOfferPrice: document.querySelector("#existing-offer-price"),
@@ -80,11 +78,6 @@ const els = {
   offerVat: document.querySelector("#offer-vat"),
   offerServiceText: document.querySelector("#offer-service-text"),
   offerObligationsText: document.querySelector("#offer-obligations-text"),
-  offerReviewForm: document.querySelector("#offer-review-form"),
-  offerReviewSummary: document.querySelector("#offer-review-summary"),
-  offerServiceTextCorrected: document.querySelector("#offer-service-text-corrected"),
-  offerObligationsTextCorrected: document.querySelector("#offer-obligations-text-corrected"),
-  offerReviewBack: document.querySelector("#offer-review-back"),
   offerList: document.querySelector("#offer-list"),
   offerSendModal: document.querySelector("#offer-send-modal"),
   offerSendForm: document.querySelector("#offer-send-form"),
@@ -1591,7 +1584,6 @@ function renderContractRow(contract) {
 
 function resetOfferIntake() {
   els.offerForm.reset();
-  els.offerReviewForm.reset();
   updateDiscountPricePreview(
     els.offerPrice,
     els.offerDiscount,
@@ -1599,14 +1591,13 @@ function resetOfferIntake() {
     els.offerDiscountAmountPreview,
     els.offerFinalPricePreview,
   );
-  els.offerIntakePanel.hidden = false;
-  els.offerReviewPanel.hidden = true;
 }
 
 async function handleExistingOfferSubmit(event) {
   event.preventDefault();
   const value = (id) => document.querySelector(id).value.trim();
-  const serviceText = value("#existing-offer-service-text");
+  const serviceText = document.querySelector("#existing-offer-service-text").value.replace(/\r\n?/g, "\n");
+  const obligationsText = document.querySelector("#existing-offer-obligations-text").value.replace(/\r\n?/g, "\n");
   const basePrice = Number(value("#existing-offer-price"));
   const discountPercent = Number(value("#existing-offer-discount") || 0);
 
@@ -1622,7 +1613,6 @@ async function handleExistingOfferSubmit(event) {
   }
 
   try {
-    const formatted = await apiPost("api/format-text.php", { text: serviceText });
     const result = await apiPost("api/existing-offers.php", {
       customerName: value("#existing-offer-customer-name"),
       contactPerson: value("#existing-offer-contact-person"),
@@ -1637,8 +1627,8 @@ async function handleExistingOfferSubmit(event) {
       vatApplicable: value("#existing-offer-vat") === "yes",
       originalStartMonth: Number(value("#existing-offer-start-month")),
       originalStartYear: Number(value("#existing-offer-start-year")),
-      serviceText: formatted.text,
-      customerObligationsNote: value("#existing-offer-obligations-text"),
+      serviceText,
+      customerObligationsNote: obligationsText,
     });
     els.existingOfferForm.reset();
     updateDiscountPricePreview(
@@ -1673,12 +1663,11 @@ async function handleOfferSubmit(event) {
   const interval = els.offerInterval.value;
   const basePrice = Number(els.offerPrice.value);
   const discountPercent = Number(els.offerDiscount.value || 0);
-  const pricing = discountPricing(basePrice, discountPercent);
   const startDate = els.offerStartDate.value;
   const validityDays = Number(els.offerValidityDays.value);
   const validityHours = Number(els.offerValidityHours.value);
-  const serviceText = els.offerServiceText.value.trim();
-  const obligationsText = els.offerObligationsText.value.trim();
+  const serviceText = els.offerServiceText.value.replace(/\r\n?/g, "\n");
+  const obligationsText = els.offerObligationsText.value.replace(/\r\n?/g, "\n");
 
   if (!customerName) {
     showToast("Bitte den Namen des Kunden eintragen.");
@@ -1740,7 +1729,7 @@ async function handleOfferSubmit(event) {
     return;
   }
 
-  if (!serviceText) {
+  if (!serviceText.trim()) {
     showToast("Bitte die Leistungsbeschreibung eintragen.");
     els.offerServiceText.focus();
     return;
@@ -1754,46 +1743,23 @@ async function handleOfferSubmit(event) {
     return;
   }
 
-  try {
-    const { text } = await apiPost("api/format-text.php", { text: serviceText });
-    els.offerServiceTextCorrected.value = text;
-    els.offerObligationsTextCorrected.value = obligationsText;
-    els.offerReviewSummary.innerHTML = `
-      <div class="record-lines">
-        <span><strong>${escapeHtml(customerName)}</strong> · ${escapeHtml(contactPerson)}</span>
-        <span>${escapeHtml(email)}</span>
-        <span>${escapeHtml(address)}, ${escapeHtml(zip)} ${escapeHtml(city)}${squareMeters > 0 ? ` · ${squareMeters} m²` : ""} · ${escapeHtml(interval)}</span>
-        <span>${formatCurrency(pricing.basePrice)} Gesamtpreis${discountPercent > 0 ? ` · ${escapeHtml(String(discountPercent).replace(".", ","))} % Rabatt · ${formatCurrency(pricing.finalPrice)} nach Rabatt` : ""} · Beginn ${formatDate(startDate)} · ${els.offerVat.value === "yes" ? "zzgl. USt." : "ohne USt."} · Link gültig ${formatValidityDuration(validityDays, validityHours)}</span>
-      </div>
-    `;
-    els.offerIntakePanel.hidden = true;
-    els.offerReviewPanel.hidden = false;
-    els.offerServiceTextCorrected.focus();
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-async function handleOfferReviewSubmit(event) {
-  event.preventDefault();
-
   const payload = {
-    customerName: els.offerCustomerName.value.trim(),
-    contactPerson: els.offerContactPerson.value.trim(),
-    email: els.offerEmail.value.trim(),
-    address: els.offerAddress.value.trim(),
-    zip: els.offerZip.value.trim(),
-    city: els.offerCity.value.trim(),
-    squareMeters: Number(els.offerSquareMeters.value) || 0,
-    interval: els.offerInterval.value,
-    basePrice: Number(els.offerPrice.value),
-    discountPercent: Number(els.offerDiscount.value || 0),
+    customerName,
+    contactPerson,
+    email,
+    address,
+    zip,
+    city,
+    squareMeters,
+    interval,
+    basePrice,
+    discountPercent,
     vatApplicable: els.offerVat.value === "yes",
-    startDate: els.offerStartDate.value,
-    validityDays: Number(els.offerValidityDays.value),
-    validityHours: Number(els.offerValidityHours.value),
-    serviceText: els.offerServiceTextCorrected.value.trim(),
-    customerObligationsNote: els.offerObligationsTextCorrected.value.trim(),
+    startDate,
+    validityDays,
+    validityHours,
+    serviceText,
+    customerObligationsNote: obligationsText,
   };
 
   try {
@@ -2067,8 +2033,8 @@ async function handleContractCorrectionSubmit(event) {
     discountPercent: Number(els.contractCorrectionDiscount.value || 0),
     vatApplicable: els.contractCorrectionVat.value === "yes",
     startDate: els.contractCorrectionStartDate.value,
-    serviceText: els.contractCorrectionServiceText.value.trim(),
-    customerObligationsNote: els.contractCorrectionObligationsText.value.trim(),
+    serviceText: els.contractCorrectionServiceText.value.replace(/\r\n?/g, "\n"),
+    customerObligationsNote: els.contractCorrectionObligationsText.value.replace(/\r\n?/g, "\n"),
   };
 
   if (!Number.isFinite(payload.basePrice) || payload.basePrice <= 0) {
@@ -2185,8 +2151,8 @@ async function handleOfferEditSubmit(event) {
     startDate: els.offerEditStartDate.value,
     validityDays,
     validityHours,
-    serviceText: els.offerEditServiceText.value.trim(),
-    customerObligationsNote: els.offerEditObligationsText.value.trim(),
+    serviceText: els.offerEditServiceText.value.replace(/\r\n?/g, "\n"),
+    customerObligationsNote: els.offerEditObligationsText.value.replace(/\r\n?/g, "\n"),
     originalStartMonth: Number(els.offerEditOriginalStartMonth.value),
     originalStartYear: Number(els.offerEditOriginalStartYear.value),
   };
@@ -3535,12 +3501,6 @@ function bindEvents() {
     priceInput.addEventListener("input", update);
     discountInput.addEventListener("input", update);
     update();
-  });
-  els.offerReviewForm.addEventListener("submit", handleOfferReviewSubmit);
-  els.offerReviewBack.addEventListener("click", () => {
-    els.offerIntakePanel.hidden = false;
-    els.offerReviewPanel.hidden = true;
-    els.offerCustomerName.focus();
   });
   els.offerList.addEventListener("click", handleRecordAction);
   els.contractList.addEventListener("click", handleRecordAction);

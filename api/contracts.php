@@ -201,8 +201,8 @@ if ($method === 'PATCH') {
         $price = offer_discounted_price($basePrice, $discountPercent);
         $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
         $startDate = trim((string) ($body['startDate'] ?? ''));
-        $serviceText = trim((string) ($body['serviceText'] ?? ''));
-        $customerObligationsNote = trim((string) ($body['customerObligationsNote'] ?? ''));
+        $serviceText = str_replace(["\r\n", "\r"], "\n", (string) ($body['serviceText'] ?? ''));
+        $customerObligationsNote = str_replace(["\r\n", "\r"], "\n", (string) ($body['customerObligationsNote'] ?? ''));
 
         $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
         if (!in_array($interval, $allowedIntervals, true)) {
@@ -211,7 +211,7 @@ if ($method === 'PATCH') {
         $intervalLabel = $interval;
 
         if ($customerName === '' || $contactPerson === '' || $email === ''
-            || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
+            || $address === '' || $zip === '' || $city === '' || trim($serviceText) === '') {
             json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
         }
         if ($basePrice <= 0) {
@@ -249,8 +249,8 @@ if ($method === 'PATCH') {
                     'base_price' => $basePrice,
                     'discount_percent' => $discountPercent,
                     'vat_applicable' => $vatApplicable ? 1 : 0,
-                    'notes' => format_service_text($serviceText),
-                    'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
+                    'notes' => $serviceText,
+                    'customer_obligations_note' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
                     'id' => $row['offer_id'],
                 ]);
             invalidate_offer_generated_documents($pdo, $row['offer_id']);

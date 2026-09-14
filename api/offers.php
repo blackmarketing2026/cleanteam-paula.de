@@ -145,8 +145,8 @@ if ($method === 'POST') {
     $price = offer_discounted_price($basePrice, $discountPercent);
     $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
     $startDate = trim((string) ($body['startDate'] ?? ''));
-    $serviceText = trim((string) ($body['serviceText'] ?? ''));
-    $customerObligationsNote = trim((string) ($body['customerObligationsNote'] ?? ''));
+    $serviceText = str_replace(["\r\n", "\r"], "\n", (string) ($body['serviceText'] ?? ''));
+    $customerObligationsNote = str_replace(["\r\n", "\r"], "\n", (string) ($body['customerObligationsNote'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
     $validityDays = (int) ($body['validityDays'] ?? 14);
     $validityHours = (int) ($body['validityHours'] ?? 0);
@@ -158,7 +158,7 @@ if ($method === 'POST') {
     $intervalLabel = $interval;
 
     if ($customerName === '' || $contactPerson === '' || $email === ''
-        || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
+        || $address === '' || $zip === '' || $city === '' || trim($serviceText) === '') {
         json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
     }
 
@@ -210,8 +210,8 @@ if ($method === 'POST') {
         'interval_label' => $intervalLabel,
         'service' => 'Individuelle Leistung',
         'start_date' => $startDate,
-        'notes' => format_service_text($serviceText),
-        'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
+        'notes' => $serviceText,
+        'customer_obligations_note' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
         'base_price' => $basePrice,
         'discount_percent' => $discountPercent,
         'price' => $price,
@@ -266,8 +266,8 @@ if ($method === 'PUT') {
     $price = offer_discounted_price($basePrice, $discountPercent);
     $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
     $startDate = trim((string) ($body['startDate'] ?? ''));
-    $serviceText = trim((string) ($body['serviceText'] ?? ''));
-    $customerObligationsNote = trim((string) ($body['customerObligationsNote'] ?? ''));
+    $serviceText = str_replace(["\r\n", "\r"], "\n", (string) ($body['serviceText'] ?? ''));
+    $customerObligationsNote = str_replace(["\r\n", "\r"], "\n", (string) ($body['customerObligationsNote'] ?? ''));
     $interval = trim((string) ($body['interval'] ?? ''));
     $validityDays = (int) ($body['validityDays'] ?? 14);
     $validityHours = (int) ($body['validityHours'] ?? 0);
@@ -282,7 +282,7 @@ if ($method === 'PUT') {
     $intervalLabel = $interval;
 
     if ($customerName === '' || $contactPerson === '' || $email === ''
-        || $address === '' || $zip === '' || $city === '' || $serviceText === '') {
+        || $address === '' || $zip === '' || $city === '' || trim($serviceText) === '') {
         json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse und Leistungsbeschreibung sind erforderlich.', 422);
     }
     if ($basePrice <= 0) {
@@ -337,8 +337,8 @@ if ($method === 'PUT') {
             'base_price' => $basePrice,
             'discount_percent' => $discountPercent,
             'vat_applicable' => $vatApplicable ? 1 : 0,
-            'notes' => format_service_text($serviceText),
-            'customer_obligations_note' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
+            'notes' => $serviceText,
+            'customer_obligations_note' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
             'validity_days' => $validityDays,
             'validity_days2' => $validityDays,
             'validity_hours' => $validityHours,

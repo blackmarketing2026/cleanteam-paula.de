@@ -228,7 +228,7 @@
         <section id="offers-new-view" class="view" aria-label="Neuer Vertrag erstellen">
           <div class="section-heading">
             <div>
-              <p class="muted">Kundendaten und Leistungsbeschreibung eintragen, Text korrigieren lassen und den Vertrag abschließen.</p>
+              <p class="muted">Kundendaten und die bereits formatierte Leistungsbeschreibung eintragen und den Vertrag direkt erstellen.</p>
             </div>
           </div>
 
@@ -340,7 +340,7 @@
               </label>
               <label class="span-2">
                 Leistungsbeschreibung *
-                <textarea id="offer-service-text" class="offer-service-editor" rows="18" required placeholder="Alle vereinbarten Leistungen als Fließtext eintragen"></textarea>
+                <textarea id="offer-service-text" class="offer-service-editor" rows="18" required placeholder="Formatierten Text hier einfügen – Zeilenfolge, Absätze und Aufzählungen bleiben erhalten"></textarea>
               </label>
               <label class="span-2">
                 Pflichten des Auftraggebers (optional)
@@ -348,38 +348,8 @@
               </label>
               <div class="form-actions span-2">
                 <button class="primary-button" type="submit">
-                  <i data-lucide="wand-2" aria-hidden="true"></i>
-                  Text korrigieren &amp; weiter
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel form-panel" id="offer-review-panel" aria-labelledby="offer-review-heading" hidden>
-            <div class="panel-header">
-              <div>
-                <h4 id="offer-review-heading">Vertrag prüfen &amp; abschließen</h4>
-                <p class="muted">Die Leistungsbeschreibung wurde korrigiert und formatiert. Bei Bedarf hier noch anpassen.</p>
-              </div>
-            </div>
-            <form id="offer-review-form" class="form-grid">
-              <div class="span-2" id="offer-review-summary"></div>
-              <label class="span-2">
-                Leistungsbeschreibung
-                <textarea id="offer-service-text-corrected" class="offer-service-editor" rows="18"></textarea>
-              </label>
-              <label class="span-2">
-                Pflichten des Auftraggebers (optional)
-                <textarea id="offer-obligations-text-corrected" class="offer-service-editor offer-obligations-editor" rows="6"></textarea>
-              </label>
-              <div class="form-actions span-2">
-                <button class="secondary-button" type="button" id="offer-review-back">
-                  <i data-lucide="arrow-left" aria-hidden="true"></i>
-                  Zurück
-                </button>
-                <button class="primary-button" type="submit">
                   <i data-lucide="file-check-2" aria-hidden="true"></i>
-                  Vertrag abschließen
+                  Vertrag erstellen
                 </button>
               </div>
             </form>

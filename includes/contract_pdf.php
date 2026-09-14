@@ -1021,6 +1021,18 @@ function contract_template_walk_pdf_nodes(SimplePdfDocument $pdf, DOMNodeList $n
             if ($items !== []) {
                 $pdf->numberedList($items);
             }
+        } elseif ($tag === 'pre' && $node instanceof DOMElement && $node->getAttribute('class') === 'service-description') {
+            foreach (preg_split('/\R/u', $node->textContent) ?: [] as $line) {
+                $line = rtrim((string) $line);
+                if ($line === '') {
+                    $pdf->spacer(6.0);
+                } else {
+                    preg_match('/^[ \t]*/', $line, $indentMatch);
+                    $leadingWhitespace = str_replace("\t", '    ', $indentMatch[0] ?? '');
+                    $indent = min(60.0, strlen($leadingWhitespace) * 3.0);
+                    $pdf->paragraph(ltrim($line), 10.5, $indent);
+                }
+            }
         } elseif ($tag === 'section' || $tag === 'div') {
             contract_template_walk_pdf_nodes($pdf, $node->childNodes);
         } else {

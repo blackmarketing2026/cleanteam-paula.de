@@ -30,11 +30,11 @@ $price = offer_discounted_price($basePrice, $discountPercent);
 $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
 $startMonth = (int) ($body['originalStartMonth'] ?? 0);
 $startYear = (int) ($body['originalStartYear'] ?? 0);
-$serviceText = trim((string) ($body['serviceText'] ?? ''));
-$customerObligationsNote = trim((string) ($body['customerObligationsNote'] ?? ''));
+$serviceText = str_replace(["\r\n", "\r"], "\n", (string) ($body['serviceText'] ?? ''));
+$customerObligationsNote = str_replace(["\r\n", "\r"], "\n", (string) ($body['customerObligationsNote'] ?? ''));
 
 if ($customerName === '' || $contactPerson === '' || $email === '' || $address === ''
-    || $zip === '' || $city === '' || $interval === '' || $serviceText === '') {
+    || $zip === '' || $city === '' || $interval === '' || trim($serviceText) === '') {
     json_error('Name, Geschäftsführer/Inhaber, E-Mail, Objektadresse, Reinigungsintervall und Leistungsbeschreibung sind erforderlich.', 422);
 }
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -71,8 +71,8 @@ try {
     )->execute([
         'id' => $id, 'customer_id' => $customerId, 'square_meters' => $squareMeters,
         'interval_label' => $interval, 'service' => 'Individuelle Leistung', 'original_start_date' => $originalStartDate,
-        'notes' => format_service_text($serviceText),
-        'obligations' => $customerObligationsNote !== '' ? format_service_text($customerObligationsNote) : null,
+        'notes' => $serviceText,
+        'obligations' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
         'base_price' => $basePrice, 'discount_percent' => $discountPercent,
         'price' => $price, 'vat' => $vatApplicable ? 1 : 0, 'token' => generate_token(),
     ]);
