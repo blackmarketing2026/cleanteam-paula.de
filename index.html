@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=discount-pricing-20260912" />
+    <link rel="stylesheet" href="styles.css?v=contract-edit-modal-20260914" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -1302,7 +1302,7 @@
           Beginn der Dienstleistung *
           <input id="offer-edit-start-date" type="date" required />
         </label>
-        <div id="offer-edit-original-start-fields" hidden>
+        <div id="offer-edit-original-start-fields" class="offer-edit-subgrid" hidden>
           <label class="modal-field">Urspr&uuml;nglicher Vertragsbeginn &ndash; Monat *
             <select id="offer-edit-original-start-month"><option value="">Bitte w&auml;hlen</option><option value="1">Januar</option><option value="2">Februar</option><option value="3">M&auml;rz</option><option value="4">April</option><option value="5">Mai</option><option value="6">Juni</option><option value="7">Juli</option><option value="8">August</option><option value="9">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Dezember</option></select>
           </label>
@@ -1310,7 +1310,7 @@
             <input id="offer-edit-original-start-year" type="number" min="1900" step="1" />
           </label>
         </div>
-        <div id="offer-edit-validity-fields">
+        <div id="offer-edit-validity-fields" class="offer-edit-subgrid">
         <label class="modal-field">
           Gültigkeitsdauer (Tage) *
           <input id="offer-edit-validity-days" type="number" min="0" step="1" required />
@@ -1353,15 +1353,15 @@
             <option value="no">Nein</option>
           </select>
         </label>
-        <label class="modal-field">
+        <label class="modal-field offer-edit-wide">
           Leistungsbeschreibung *
           <textarea id="offer-edit-service-text" class="offer-service-editor" rows="10" required></textarea>
         </label>
-        <label class="modal-field">
+        <label class="modal-field offer-edit-wide">
           Pflichten des Auftraggebers (optional)
           <textarea id="offer-edit-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6"></textarea>
         </label>
-        <div class="form-actions">
+        <div class="form-actions offer-edit-wide">
           <button id="offer-edit-cancel" class="ghost-button" type="button">Abbrechen</button>
           <button class="primary-button" type="submit">
             <i data-lucide="save" aria-hidden="true"></i>

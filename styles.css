@@ -969,6 +969,54 @@ button.compact-item.selected {
   margin: 0 0 8px;
 }
 
+#offer-edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  width: min(1040px, 100%);
+  max-width: 1040px;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  padding: 28px;
+}
+
+#offer-edit-form > h4,
+#offer-edit-form > p,
+#offer-edit-form > input[type="hidden"],
+#offer-edit-form > .modal-price-preview,
+#offer-edit-form > .offer-edit-subgrid,
+#offer-edit-form > .offer-edit-wide {
+  grid-column: 1 / -1;
+}
+
+#offer-edit-form > .modal-field {
+  min-width: 0;
+  margin: 10px 0;
+}
+
+#offer-edit-form .offer-edit-subgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+}
+
+#offer-edit-form .offer-edit-subgrid .modal-field {
+  min-width: 0;
+  margin: 10px 0;
+}
+
+#offer-edit-form .modal-price-preview {
+  margin: 14px 0 10px;
+}
+
+#offer-edit-service-text {
+  min-height: 300px;
+}
+
+#offer-edit-obligations-text {
+  min-height: 140px;
+}
+
 .modal-field {
   margin: 16px 0;
 }
@@ -2502,6 +2550,57 @@ button.compact-item.selected {
   .record-actions button,
   .record-actions a {
     flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 700px) {
+  #offer-edit-modal {
+    place-items: stretch;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
+  #offer-edit-form {
+    grid-template-columns: 1fr;
+    width: 100%;
+    max-width: none;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
+
+  #offer-edit-form > *,
+  #offer-edit-form .offer-edit-wide {
+    grid-column: 1;
+  }
+
+  #offer-edit-form .offer-edit-subgrid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  #offer-edit-form > .modal-field,
+  #offer-edit-form .offer-edit-subgrid .modal-field {
+    margin: 8px 0;
+  }
+
+  #offer-edit-service-text {
+    min-height: 220px;
+  }
+
+  #offer-edit-obligations-text {
+    min-height: 120px;
+  }
+
+  #offer-edit-form > .form-actions {
+    position: sticky;
+    bottom: -18px;
+    z-index: 2;
+    margin: 8px -14px -18px;
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: #fff;
   }
 }
 
