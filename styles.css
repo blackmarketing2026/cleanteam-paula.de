@@ -1892,6 +1892,10 @@ button.compact-item.selected {
   line-height: 1.1;
 }
 
+.price-preview.has-vat-price {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .modal-price-preview {
   margin: 14px 0 18px;
 }

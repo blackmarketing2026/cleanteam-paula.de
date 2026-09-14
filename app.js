@@ -8,6 +8,7 @@ const CONTRACT_STATUS_LABELS = {
 };
 
 const REJECTED_CONTRACT_STATUSES = ["daten_abgelehnt", "intervall_abgelehnt", "datenschutz_abgelehnt"];
+const VAT_RATE = 0.19;
 
 const state = {
   data: { customers: [], offers: [], contracts: [] },
@@ -72,6 +73,7 @@ const els = {
   offerBasePricePreview: document.querySelector("#offer-base-price-preview"),
   offerDiscountAmountPreview: document.querySelector("#offer-discount-amount-preview"),
   offerFinalPricePreview: document.querySelector("#offer-final-price-preview"),
+  offerGrossPricePreview: document.querySelector("#offer-gross-price-preview"),
   offerStartDate: document.querySelector("#offer-start-date"),
   offerValidityDays: document.querySelector("#offer-validity-days"),
   offerValidityHours: document.querySelector("#offer-validity-hours"),
@@ -204,6 +206,7 @@ const els = {
   offerEditBasePricePreview: document.querySelector("#offer-edit-base-price-preview"),
   offerEditDiscountAmountPreview: document.querySelector("#offer-edit-discount-amount-preview"),
   offerEditFinalPricePreview: document.querySelector("#offer-edit-final-price-preview"),
+  offerEditGrossPricePreview: document.querySelector("#offer-edit-gross-price-preview"),
   offerEditStartDate: document.querySelector("#offer-edit-start-date"),
   offerEditStartDateField: document.querySelector("#offer-edit-start-date-field"),
   offerEditOriginalStartFields: document.querySelector("#offer-edit-original-start-fields"),
@@ -713,11 +716,19 @@ function discountPricing(basePriceValue, discountPercentValue) {
   return { basePrice, discountPercent, discountAmount, finalPrice };
 }
 
-function updateDiscountPricePreview(priceInput, discountInput, baseOutput, discountOutput, finalOutput) {
+function updateDiscountPricePreview(priceInput, discountInput, baseOutput, discountOutput, finalOutput, vatSelect = null, grossOutput = null) {
   const pricing = discountPricing(priceInput.value, discountInput.value);
   baseOutput.textContent = formatCurrency(pricing.basePrice);
   discountOutput.textContent = pricing.discountPercent > 0 ? `- ${formatCurrency(pricing.discountAmount)}` : formatCurrency(0);
   finalOutput.textContent = formatCurrency(pricing.finalPrice);
+
+  if (vatSelect && grossOutput) {
+    const showGrossPrice = vatSelect.value === "yes";
+    const grossPrice = Math.round(pricing.finalPrice * (1 + VAT_RATE) * 100) / 100;
+    grossOutput.textContent = formatCurrency(grossPrice);
+    grossOutput.parentElement.hidden = !showGrossPrice;
+    grossOutput.closest(".price-preview").classList.toggle("has-vat-price", showGrossPrice);
+  }
 }
 
 function validDiscountPercent(value) {
@@ -1590,6 +1601,8 @@ function resetOfferIntake() {
     els.offerBasePricePreview,
     els.offerDiscountAmountPreview,
     els.offerFinalPricePreview,
+    els.offerVat,
+    els.offerGrossPricePreview,
   );
 }
 
@@ -2083,14 +2096,16 @@ function openOfferEditModal(id) {
   els.offerEditInterval.value = offer.interval;
   els.offerEditPrice.value = offer.basePrice ?? offer.price;
   els.offerEditDiscount.value = offer.discountPercent ?? 0;
+  els.offerEditVat.value = offer.vatApplicable === false ? "no" : "yes";
   updateDiscountPricePreview(
     els.offerEditPrice,
     els.offerEditDiscount,
     els.offerEditBasePricePreview,
     els.offerEditDiscountAmountPreview,
     els.offerEditFinalPricePreview,
+    els.offerEditVat,
+    els.offerEditGrossPricePreview,
   );
-  els.offerEditVat.value = offer.vatApplicable === false ? "no" : "yes";
   els.offerEditStartDate.value = offer.startDate || "";
   els.offerEditModal.dataset.existingContract = offer.isExistingContract ? "true" : "false";
   els.offerEditStartDateField.hidden = offer.isExistingContract;
@@ -3493,14 +3508,15 @@ function bindEvents() {
   els.offerForm.addEventListener("submit", handleOfferSubmit);
   els.existingOfferForm.addEventListener("submit", handleExistingOfferSubmit);
   [
-    [els.offerPrice, els.offerDiscount, els.offerBasePricePreview, els.offerDiscountAmountPreview, els.offerFinalPricePreview],
+    [els.offerPrice, els.offerDiscount, els.offerBasePricePreview, els.offerDiscountAmountPreview, els.offerFinalPricePreview, els.offerVat, els.offerGrossPricePreview],
     [els.existingOfferPrice, els.existingOfferDiscount, els.existingOfferBasePricePreview, els.existingOfferDiscountAmountPreview, els.existingOfferFinalPricePreview],
     [els.contractCorrectionPrice, els.contractCorrectionDiscount, els.contractCorrectionBasePricePreview, els.contractCorrectionDiscountAmountPreview, els.contractCorrectionFinalPricePreview],
-    [els.offerEditPrice, els.offerEditDiscount, els.offerEditBasePricePreview, els.offerEditDiscountAmountPreview, els.offerEditFinalPricePreview],
-  ].forEach(([priceInput, discountInput, baseOutput, discountOutput, finalOutput]) => {
-    const update = () => updateDiscountPricePreview(priceInput, discountInput, baseOutput, discountOutput, finalOutput);
+    [els.offerEditPrice, els.offerEditDiscount, els.offerEditBasePricePreview, els.offerEditDiscountAmountPreview, els.offerEditFinalPricePreview, els.offerEditVat, els.offerEditGrossPricePreview],
+  ].forEach(([priceInput, discountInput, baseOutput, discountOutput, finalOutput, vatSelect, grossOutput]) => {
+    const update = () => updateDiscountPricePreview(priceInput, discountInput, baseOutput, discountOutput, finalOutput, vatSelect, grossOutput);
     priceInput.addEventListener("input", update);
     discountInput.addEventListener("input", update);
+    vatSelect?.addEventListener("change", update);
     update();
   });
   els.contractSearch.addEventListener("input", () => {

@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=contract-edit-modal-20260914" />
+    <link rel="stylesheet" href="styles.css?v=vat-preview-20260914" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -292,6 +292,7 @@
                 <div><span>Gesamtpreis</span><strong id="offer-base-price-preview">0,00&nbsp;&euro;</strong></div>
                 <div><span>Rabatt</span><strong id="offer-discount-amount-preview">0,00&nbsp;&euro;</strong></div>
                 <div><span>Preis nach Rabatt</span><strong id="offer-final-price-preview">0,00&nbsp;&euro;</strong></div>
+                <div class="vat-price-preview" hidden><span>Preis nach Rabatt mit Umsatzsteuer</span><strong id="offer-gross-price-preview">0,00&nbsp;&euro;</strong></div>
               </div>
               <label>
                 Beginn der Dienstleistung *
@@ -1297,6 +1298,7 @@
           <div><span>Gesamtpreis</span><strong id="offer-edit-base-price-preview">0,00&nbsp;&euro;</strong></div>
           <div><span>Rabatt</span><strong id="offer-edit-discount-amount-preview">0,00&nbsp;&euro;</strong></div>
           <div><span>Preis nach Rabatt</span><strong id="offer-edit-final-price-preview">0,00&nbsp;&euro;</strong></div>
+          <div class="vat-price-preview" hidden><span>Preis nach Rabatt mit Umsatzsteuer</span><strong id="offer-edit-gross-price-preview">0,00&nbsp;&euro;</strong></div>
         </div>
         <label id="offer-edit-start-date-field" class="modal-field">
           Beginn der Dienstleistung *
@@ -1453,7 +1455,7 @@
     </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=contract-actions-20260914"></script>
+    <script src="app.js?v=vat-preview-20260914"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>
