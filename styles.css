@@ -725,6 +725,44 @@ button svg {
   overflow-x: auto;
 }
 
+.contract-groups {
+  display: grid;
+  gap: 28px;
+  padding: 0 16px 16px;
+}
+
+.contract-group {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.contract-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--blue-050);
+  border-bottom: 1px solid var(--line);
+}
+
+.contract-group-heading h5 {
+  margin: 0 0 3px;
+  color: var(--blue-950);
+  font-size: 16px;
+}
+
+.contract-group-heading p {
+  margin: 0;
+}
+
+.contract-group-heading .badge {
+  min-width: 32px;
+  text-align: center;
+}
+
 .offer-service-editor {
   min-height: 360px;
   font-family: "SFMono-Regular", Consolas, monospace;

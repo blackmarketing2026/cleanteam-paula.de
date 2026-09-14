@@ -1,5 +1,5 @@
 const CONTRACT_STATUS_LABELS = {
-  entwurf: "Läuft beim Kunden",
+  entwurf: "Wartet auf Unterschrift",
   daten_abgelehnt: "Rückfrage: Daten prüfen",
   intervall_abgelehnt: "Rückfrage: Intervall prüfen",
   datenschutz_abgelehnt: "Rückfrage: Datenschutz",
@@ -95,6 +95,10 @@ const els = {
   offerSendCancel: document.querySelector("#offer-send-cancel"),
   offerSendSubmit: document.querySelector("#offer-send-submit"),
   contractList: document.querySelector("#contract-list"),
+  pendingContractList: document.querySelector("#pending-contract-list"),
+  signedContractList: document.querySelector("#signed-contract-list"),
+  pendingContractCount: document.querySelector("#pending-contract-count"),
+  signedContractCount: document.querySelector("#signed-contract-count"),
   contractSearch: document.querySelector("#contract-search"),
   contractPeriodFilter: document.querySelector("#contract-period-filter"),
   contractSort: document.querySelector("#contract-sort"),
@@ -1324,10 +1328,12 @@ function renderOfferCard(offer) {
           <i data-lucide="pencil" aria-hidden="true"></i>
           Bearbeiten
         </button>
-        <button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
-          <i data-lucide="trash-2" aria-hidden="true"></i>
-          Löschen
-        </button>
+        ${offer.contractStatus === "entwurf"
+          ? ""
+          : `<button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
+              <i data-lucide="trash-2" aria-hidden="true"></i>
+              Löschen
+            </button>`}
       </div>
     </article>
   `;
@@ -1339,15 +1345,34 @@ function renderContracts() {
   }
 
   const contracts = filteredContracts();
+  const pendingContracts = contracts.filter((contract) => !isSignedContract(contract));
+  const signedContracts = contracts.filter(isSignedContract);
   els.contractCount.textContent = `${contracts.length} von ${state.data.contracts.length} Verträgen angezeigt.`;
+  els.pendingContractCount.textContent = pendingContracts.length;
+  els.signedContractCount.textContent = signedContracts.length;
   els.contractSearch.value = state.contractFilters.search;
   els.contractPeriodFilter.value = state.contractFilters.period;
   els.contractSort.value = state.contractFilters.sortKey;
   els.contractSortDirection.value = state.contractFilters.sortDirection;
 
-  els.contractList.innerHTML = contracts.length
+  els.pendingContractList.innerHTML = renderContractGroupRows(
+    pendingContracts,
+    "Keine offenen Verträge für diese Auswahl gefunden.",
+  );
+  els.signedContractList.innerHTML = renderContractGroupRows(
+    signedContracts,
+    "Keine signierten Verträge für diese Auswahl gefunden.",
+  );
+}
+
+function isSignedContract(contract) {
+  return ["signiert", "bestaetigt"].includes(contract.status);
+}
+
+function renderContractGroupRows(contracts, emptyMessage) {
+  return contracts.length
     ? contracts.map(renderContractRow).join("")
-    : `<tr><td colspan="8" class="table-empty">Keine Verträge für diese Auswahl gefunden.</td></tr>`;
+    : `<tr><td colspan="8" class="table-empty">${emptyMessage}</td></tr>`;
 }
 
 function filteredContracts() {
@@ -1549,10 +1574,12 @@ function renderContractRow(contract) {
               </button>`}
             `
             : ""}
-          <button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
-            <i data-lucide="trash-2" aria-hidden="true"></i>
-            Löschen
-          </button>
+          ${contract.status === "entwurf"
+            ? ""
+            : `<button class="ghost-button" type="button" data-action="delete-contract" data-id="${escapeHtml(contract.id)}">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                Löschen
+              </button>`}
         </div>
       </td>
       <td>${contract.isExistingContract ? '<span class="muted">Manuell per Link</span>' : renderDeliveryStatus(contract.offer)}</td>
@@ -2254,6 +2281,10 @@ async function deleteOffer(id) {
 
 async function deleteContract(id) {
   const contract = getContract(id);
+  if (contract?.status === "entwurf") {
+    showToast("Ein Vertrag, der auf die Unterschrift wartet, kann nicht gelöscht werden.");
+    return;
+  }
   const contractLabel = contract
     ? `von ${contract.customer.name}`
     : "diesen Vertrag";

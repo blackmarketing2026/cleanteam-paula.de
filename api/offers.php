@@ -364,6 +364,12 @@ if ($method === 'DELETE') {
         json_error('Vertrags-ID fehlt.', 422);
     }
 
+    $stmt = $pdo->prepare("SELECT id FROM contracts WHERE offer_id = :id AND status = 'entwurf' LIMIT 1");
+    $stmt->execute(['id' => $id]);
+    if ($stmt->fetch()) {
+        json_error('Ein Vertrag, der auf die Unterschrift wartet, kann nicht gelöscht werden.', 409);
+    }
+
     $stmt = $pdo->prepare('DELETE FROM offers WHERE id = :id');
     $stmt->execute(['id' => $id]);
     json_response(['ok' => true]);
