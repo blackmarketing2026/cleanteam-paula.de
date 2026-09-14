@@ -3488,6 +3488,7 @@ function bindEvents() {
     });
   });
   document.addEventListener("click", handleDashboardAction);
+  document.addEventListener("click", handleRecordAction);
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
   els.existingOfferForm.addEventListener("submit", handleExistingOfferSubmit);
@@ -3502,8 +3503,6 @@ function bindEvents() {
     discountInput.addEventListener("input", update);
     update();
   });
-  els.offerList.addEventListener("click", handleRecordAction);
-  els.contractList.addEventListener("click", handleRecordAction);
   els.contractSearch.addEventListener("input", () => {
     state.contractFilters.search = els.contractSearch.value;
     renderContracts();
