@@ -66,5 +66,27 @@ $placeholders = contract_template_placeholder_map([
 if ($placeholders['beginn_datum'] !== 'November 2027') {
     throw new RuntimeException('Im neuen Bestandsvertrag wird nicht das neue Inkrafttreten verwendet.');
 }
+if (!str_contains($placeholders['beginn_block'], 'Der ursprüngliche Vertrag besteht seit')
+    || !str_contains($placeholders['beginn_block'], 'April 2018')
+    || !str_contains($placeholders['beginn_block'], 'Der neue Vertrag tritt am')
+    || !str_contains($placeholders['beginn_block'], 'November 2027')) {
+    throw new RuntimeException('Der Bestandskundenvertrag nennt ursprünglichen Vertrag und neues Inkrafttreten nicht vollständig.');
+}
+if ($placeholders['ausfertigung_satz'] !== 'Beide Parteien erhalten eine Ausfertigung dieses Vertrags.') {
+    throw new RuntimeException('Der Bestandskundenvertrag wird in der Ausfertigungsklausel nicht als Vertrag bezeichnet.');
+}
 
-echo "PASS: existing contracts use one original month field and one effective month field\n";
+$templateSource = file_get_contents(__DIR__ . '/../includes/contract_template.php');
+$pdfSource = file_get_contents(__DIR__ . '/../includes/contract_pdf.php');
+$templateTitleNeedle = '$documentTitle = $isExistingContract ? \'Vertrag\' : \'Auftragsbestätigung\'';
+$pdfTitleNeedle = '$pdf->title($isExistingContract ? \'Vertrag\' : \'Auftragsbestätigung\')';
+$conditionalNameNeedle = '$isExistingContract ? \'Vertrag\' : \'Auftragsbestätigung\'';
+if (!str_contains($templateSource, $templateTitleNeedle)) {
+    throw new RuntimeException('Der HTML-Vertrag verwendet für Bestandskunden nicht den Titel Vertrag.');
+}
+if (!str_contains($pdfSource, $pdfTitleNeedle)
+    || !str_contains($pdfSource, $conditionalNameNeedle)) {
+    throw new RuntimeException('PDF-Titel oder Dateiname des Bestandskundenvertrags ist nicht als Vertrag bezeichnet.');
+}
+
+echo "PASS: existing contracts show both contract dates and use the title Vertrag\n";

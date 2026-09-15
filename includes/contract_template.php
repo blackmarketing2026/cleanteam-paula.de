@@ -385,11 +385,7 @@ function default_contract_template_html(): string
 
     return <<<HTML
 <h2>§ 1 Beginn, Rechtswahl, Vertragssprache</h2>
-<p>
-  1. Der Vertrag zur Gebäudereinigung tritt am <strong>{{beginn_datum}}</strong> in Kraft.<br>
-  2. Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss
-  aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.
-</p>
+{{beginn_block}}
 
 <h2>§ 2 Vertragsgegenstand und Objekt</h2>
 <p>
@@ -462,7 +458,7 @@ function default_contract_template_html(): string
 
 <h2>§ 9 Ausfertigungen und elektronische Dokumentation</h2>
 <p>
-  Beide Parteien erhalten eine Ausfertigung dieser Auftragsbestätigung. Bei elektronischer Unterzeichnung wird jeder
+  {{ausfertigung_satz}} Bei elektronischer Unterzeichnung wird jeder
   Partei nach Abschluss des Signaturvorgangs eine Ausfertigung zur Verfügung gestellt.
 </p>
 HTML;
@@ -518,7 +514,8 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $vatApplicable = !isset($offer['vat_applicable']) || (int) $offer['vat_applicable'] === 1;
     $vatAmount = $vatApplicable ? round($netPrice * VAT_RATE / 100, 2) : 0.0;
     $grossPrice = $vatApplicable ? round($netPrice + $vatAmount, 2) : $netPrice;
-    if (!empty($offer['is_existing_contract'])) {
+    $isExistingContract = !empty($offer['is_existing_contract']);
+    if ($isExistingContract) {
         $effectiveDate = contract_format_month_year((string) ($offer['start_date'] ?? $offer['original_start_date'] ?? $offer['created_at']));
     } else {
         $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
@@ -568,6 +565,14 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     }
 
     $values['logo'] = $forPdf ? '' : contract_logo_html();
+    $legalChoiceText = 'Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.';
+    $values['beginn_block'] = $isExistingContract
+        ? '<p>1. Der ursprüngliche Vertrag besteht seit <strong>' . h(contract_format_month_year($offer['original_start_date'] ?? null)) . '</strong>.<br>'
+            . '2. Der neue Vertrag tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>3. ' . h($legalChoiceText) . '</p>'
+        : '<p>1. Der Vertrag zur Gebäudereinigung tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>2. ' . h($legalChoiceText) . '</p>';
+    $values['ausfertigung_satz'] = $isExistingContract
+        ? 'Beide Parteien erhalten eine Ausfertigung dieses Vertrags.'
+        : 'Beide Parteien erhalten eine Ausfertigung dieser Auftragsbestätigung.';
     $values['zusaetzliche_pflichten_items'] = render_additional_obligations_items_html($customerObligationsNote);
     $values['zusatzhinweis_block'] = $offerNotes !== ''
         ? ($forPdf ? '' : '<p><strong>Zusatzhinweis:</strong></p>')
@@ -639,8 +644,11 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
         : 'ohne gesonderte Vertretungsangabe';
 
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
-    $documentTitle = 'Auftragsbestätigung';
-    $documentLead = 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:';
+    $isExistingContract = !empty($offer['is_existing_contract']);
+    $documentTitle = $isExistingContract ? 'Vertrag' : 'Auftragsbestätigung';
+    $documentLead = $isExistingContract
+        ? 'Die Parteien schließen den folgenden Vertrag zur Gebäudereinigung:'
+        : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:';
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '–';
     $signatureImage = $isSigned && !empty($contract['signature_data'])
         ? '<img src="' . h($contract['signature_data']) . '" alt="Unterschrift" style="max-height:70px;">'

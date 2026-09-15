@@ -1118,17 +1118,17 @@ function contract_pdf_context(PDO $pdo, string $contractId): ?array
     return ['contract' => $contract, 'offer' => $offer, 'customer' => $customer];
 }
 
-function contract_pdf_filename(string $customerName, string $audience): string
+function contract_pdf_filename(string $customerName, string $audience, bool $isExistingContract = false): string
 {
     $safeName = trim(preg_replace('/[\/\\\\:*?"<>|]+/', '-', $customerName) ?: '') ?: 'Kunde';
 
-    return 'CleanTeam Auftragsbestätigung - ' . $safeName . '.pdf';
+    return 'CleanTeam ' . ($isExistingContract ? 'Vertrag' : 'Auftragsbestätigung') . ' - ' . $safeName . '.pdf';
 }
 
-function order_confirmation_pdf_filename(string $customerName): string
+function order_confirmation_pdf_filename(string $customerName, bool $isExistingContract = false): string
 {
     $safeName = trim(preg_replace('/[\/\\\\:*?"<>|]+/', '-', $customerName) ?: '') ?: 'Kunde';
-    return 'CleanTeam Auftragsbestätigung - ' . $safeName . '.pdf';
+    return 'CleanTeam ' . ($isExistingContract ? 'Vertrag' : 'Auftragsbestätigung') . ' - ' . $safeName . '.pdf';
 }
 
 function normalize_contract_pdf_audience(string $audience): string
@@ -1231,6 +1231,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $createdAt = contract_format_date($offer['created_at']);
     $currentDate = contract_current_date();
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
+    $isExistingContract = !empty($offer['is_existing_contract']);
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '-';
 
     $authorized = isset($contract['authorized']) && $contract['authorized'] !== null ? (bool) $contract['authorized'] : null;
@@ -1249,7 +1250,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
     $pdf->meta('Datum: ' . $currentDate);
-    $pdf->title('Auftragsbestätigung');
+    $pdf->title($isExistingContract ? 'Vertrag' : 'Auftragsbestätigung');
     $pdf->centeredText('zwischen');
 
     $customerFullAddress = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . 'D-' . $customerZipCity, ', ');
@@ -1262,7 +1263,9 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         'Die ' . $customerName . ', ' . $customerFullAddress . ', Vertragsunterzeichnung durch: ' . $signatoryName . $authorityInline
     );
     $pdf->rightAlignedText('- im Folgenden Auftraggeber genannt -');
-    $pdf->paragraph('Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:');
+    $pdf->paragraph($isExistingContract
+        ? 'Die Parteien schließen den folgenden Vertrag zur Gebäudereinigung:'
+        : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:');
 
     $templateHtml = get_contract_template_html(db());
     $pdfPlaceholders = contract_template_placeholder_map($offer, $customer, $contract, true);
@@ -1310,8 +1313,8 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->protocolKeyValue('Kunde', $customerName);
         $pdf->protocolKeyValue('Unterzeichner', $signatoryName);
         $pdf->protocolKeyValue('Vertragsentwurf erstellt', contract_format_datetime($offer['created_at'] ?? null));
-        $pdf->protocolKeyValue('Auftragsbestätigung erstellt', contract_format_datetime($contract['created_at'] ?? null));
-        $pdf->protocolKeyValue('Auftragsbestätigung elektronisch signiert', $signedAtDisplay);
+        $pdf->protocolKeyValue($isExistingContract ? 'Vertrag erstellt' : 'Auftragsbestätigung erstellt', contract_format_datetime($contract['created_at'] ?? null));
+        $pdf->protocolKeyValue($isExistingContract ? 'Vertrag elektronisch signiert' : 'Auftragsbestätigung elektronisch signiert', $signedAtDisplay);
         $privacyAcceptedAt = $contract['privacy_accepted_at'] ?? null;
         $pdf->protocolKeyValue('Datenschutz-Zustimmung erteilt', $privacyAcceptedAt !== null ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt');
         $pdf->protocolKeyValue('Zeitpunkt der Datenschutz-Zustimmung', contract_format_datetime($privacyAcceptedAt));
@@ -1381,9 +1384,10 @@ function save_contract_pdf(PDO $pdo, string $contractId, string $audience, bool 
     } else {
         $content = render_contract_pdf($context['offer'], $context['customer'], $context['contract'], ['audience' => $audience]);
     }
+    $isExistingContract = !empty($context['offer']['is_existing_contract']);
     $filename = ($context['contract']['status'] ?? '') === 'bestaetigt'
-        ? order_confirmation_pdf_filename(contract_customer_display_name($context['customer']))
-        : contract_pdf_filename(contract_customer_display_name($context['customer']), $audience);
+        ? order_confirmation_pdf_filename(contract_customer_display_name($context['customer']), $isExistingContract)
+        : contract_pdf_filename(contract_customer_display_name($context['customer']), $audience, $isExistingContract);
     $sha256 = hash('sha256', $content);
     $id = generate_id('contract-document');
 
