@@ -51,6 +51,7 @@ const els = {
   views: document.querySelectorAll(".view"),
   viewTitle: document.querySelector("#view-title"),
   sidebar: document.querySelector(".sidebar"),
+  mobileNavigationClose: document.querySelector("#mobile-navigation-close"),
   bottomMenuButton: document.querySelector("#bottom-menu-button"),
   mobileBackdrop: document.querySelector("#mobile-backdrop"),
   offerForm: document.querySelector("#offer-form"),
@@ -561,6 +562,10 @@ function switchView(view) {
     button.classList.toggle("active", button.dataset.view === view);
   });
 
+  const hasDirectBottomDestination = Array.from(document.querySelectorAll(".app-bottom-nav [data-view]"))
+    .some((button) => button.dataset.view === view);
+  els.bottomMenuButton.classList.toggle("active", !hasDirectBottomDestination);
+
   els.views.forEach((panel) => {
     panel.classList.toggle("active-view", panel.id === `${view}-view`);
   });
@@ -618,11 +623,26 @@ function switchView(view) {
 function openMobileNav() {
   els.sidebar.classList.add("open");
   els.mobileBackdrop.hidden = false;
+  els.bottomMenuButton.setAttribute("aria-expanded", "true");
+  els.sidebar.removeAttribute("aria-hidden");
+  els.sidebar.inert = false;
+  document.body.classList.add("mobile-nav-open");
+  els.mobileNavigationClose?.focus();
 }
 
 function closeMobileNav() {
   els.sidebar.classList.remove("open");
   els.mobileBackdrop.hidden = true;
+  els.bottomMenuButton.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("mobile-nav-open");
+
+  if (window.matchMedia("(max-width: 1024px)").matches) {
+    els.sidebar.setAttribute("aria-hidden", "true");
+    els.sidebar.inert = true;
+  } else {
+    els.sidebar.removeAttribute("aria-hidden");
+    els.sidebar.inert = false;
+  }
 }
 
 async function loadAll() {
@@ -1366,7 +1386,7 @@ function isSignedContract(contract) {
 function renderContractGroup(label, contracts) {
   const rows = contracts.length
     ? contracts.map(renderContractRow).join("")
-    : `<tr><td colspan="8" class="table-empty compact-empty">Keine Verträge in diesem Abschnitt.</td></tr>`;
+    : `<tr class="contract-empty-row"><td colspan="8" class="table-empty compact-empty">Keine Verträge in diesem Abschnitt.</td></tr>`;
 
   return `
     <tr class="contract-group-row">
@@ -1556,14 +1576,14 @@ function renderContractRow(contract) {
     : "";
 
   return `
-    <tr class="${selected}">
-      <td>${contract.isExistingContract ? '<span class="badge">Bestand</span>' : ""}</td>
-      <td>${escapeHtml(contract.customer.name)}</td>
-      <td>${escapeHtml(contactName(contract.customer))}</td>
-      <td>${escapeHtml(formatDate(contract.createdAt))}</td>
-      <td>${escapeHtml(signedAt)}</td>
-      <td><span class="badge ${badgeClass}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span></td>
-      <td>
+    <tr class="contract-data-row${selected}">
+      <td data-label="Art">${contract.isExistingContract ? '<span class="badge">Bestand</span>' : '<span class="muted">Neu</span>'}</td>
+      <td data-label="Name">${escapeHtml(contract.customer.name)}</td>
+      <td data-label="Kontakt">${escapeHtml(contactName(contract.customer))}</td>
+      <td data-label="Datum">${escapeHtml(formatDate(contract.createdAt))}</td>
+      <td data-label="Signatur">${escapeHtml(signedAt)}</td>
+      <td data-label="Status"><span class="badge ${badgeClass}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span></td>
+      <td data-label="Dokumente">
         <div class="table-actions">
           ${documentActions}
           ${authorizationButton}
@@ -1588,7 +1608,7 @@ function renderContractRow(contract) {
               </button>`}
         </div>
       </td>
-      <td>${contract.isExistingContract ? '<span class="muted">Manuell per Link</span>' : renderDeliveryStatus(contract.offer)}</td>
+      <td data-label="Zustellung">${contract.isExistingContract ? '<span class="muted">Manuell per Link</span>' : renderDeliveryStatus(contract.offer)}</td>
     </tr>
   `;
 }
@@ -3496,7 +3516,18 @@ function bindEvents() {
   });
 
   els.bottomMenuButton.addEventListener("click", openMobileNav);
+  els.mobileNavigationClose?.addEventListener("click", () => {
+    closeMobileNav();
+    els.bottomMenuButton.focus();
+  });
   els.mobileBackdrop.addEventListener("click", closeMobileNav);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && els.sidebar.classList.contains("open")) {
+      closeMobileNav();
+      els.bottomMenuButton.focus();
+    }
+  });
+  window.matchMedia("(max-width: 1024px)").addEventListener("change", closeMobileNav);
   document.querySelectorAll("[data-overview-target]").forEach((button) => {
     button.addEventListener("click", () => {
       switchView(button.dataset.overviewTarget);

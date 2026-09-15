@@ -39,7 +39,7 @@
     </main>
 
     <main id="app-shell" class="app-shell" hidden>
-      <aside class="sidebar" aria-label="Hauptnavigation">
+      <aside id="mobile-navigation-drawer" class="sidebar" aria-label="Hauptnavigation">
         <div class="sidebar-brand">
           <div class="brand-mark compact" aria-hidden="true">
             <span>CT</span>
@@ -48,6 +48,9 @@
             <strong>CleanTeam</strong>
             <span>Dashboard</span>
           </div>
+          <button id="mobile-navigation-close" class="icon-button mobile-nav-close" type="button" aria-label="Menü schließen">
+            <i data-lucide="x" aria-hidden="true"></i>
+          </button>
         </div>
         <nav class="nav-list">
           <button class="nav-link active" type="button" data-view="overview">
@@ -1082,10 +1085,18 @@
           <span>Übersicht</span>
         </button>
         <button class="nav-link bottom-nav-link" type="button" data-view="offers-new">
-          <i data-lucide="file-text" aria-hidden="true"></i>
-          <span>Neuer Vertrag erstellen</span>
+          <i data-lucide="file-plus-2" aria-hidden="true"></i>
+          <span>Neu</span>
         </button>
-        <button id="bottom-menu-button" class="bottom-nav-link" type="button" aria-label="Weitere Menüpunkte">
+        <button class="nav-link bottom-nav-link" type="button" data-view="offers-saved">
+          <i data-lucide="archive" aria-hidden="true"></i>
+          <span>Entwürfe</span>
+        </button>
+        <button class="nav-link bottom-nav-link" type="button" data-view="contracts">
+          <i data-lucide="signature" aria-hidden="true"></i>
+          <span>Verträge</span>
+        </button>
+        <button id="bottom-menu-button" class="bottom-nav-link" type="button" aria-label="Weitere Menüpunkte" aria-controls="mobile-navigation-drawer" aria-expanded="false">
           <i data-lucide="menu" aria-hidden="true"></i>
           <span>Mehr</span>
         </button>

@@ -30,6 +30,7 @@
 
 html {
   min-height: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -2091,6 +2092,11 @@ button.compact-item.selected {
   color: var(--blue-950);
 }
 
+.mobile-nav-close {
+  display: none;
+  margin-left: auto;
+}
+
 .public-brand {
   display: flex;
   align-items: center;
@@ -2641,6 +2647,169 @@ button.compact-item.selected {
   h3 {
     font-size: 20px;
   }
+}
+
+/* Mobile app polish: compact navigation, overflow-safe forms and card-based tables. */
+@media (max-width: 1024px) {
+  :root { --bottom-nav-height: 72px; }
+  body.mobile-nav-open { overflow: hidden; }
+
+  .sidebar {
+    inset: 0 auto 0 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .mobile-nav-close { display: inline-flex; min-width: 44px; min-height: 44px; }
+  .workspace { padding-bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom)); }
+
+  .app-bottom-nav {
+    min-height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+    padding: 6px max(4px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(14px);
+  }
+
+  .bottom-nav-link { min-width: 0; min-height: 58px; padding: 5px 2px; font-size: 11px; }
+  .bottom-nav-link:focus-visible { outline: 3px solid rgba(19, 121, 216, 0.28); outline-offset: -3px; }
+}
+
+@media (max-width: 820px) {
+  .workspace { padding-bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom)); }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    margin: -18px -18px 20px;
+    padding: calc(14px + env(safe-area-inset-top)) 18px 12px;
+    border-bottom: 1px solid rgba(8, 50, 95, 0.1);
+    background: rgba(242, 248, 255, 0.94);
+    backdrop-filter: blur(14px);
+  }
+
+  .topbar .eyebrow { margin-bottom: 3px; }
+  .price-preview.has-vat-price { grid-template-columns: 1fr; }
+  .form-actions { flex-wrap: wrap; }
+  .form-actions button,
+  .record-actions button,
+  .record-actions a { min-height: 44px; white-space: normal; }
+  .primary-button,
+  .secondary-button,
+  .ghost-button { overflow-wrap: anywhere; }
+}
+
+@media (max-width: 700px) {
+  input, select, textarea { font-size: 16px; }
+
+  .modal-overlay {
+    place-items: end stretch;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+  }
+
+  .modal-box {
+    max-width: none;
+    max-height: calc(100vh - 8px);
+    max-height: calc(100dvh - 8px);
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+  }
+
+  .modal-box > .form-actions:last-child {
+    position: sticky;
+    bottom: calc(-20px - env(safe-area-inset-bottom));
+    z-index: 2;
+    margin: 18px -16px calc(-20px - env(safe-area-inset-bottom));
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: #fff;
+  }
+
+  .recipient-mode-row { grid-template-columns: 1fr; }
+  .link-copy-row,
+  .email-row,
+  .signer-heading,
+  .series-dialog-heading { flex-wrap: wrap; }
+  .link-copy-row button,
+  .email-row button { flex: 1 1 100%; }
+
+  .table-wrap { overflow: visible; }
+  .contract-table,
+  .contract-table tbody { display: grid; min-width: 0; gap: 12px; }
+  .contract-table thead { display: none; }
+
+  .contract-table tr.contract-data-row {
+    display: grid;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(7, 40, 78, 0.06);
+  }
+
+  .contract-table tr.contract-data-row.selected { border-color: rgba(19, 121, 216, 0.42); background: var(--blue-050); }
+  .contract-table tr.contract-data-row td {
+    display: grid;
+    grid-template-columns: minmax(86px, 0.34fr) minmax(0, 0.66fr);
+    gap: 10px;
+    align-items: start;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    overflow-wrap: anywhere;
+  }
+  .contract-table tr.contract-data-row td:last-child { border-bottom: 0; }
+  .contract-table tr.contract-data-row td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .contract-table .contract-group-row,
+  .contract-table .contract-group-row td,
+  .contract-table .contract-empty-row { display: block; }
+  .contract-table .contract-group-row td { padding: 10px 12px; border: 0; border-radius: 10px; }
+  .contract-table .table-empty { display: block; height: auto; padding: 24px 12px; border: 1px dashed var(--line); border-radius: 10px; }
+  .table-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+  .table-actions .primary-button,
+  .table-actions .secondary-button,
+  .table-actions .ghost-button { min-width: 0; min-height: 42px; white-space: normal; }
+  .delivery-status { min-width: 0; }
+}
+
+@media (max-width: 560px) {
+  .workspace { padding: 14px 12px calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom)); }
+  .topbar { margin: -14px -12px 18px; padding-right: 12px; padding-left: 12px; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .panel,
+  .metric-card { padding: 13px; }
+  .metric-card { min-height: 108px; }
+  .metric-card strong { font-size: 32px; }
+  .guide-panel { padding: 13px; }
+  .guide-step { min-height: 82px; gap: 10px; padding: 11px; }
+  .guide-step-number { width: 30px; height: 30px; }
+  .guide-step svg { width: 19px; height: 19px; }
+  .table-toolbar { display: grid; grid-template-columns: 1fr; }
+  .table-toolbar .search-field,
+  .table-toolbar .select-field { width: 100%; min-width: 0; }
+  .record-side { width: 100%; justify-items: start; text-align: left; }
+  .record-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .record-actions > * { min-width: 0; }
+  .cleaning-task-title { overflow: visible; text-overflow: clip; white-space: normal; }
+  .counter-stepper { grid-template-columns: 44px minmax(44px, 1fr) auto 44px; width: 100%; }
+  #email-series-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding: 18px 14px; }
+  .toast { right: 12px; bottom: calc(var(--bottom-nav-height) + 12px + env(safe-area-inset-bottom)); left: 12px; max-width: none; }
+}
+
+@media (max-width: 350px) {
+  .metric-grid,
+  .record-actions,
+  .table-actions { grid-template-columns: 1fr; }
+  .bottom-nav-link { font-size: 10px; }
 }
 
 @media print {
