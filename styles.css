@@ -2806,7 +2806,30 @@ button.compact-item.selected {
   .table-toolbar .select-field { width: 100%; min-width: 0; }
   .record-side { width: 100%; justify-items: start; text-align: left; }
   .record-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .record-actions > * { min-width: 0; }
+  .record-actions > * {
+    min-width: 0;
+    height: 44px;
+    max-height: 44px;
+    gap: 5px;
+    padding-right: 6px;
+    padding-left: 6px;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.08;
+  }
+  .record-actions > * > svg { width: 17px; height: 17px; }
+  .record-actions > * > span {
+    display: -webkit-box;
+    min-width: 0;
+    overflow: hidden;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+    text-align: center;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
   .cleaning-task-title { overflow: visible; text-overflow: clip; white-space: normal; }
   .counter-stepper { grid-template-columns: 44px minmax(44px, 1fr) auto 44px; width: 100%; }
   #email-series-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding: 18px 14px; }

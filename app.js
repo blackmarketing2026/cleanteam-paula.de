@@ -1291,7 +1291,7 @@ function renderOfferCard(offer) {
     ? `
       <button class="secondary-button" type="button" data-action="open-contract" data-id="${escapeHtml(offer.contractId)}">
         <i data-lucide="signature" aria-hidden="true"></i>
-        Vertrag ansehen
+        <span>Vertrag ansehen</span>
       </button>
     `
     : "";
@@ -1300,7 +1300,7 @@ function renderOfferCard(offer) {
     : `
       <button class="secondary-button" type="button" data-action="open-offer-contract-link" data-id="${escapeHtml(offer.id)}">
         <i data-lucide="signature" aria-hidden="true"></i>
-        ${offer.isExistingContract ? "Vertrag ansehen" : "Neuen Vertrag erstellen"}
+        <span>${offer.isExistingContract ? "Vertrag ansehen" : "Neuen Vertrag erstellen"}</span>
       </button>
     `;
   return `
@@ -1326,33 +1326,33 @@ function renderOfferCard(offer) {
       <div class="record-actions">
         <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `contract.php?offerId=${encodeURIComponent(offer.id)}&preview=1`}" target="_blank" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
-          Vertrag Vorschau
+          <span>Vertrag Vorschau</span>
         </a>
         <button class="primary-button" type="button" data-action="send-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="send" aria-hidden="true"></i>
-          Vertrag verschicken
+          <span>Vertrag verschicken</span>
         </button>
-        <a class="secondary-button" href="quote.php?offerId=${encodeURIComponent(offer.id)}&v=cleanteam-3" target="_blank" rel="noopener"><i data-lucide="receipt-text" aria-hidden="true"></i>Kostenvoranschlag ansehen</a>
-        <button class="secondary-button" type="button" data-action="send-quote" data-id="${escapeHtml(offer.id)}"><i data-lucide="file-output" aria-hidden="true"></i>Kostenvoranschlag verschicken</button>
+        <a class="secondary-button" href="quote.php?offerId=${encodeURIComponent(offer.id)}&v=cleanteam-3" target="_blank" rel="noopener"><i data-lucide="receipt-text" aria-hidden="true"></i><span>Kostenvoranschlag ansehen</span></a>
+        <button class="secondary-button" type="button" data-action="send-quote" data-id="${escapeHtml(offer.id)}"><i data-lucide="file-output" aria-hidden="true"></i><span>Kostenvoranschlag verschicken</span></button>
         ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="link" aria-hidden="true"></i>
-          Link kopieren
+          <span>Link kopieren</span>
         </button>
         <button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="mail" aria-hidden="true"></i>
-          E-Mail-Vorlage
+          <span>E-Mail-Vorlage</span>
         </button>
         ${contractActions}
         <button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="pencil" aria-hidden="true"></i>
-          Bearbeiten
+          <span>Bearbeiten</span>
         </button>
         ${offer.contractStatus === "entwurf"
           ? ""
-          : `<button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
+            : `<button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
               <i data-lucide="trash-2" aria-hidden="true"></i>
-              Löschen
+              <span>Löschen</span>
             </button>`}
       </div>
     </article>

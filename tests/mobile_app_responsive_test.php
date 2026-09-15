@@ -4,7 +4,7 @@ $index = file_get_contents(__DIR__ . '/../index.html');
 $styles = file_get_contents(__DIR__ . '/../styles.css');
 $app = file_get_contents(__DIR__ . '/../app.js');
 
-foreach (['data-view="overview"', 'data-view="offers-new"', 'data-view="offers-saved"', 'data-view="contracts"', 'id="bottom-menu-button"', 'mobile-app-20260915-2'] as $needle) {
+foreach (['data-view="overview"', 'data-view="offers-new"', 'data-view="offers-saved"', 'data-view="contracts"', 'id="bottom-menu-button"', 'mobile-actions-20260915'] as $needle) {
     if (!str_contains($index, $needle)) {
         throw new RuntimeException('Mobiles Navigationsziel fehlt: ' . $needle);
     }
@@ -25,6 +25,18 @@ foreach (['contract-data-row', 'data-label="Status"', 'data-label="Dokumente"', 
 foreach (['body.mobile-nav-open', 'height: 100dvh', '.contract-table tr.contract-data-row td::before', 'font-size: 16px', '@media (max-width: 350px)'] as $needle) {
     if (!str_contains($styles, $needle)) {
         throw new RuntimeException('Mobile Schutz- oder Layoutregel fehlt: ' . $needle);
+    }
+}
+
+foreach (['height: 44px', 'max-height: 44px', '-webkit-line-clamp: 2', 'overflow-wrap: normal', 'hyphens: none'] as $needle) {
+    if (!str_contains($styles, $needle)) {
+        throw new RuntimeException('Konstante zweizeilige Mobile-Aktionsbuttons fehlen: ' . $needle);
+    }
+}
+
+foreach (['<span>Kostenvoranschlag ansehen</span>', '<span>Kostenvoranschlag verschicken</span>', '<span>Vertrag verschicken</span>'] as $needle) {
+    if (!str_contains($app, $needle)) {
+        throw new RuntimeException('Beschriftung für begrenzten Button-Umbruch fehlt: ' . $needle);
     }
 }
 
