@@ -2769,6 +2769,14 @@ button.compact-item.selected {
     font-weight: 800;
     text-transform: uppercase;
   }
+  .contract-table tr.contract-data-row .badge {
+    width: fit-content;
+    max-width: 100%;
+    height: auto;
+    padding: 6px 10px;
+    line-height: 1.25;
+    white-space: normal;
+  }
   .contract-table .contract-group-row,
   .contract-table .contract-group-row td,
   .contract-table .contract-empty-row { display: block; }
