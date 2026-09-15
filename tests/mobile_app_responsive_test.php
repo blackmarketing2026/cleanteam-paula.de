@@ -4,7 +4,7 @@ $index = file_get_contents(__DIR__ . '/../index.html');
 $styles = file_get_contents(__DIR__ . '/../styles.css');
 $app = file_get_contents(__DIR__ . '/../app.js');
 
-foreach (['data-view="overview"', 'data-view="offers-new"', 'data-view="offers-saved"', 'data-view="contracts"', 'id="bottom-menu-button"', 'mobile-actions-20260915'] as $needle) {
+foreach (['data-view="overview"', 'data-view="offers-new"', 'data-view="offers-saved"', 'data-view="contracts"', 'id="bottom-menu-button"', 'mobile-actions-20260915-2'] as $needle) {
     if (!str_contains($index, $needle)) {
         throw new RuntimeException('Mobiles Navigationsziel fehlt: ' . $needle);
     }
@@ -28,7 +28,7 @@ foreach (['body.mobile-nav-open', 'height: 100dvh', '.contract-table tr.contract
     }
 }
 
-foreach (['height: 44px', 'max-height: 44px', '-webkit-line-clamp: 2', 'overflow-wrap: normal', 'hyphens: none'] as $needle) {
+foreach (['height: 44px', 'max-height: 44px', '-webkit-line-clamp: 2', 'overflow-wrap: anywhere', 'max-width: calc(100% - 17px)', 'hyphens: none'] as $needle) {
     if (!str_contains($styles, $needle)) {
         throw new RuntimeException('Konstante zweizeilige Mobile-Aktionsbuttons fehlen: ' . $needle);
     }

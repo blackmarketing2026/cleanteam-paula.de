@@ -2810,19 +2810,21 @@ button.compact-item.selected {
     min-width: 0;
     height: 44px;
     max-height: 44px;
-    gap: 5px;
-    padding-right: 6px;
-    padding-left: 6px;
+    gap: 3px;
+    padding-right: 4px;
+    padding-left: 4px;
     overflow: hidden;
-    font-size: 11px;
+    font-size: 10.5px;
     line-height: 1.08;
   }
-  .record-actions > * > svg { width: 17px; height: 17px; }
+  .record-actions > * > svg { width: 14px; height: 14px; }
   .record-actions > * > span {
     display: -webkit-box;
+    flex: 1 1 auto;
     min-width: 0;
+    max-width: calc(100% - 17px);
     overflow: hidden;
-    overflow-wrap: normal;
+    overflow-wrap: anywhere;
     word-break: normal;
     hyphens: none;
     text-align: center;
