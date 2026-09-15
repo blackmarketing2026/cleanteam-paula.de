@@ -28,8 +28,13 @@ $basePrice = round((float) ($body['basePrice'] ?? $body['price'] ?? 0), 2);
 $discountPercent = round((float) ($body['discountPercent'] ?? 0), 2);
 $price = offer_discounted_price($basePrice, $discountPercent);
 $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
-$startMonth = (int) ($body['originalStartMonth'] ?? 0);
-$startYear = (int) ($body['originalStartYear'] ?? 0);
+$originalStartInput = trim((string) ($body['originalStartDate'] ?? ''));
+$effectiveStartInput = trim((string) ($body['startDate'] ?? ''));
+$legacyStartMonth = (int) ($body['originalStartMonth'] ?? 0);
+$legacyStartYear = (int) ($body['originalStartYear'] ?? 0);
+if ($originalStartInput === '' && $legacyStartMonth > 0 && $legacyStartYear > 0) {
+    $originalStartInput = sprintf('%04d-%02d', $legacyStartYear, $legacyStartMonth);
+}
 $serviceText = str_replace(["\r\n", "\r"], "\n", (string) ($body['serviceText'] ?? ''));
 $customerObligationsNote = str_replace(["\r\n", "\r"], "\n", (string) ($body['customerObligationsNote'] ?? ''));
 
@@ -46,11 +51,16 @@ if ($basePrice <= 0) {
 if ($discountPercent < 0 || $discountPercent >= 100) {
     json_error('Der Rabatt muss zwischen 0 und 99,99 Prozent liegen.', 422);
 }
+$originalStartDate = offer_month_start_date($originalStartInput);
+$effectiveStartDate = offer_month_start_date($effectiveStartInput);
 $currentYear = (int) gmdate('Y');
-if ($startMonth < 1 || $startMonth > 12 || $startYear < 1900 || $startYear > $currentYear) {
+if ($originalStartDate === null || (int) substr($originalStartDate, 0, 4) < 1900
+    || (int) substr($originalStartDate, 0, 4) > $currentYear) {
     json_error('Bitte den ursprünglichen Vertragsbeginn mit einem gültigen Monat und Jahr eintragen.', 422);
 }
-$originalStartDate = sprintf('%04d-%02d-01', $startYear, $startMonth);
+if ($effectiveStartDate === null || (int) substr($effectiveStartDate, 0, 4) < 1900) {
+    json_error('Bitte eintragen, ab wann der neue Vertrag mit einem gültigen Monat und Jahr in Kraft tritt.', 422);
+}
 
 try {
     $pdo->beginTransaction();
@@ -66,11 +76,12 @@ try {
         'INSERT INTO offers (id, customer_id, is_existing_contract, square_meters, interval_label, service, start_date,
             original_start_date, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note,
             price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
-         VALUES (:id, :customer_id, 1, :square_meters, :interval_label, :service, NULL, :original_start_date,
+         VALUES (:id, :customer_id, 1, :square_meters, :interval_label, :service, :start_date, :original_start_date,
             :notes, :obligations, :base_price, :discount_percent, 0, NULL, :price, :vat, :token, UTC_TIMESTAMP(), \'2099-12-31 23:59:59\', 0, 0)'
     )->execute([
         'id' => $id, 'customer_id' => $customerId, 'square_meters' => $squareMeters,
-        'interval_label' => $interval, 'service' => 'Individuelle Leistung', 'original_start_date' => $originalStartDate,
+        'interval_label' => $interval, 'service' => 'Individuelle Leistung', 'start_date' => $effectiveStartDate,
+        'original_start_date' => $originalStartDate,
         'notes' => $serviceText,
         'obligations' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
         'base_price' => $basePrice, 'discount_percent' => $discountPercent,

@@ -194,6 +194,19 @@ function contract_format_date(?string $isoOrMysqlDate): string
     return gmdate('d.m.Y', $timestamp);
 }
 
+function contract_format_month_year(?string $isoOrMysqlDate): string
+{
+    if ($isoOrMysqlDate === null || $isoOrMysqlDate === '') {
+        return '–';
+    }
+
+    $date = new DateTimeImmutable($isoOrMysqlDate);
+    $months = [1 => 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
+        'September', 'Oktober', 'November', 'Dezember'];
+
+    return $months[(int) $date->format('n')] . ' ' . $date->format('Y');
+}
+
 function contract_current_date(): string
 {
     return (new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin')))->format('d.m.Y');
@@ -505,11 +518,8 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $vatApplicable = !isset($offer['vat_applicable']) || (int) $offer['vat_applicable'] === 1;
     $vatAmount = $vatApplicable ? round($netPrice * VAT_RATE / 100, 2) : 0.0;
     $grossPrice = $vatApplicable ? round($netPrice + $vatAmount, 2) : $netPrice;
-    if (!empty($offer['is_existing_contract']) && !empty($offer['original_start_date'])) {
-        $start = new DateTimeImmutable((string) $offer['original_start_date']);
-        $months = [1 => 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
-            'September', 'Oktober', 'November', 'Dezember'];
-        $effectiveDate = $months[(int) $start->format('n')] . ' ' . $start->format('Y');
+    if (!empty($offer['is_existing_contract'])) {
+        $effectiveDate = contract_format_month_year((string) ($offer['start_date'] ?? $offer['original_start_date'] ?? $offer['created_at']));
     } else {
         $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
     }

@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=mobile-actions-20260915-2" />
+    <link rel="stylesheet" href="styles.css?v=existing-dates-20260915" />
   </head>
   <body>
     <main id="login-screen" class="login-shell" hidden>
@@ -381,8 +381,8 @@
                 <div><span>Preis nach Rabatt</span><strong id="existing-offer-final-price-preview">0,00&nbsp;&euro;</strong></div>
               </div>
               <label>Umsatzsteuer berechnen? *<select id="existing-offer-vat" required><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
-              <label>Urspr&uuml;nglicher Vertragsbeginn &ndash; Monat *<select id="existing-offer-start-month" required><option value="">Bitte w&auml;hlen</option><option value="1">Januar</option><option value="2">Februar</option><option value="3">M&auml;rz</option><option value="4">April</option><option value="5">Mai</option><option value="6">Juni</option><option value="7">Juli</option><option value="8">August</option><option value="9">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Dezember</option></select></label>
-              <label>Urspr&uuml;nglicher Vertragsbeginn &ndash; Jahr *<input id="existing-offer-start-year" type="number" min="1900" step="1" required placeholder="z. B. 2018" /></label>
+              <label>Urspr&uuml;nglicher Vertrag *<input id="existing-offer-original-start" type="month" min="1900-01" required /></label>
+              <label>Neuer Vertrag tritt in Kraft ab *<input id="existing-offer-effective-start" type="month" min="1900-01" required /></label>
               <label class="span-2">Leistungsbeschreibung *<textarea id="existing-offer-service-text" class="offer-service-editor" rows="18" required placeholder="Alle vereinbarten Leistungen als Flie&szlig;text eintragen"></textarea></label>
               <label class="span-2">Pflichten des Auftraggebers (optional)<textarea id="existing-offer-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6" placeholder="Zus&auml;tzliche kundenspezifische Pflichten, eine Pflicht pro Zeile"></textarea></label>
               <p class="muted span-2">Link, Versand und E-Mail-Vorlage werden manuell ausgel&ouml;st. Automatische Signatur-Erinnerungen und E-Mail-Serien bleiben deaktiviert.</p>
@@ -1316,11 +1316,11 @@
           <input id="offer-edit-start-date" type="date" required />
         </label>
         <div id="offer-edit-original-start-fields" class="offer-edit-subgrid" hidden>
-          <label class="modal-field">Urspr&uuml;nglicher Vertragsbeginn &ndash; Monat *
-            <select id="offer-edit-original-start-month"><option value="">Bitte w&auml;hlen</option><option value="1">Januar</option><option value="2">Februar</option><option value="3">M&auml;rz</option><option value="4">April</option><option value="5">Mai</option><option value="6">Juni</option><option value="7">Juli</option><option value="8">August</option><option value="9">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Dezember</option></select>
+          <label class="modal-field">Urspr&uuml;nglicher Vertrag *
+            <input id="offer-edit-original-start" type="month" min="1900-01" />
           </label>
-          <label class="modal-field">Urspr&uuml;nglicher Vertragsbeginn &ndash; Jahr *
-            <input id="offer-edit-original-start-year" type="number" min="1900" step="1" />
+          <label class="modal-field">Neuer Vertrag tritt in Kraft ab *
+            <input id="offer-edit-effective-start" type="month" min="1900-01" />
           </label>
         </div>
         <div id="offer-edit-validity-fields" class="offer-edit-subgrid">
@@ -1466,7 +1466,7 @@
     </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=mobile-actions-20260915-2"></script>
+    <script src="app.js?v=existing-dates-20260915"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

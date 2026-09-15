@@ -117,6 +117,14 @@ function renderDataCheck() {
   ]);
 }
 
+function formatMonthYear(value) {
+  if (!value) {
+    return "Nicht angegeben";
+  }
+  return new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" })
+    .format(new Date(`${String(value).slice(0, 7)}-01T00:00:00Z`));
+}
+
 function showExpiredLink() {
   els.errorMessage.textContent = EXPIRED_LINK_MESSAGE;
   els.linkValidity.textContent = "Link abgelaufen";
@@ -177,15 +185,16 @@ function renderFactGrid(items) {
 
 function renderServiceDetails() {
   const offer = state.offer;
-  const historicalStart = offer.originalStartDate
-    ? new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" })
-        .format(new Date(`${offer.originalStartDate}T00:00:00Z`))
-    : "Nicht angegeben";
-  const items = [
-    [offer.isExistingContract ? "Ursprünglicher Vertragsbeginn" : "Startdatum",
-      offer.isExistingContract ? historicalStart : (offer.startDate ? formatDate(offer.startDate) : "Nach Absprache")],
-    ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
-  ];
+  const items = offer.isExistingContract
+    ? [
+        ["Ursprünglicher Vertrag", formatMonthYear(offer.originalStartDate)],
+        ["Neuer Vertrag in Kraft ab", formatMonthYear(offer.startDate)],
+        ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
+      ]
+    : [
+        ["Startdatum", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
+        ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
+      ];
 
   els.serviceDetails.innerHTML = `
     <div class="public-service-card">

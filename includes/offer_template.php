@@ -19,7 +19,9 @@ function render_offer_document(array $offer, array $customer): string
 
     $squareMeters = (int) $offer['square_meters'];
     $areaRow = $squareMeters > 0 ? "<dt>Fläche</dt><dd>{$squareMeters} m²</dd>" : '';
-    $startDate = $offer['start_date'] !== null ? contract_format_date($offer['start_date']) : 'Nach Absprache';
+    $startDate = $offer['start_date'] !== null
+        ? (!empty($offer['is_existing_contract']) ? contract_format_month_year($offer['start_date']) : contract_format_date($offer['start_date']))
+        : 'Nach Absprache';
     $validUntil = contract_format_datetime($offer['expires_at']);
     $price = (float) $offer['price'];
     $priceFormatted = contract_format_money($price);

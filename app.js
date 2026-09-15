@@ -211,8 +211,8 @@ const els = {
   offerEditStartDate: document.querySelector("#offer-edit-start-date"),
   offerEditStartDateField: document.querySelector("#offer-edit-start-date-field"),
   offerEditOriginalStartFields: document.querySelector("#offer-edit-original-start-fields"),
-  offerEditOriginalStartMonth: document.querySelector("#offer-edit-original-start-month"),
-  offerEditOriginalStartYear: document.querySelector("#offer-edit-original-start-year"),
+  offerEditOriginalStart: document.querySelector("#offer-edit-original-start"),
+  offerEditEffectiveStart: document.querySelector("#offer-edit-effective-start"),
   offerEditValidityFields: document.querySelector("#offer-edit-validity-fields"),
   offerEditValidityDays: document.querySelector("#offer-edit-validity-days"),
   offerEditValidityHours: document.querySelector("#offer-edit-validity-hours"),
@@ -346,6 +346,18 @@ function formatDate(value) {
     month: "2-digit",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function formatMonthYear(value) {
+  if (!value) {
+    return "Nicht angegeben";
+  }
+
+  return new Intl.DateTimeFormat("de-DE", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${String(value).slice(0, 7)}-01T00:00:00Z`));
 }
 
 function formatDateTime(value) {
@@ -1310,7 +1322,7 @@ function renderOfferCard(offer) {
           <div class="record-title">Firma: ${escapeHtml(offer.customer.name)}</div>
           <div class="record-meta">
             ${offer.squareMeters > 0 ? `<span>${offer.squareMeters} m²</span>` : ""}
-            <span>Erstellt am ${formatDate(offer.createdAt)}${offer.isExistingContract && offer.originalStartDate ? ` · Ursprünglicher Beginn ${new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${offer.originalStartDate}T00:00:00Z`))}` : offer.startDate ? ` · Start ${formatDate(offer.startDate)}` : ""}</span>
+            <span>Erstellt am ${formatDate(offer.createdAt)}${offer.isExistingContract ? ` · Ursprünglicher Vertrag ${formatMonthYear(offer.originalStartDate)} · Neuer Vertrag ab ${formatMonthYear(offer.startDate)}` : offer.startDate ? ` · Start ${formatDate(offer.startDate)}` : ""}</span>
             <span>${escapeHtml(sentLabel)}</span>
           </div>
         </div>
@@ -1658,8 +1670,8 @@ async function handleExistingOfferSubmit(event) {
       basePrice,
       discountPercent,
       vatApplicable: value("#existing-offer-vat") === "yes",
-      originalStartMonth: Number(value("#existing-offer-start-month")),
-      originalStartYear: Number(value("#existing-offer-start-year")),
+      originalStartDate: value("#existing-offer-original-start"),
+      startDate: value("#existing-offer-effective-start"),
       serviceText,
       customerObligationsNote: obligationsText,
     });
@@ -2126,22 +2138,22 @@ function openOfferEditModal(id) {
     els.offerEditVat,
     els.offerEditGrossPricePreview,
   );
-  els.offerEditStartDate.value = offer.startDate || "";
+  els.offerEditStartDate.value = offer.isExistingContract ? "" : (offer.startDate || "");
   els.offerEditModal.dataset.existingContract = offer.isExistingContract ? "true" : "false";
   els.offerEditStartDateField.hidden = offer.isExistingContract;
   els.offerEditStartDate.required = !offer.isExistingContract;
   els.offerEditOriginalStartFields.hidden = !offer.isExistingContract;
+  els.offerEditOriginalStart.required = offer.isExistingContract;
+  els.offerEditEffectiveStart.required = offer.isExistingContract;
   els.offerEditValidityFields.hidden = offer.isExistingContract;
   els.offerEditValidityDays.required = !offer.isExistingContract;
   els.offerEditValidityHours.required = !offer.isExistingContract;
-  if (offer.isExistingContract && offer.originalStartDate) {
-    const [year, month] = offer.originalStartDate.split("-");
-    els.offerEditOriginalStartMonth.value = String(Number(month));
-    els.offerEditOriginalStartYear.value = year;
-  } else {
-    els.offerEditOriginalStartMonth.value = "";
-    els.offerEditOriginalStartYear.value = "";
-  }
+  els.offerEditOriginalStart.value = offer.isExistingContract && offer.originalStartDate
+    ? offer.originalStartDate.slice(0, 7)
+    : "";
+  els.offerEditEffectiveStart.value = offer.isExistingContract && offer.startDate
+    ? offer.startDate.slice(0, 7)
+    : "";
   els.offerEditValidityDays.value = offer.validityDays ?? 14;
   els.offerEditValidityHours.value = offer.validityHours ?? 0;
   els.offerEditServiceText.value = offer.notes || "";
@@ -2183,13 +2195,12 @@ async function handleOfferEditSubmit(event) {
     basePrice: Number(els.offerEditPrice.value),
     discountPercent: Number(els.offerEditDiscount.value || 0),
     vatApplicable: els.offerEditVat.value === "yes",
-    startDate: els.offerEditStartDate.value,
+    startDate: isExistingContract ? els.offerEditEffectiveStart.value : els.offerEditStartDate.value,
     validityDays,
     validityHours,
     serviceText: els.offerEditServiceText.value.replace(/\r\n?/g, "\n"),
     customerObligationsNote: els.offerEditObligationsText.value.replace(/\r\n?/g, "\n"),
-    originalStartMonth: Number(els.offerEditOriginalStartMonth.value),
-    originalStartYear: Number(els.offerEditOriginalStartYear.value),
+    originalStartDate: els.offerEditOriginalStart.value,
   };
 
   if (!Number.isFinite(payload.basePrice) || payload.basePrice <= 0) {
@@ -2208,9 +2219,14 @@ async function handleOfferEditSubmit(event) {
     els.offerEditStartDate.focus();
     return;
   }
-  if (isExistingContract && (!payload.originalStartMonth || !payload.originalStartYear)) {
-    showToast("Bitte den ursprünglichen Vertragsbeginn mit Monat und Jahr eintragen.");
-    els.offerEditOriginalStartMonth.focus();
+  if (isExistingContract && !payload.originalStartDate) {
+    showToast("Bitte den ursprünglichen Vertrag mit Monat und Jahr eintragen.");
+    els.offerEditOriginalStart.focus();
+    return;
+  }
+  if (isExistingContract && !payload.startDate) {
+    showToast("Bitte eintragen, ab wann der neue Vertrag in Kraft tritt.");
+    els.offerEditEffectiveStart.focus();
     return;
   }
 

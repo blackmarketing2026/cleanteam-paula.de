@@ -272,8 +272,12 @@ if ($method === 'PUT') {
     $validityDays = (int) ($body['validityDays'] ?? 14);
     $validityHours = (int) ($body['validityHours'] ?? 0);
     $isExistingContract = !empty($existing['is_existing_contract']);
-    $originalStartMonth = (int) ($body['originalStartMonth'] ?? 0);
-    $originalStartYear = (int) ($body['originalStartYear'] ?? 0);
+    $originalStartInput = trim((string) ($body['originalStartDate'] ?? ''));
+    $legacyOriginalStartMonth = (int) ($body['originalStartMonth'] ?? 0);
+    $legacyOriginalStartYear = (int) ($body['originalStartYear'] ?? 0);
+    if ($originalStartInput === '' && $legacyOriginalStartMonth > 0 && $legacyOriginalStartYear > 0) {
+        $originalStartInput = sprintf('%04d-%02d', $legacyOriginalStartYear, $legacyOriginalStartMonth);
+    }
 
     $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
     if (!in_array($interval, $allowedIntervals, true)) {
@@ -298,13 +302,16 @@ if ($method === 'PUT') {
         || ($validityDays === 0 && $validityHours === 0))) {
         json_error('Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.', 422);
     }
-    if ($isExistingContract && ($originalStartMonth < 1 || $originalStartMonth > 12
-        || $originalStartYear < 1900 || $originalStartYear > (int) gmdate('Y'))) {
+    $originalStartDate = $isExistingContract ? offer_month_start_date($originalStartInput) : null;
+    $effectiveStartDate = $isExistingContract ? offer_month_start_date($startDate) : null;
+    if ($isExistingContract && ($originalStartDate === null
+        || (int) substr($originalStartDate, 0, 4) < 1900
+        || (int) substr($originalStartDate, 0, 4) > (int) gmdate('Y'))) {
         json_error('Bitte den ursprünglichen Vertragsbeginn mit einem gültigen Monat und Jahr eintragen.', 422);
     }
-    $originalStartDate = $isExistingContract
-        ? sprintf('%04d-%02d-01', $originalStartYear, $originalStartMonth)
-        : null;
+    if ($isExistingContract && ($effectiveStartDate === null || (int) substr($effectiveStartDate, 0, 4) < 1900)) {
+        json_error('Bitte eintragen, ab wann der neue Vertrag mit einem gültigen Monat und Jahr in Kraft tritt.', 422);
+    }
 
     $pdo->beginTransaction();
     try {
@@ -331,7 +338,7 @@ if ($method === 'PUT') {
         )->execute([
             'square_meters' => $squareMeters,
             'interval_label' => $intervalLabel,
-            'start_date' => $isExistingContract ? null : $startDate,
+            'start_date' => $isExistingContract ? $effectiveStartDate : $startDate,
             'original_start_date' => $originalStartDate,
             'price' => $price,
             'base_price' => $basePrice,
