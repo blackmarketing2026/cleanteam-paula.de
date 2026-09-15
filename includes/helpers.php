@@ -228,6 +228,7 @@ function ensure_offers_existing_contract_columns(PDO $pdo): void
     $columns = [
         'is_existing_contract' => 'ALTER TABLE offers ADD COLUMN is_existing_contract TINYINT(1) NOT NULL DEFAULT 0 AFTER customer_id',
         'original_start_date' => 'ALTER TABLE offers ADD COLUMN original_start_date DATE NULL AFTER start_date',
+        'signing_location' => "ALTER TABLE offers ADD COLUMN signing_location VARCHAR(80) NOT NULL DEFAULT 'Linz, Österreich' AFTER original_start_date",
     ];
 
     foreach ($columns as $column => $sql) {

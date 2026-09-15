@@ -1273,7 +1273,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     contract_template_html_to_pdf($pdf, $templateBodyHtml);
 
     $pdf->heading('Annahme und Bestätigung');
-    $pdf->keyValue('CleanTeam', SIGNING_LOCATION . ', ' . $createdAt . ' | Im Namen von CleanTeam Geschäftsführer: ' . $managingDirectors);
+    $pdf->keyValue('CleanTeam', contract_offer_signing_location($offer) . ', ' . $createdAt . ' | Im Namen von CleanTeam Geschäftsführer: ' . $managingDirectors);
     if ($contractorSignatureDataUrl !== null) {
         if (!$pdf->signatureImage($contractorSignatureDataUrl)) {
             $pdf->paragraph('Die CleanTeam-Unterschrift konnte nicht eingebettet werden.', 9.5, 170.0);

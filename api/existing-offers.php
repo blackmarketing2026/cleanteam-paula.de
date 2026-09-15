@@ -30,6 +30,7 @@ $price = offer_discounted_price($basePrice, $discountPercent);
 $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
 $originalStartInput = trim((string) ($body['originalStartDate'] ?? ''));
 $effectiveStartInput = trim((string) ($body['startDate'] ?? ''));
+$signingLocation = normalize_contract_signing_location($body['signingLocation'] ?? null);
 $legacyStartMonth = (int) ($body['originalStartMonth'] ?? 0);
 $legacyStartYear = (int) ($body['originalStartYear'] ?? 0);
 if ($originalStartInput === '' && $legacyStartMonth > 0 && $legacyStartYear > 0) {
@@ -61,6 +62,9 @@ if ($originalStartDate === null || (int) substr($originalStartDate, 0, 4) < 1900
 if ($effectiveStartDate === null || (int) substr($effectiveStartDate, 0, 4) < 1900) {
     json_error('Bitte eintragen, ab wann der neue Vertrag mit einem gültigen Monat und Jahr in Kraft tritt.', 422);
 }
+if ($signingLocation === null) {
+    json_error('Bitte einen gültigen Signaturort auswählen.', 422);
+}
 
 try {
     $pdo->beginTransaction();
@@ -74,14 +78,15 @@ try {
     $id = generate_id('offer');
     $pdo->prepare(
         'INSERT INTO offers (id, customer_id, is_existing_contract, square_meters, interval_label, service, start_date,
-            original_start_date, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note,
+            original_start_date, signing_location, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note,
             price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
-         VALUES (:id, :customer_id, 1, :square_meters, :interval_label, :service, :start_date, :original_start_date,
+         VALUES (:id, :customer_id, 1, :square_meters, :interval_label, :service, :start_date, :original_start_date, :signing_location,
             :notes, :obligations, :base_price, :discount_percent, 0, NULL, :price, :vat, :token, UTC_TIMESTAMP(), \'2099-12-31 23:59:59\', 0, 0)'
     )->execute([
         'id' => $id, 'customer_id' => $customerId, 'square_meters' => $squareMeters,
         'interval_label' => $interval, 'service' => 'Individuelle Leistung', 'start_date' => $effectiveStartDate,
         'original_start_date' => $originalStartDate,
+        'signing_location' => $signingLocation,
         'notes' => $serviceText,
         'obligations' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
         'base_price' => $basePrice, 'discount_percent' => $discountPercent,

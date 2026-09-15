@@ -66,6 +66,7 @@ function offer_row_to_json(array $row): array
         'customerId' => $row['customer_id'],
         'isExistingContract' => (bool) ($row['is_existing_contract'] ?? false),
         'originalStartDate' => $row['original_start_date'] ?? null,
+        'signingLocation' => contract_offer_signing_location($row),
         'customer' => [
             'id' => $row['customer_id'],
             'name' => $row['c_name'],
@@ -150,6 +151,7 @@ if ($method === 'POST') {
     $interval = trim((string) ($body['interval'] ?? ''));
     $validityDays = (int) ($body['validityDays'] ?? 14);
     $validityHours = (int) ($body['validityHours'] ?? 0);
+    $signingLocation = normalize_contract_signing_location($body['signingLocation'] ?? null);
 
     $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
     if (!in_array($interval, $allowedIntervals, true)) {
@@ -171,6 +173,9 @@ if ($method === 'POST') {
 
     if ($startDate === '' || strtotime($startDate) === false) {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
+    }
+    if ($signingLocation === null) {
+        json_error('Bitte einen gültigen Signaturort auswählen.', 422);
     }
 
     if ($validityDays < 0 || $validityHours < 0 || $validityHours > 24
@@ -200,8 +205,8 @@ if ($method === 'POST') {
     $token = generate_token();
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :notes, :customer_obligations_note, :base_price, :discount_percent, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), INTERVAL :validity_hours HOUR), :validity_days2, :validity_hours2)'
+        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, signing_location, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :signing_location, :notes, :customer_obligations_note, :base_price, :discount_percent, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), INTERVAL :validity_hours HOUR), :validity_days2, :validity_hours2)'
     );
     $stmt->execute([
         'id' => $id,
@@ -210,6 +215,7 @@ if ($method === 'POST') {
         'interval_label' => $intervalLabel,
         'service' => 'Individuelle Leistung',
         'start_date' => $startDate,
+        'signing_location' => $signingLocation,
         'notes' => $serviceText,
         'customer_obligations_note' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
         'base_price' => $basePrice,
@@ -271,6 +277,7 @@ if ($method === 'PUT') {
     $interval = trim((string) ($body['interval'] ?? ''));
     $validityDays = (int) ($body['validityDays'] ?? 14);
     $validityHours = (int) ($body['validityHours'] ?? 0);
+    $signingLocation = normalize_contract_signing_location($body['signingLocation'] ?? null);
     $isExistingContract = !empty($existing['is_existing_contract']);
     $originalStartInput = trim((string) ($body['originalStartDate'] ?? ''));
     $legacyOriginalStartMonth = (int) ($body['originalStartMonth'] ?? 0);
@@ -297,6 +304,9 @@ if ($method === 'PUT') {
     }
     if (!$isExistingContract && ($startDate === '' || strtotime($startDate) === false)) {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
+    }
+    if ($signingLocation === null) {
+        json_error('Bitte einen gültigen Signaturort auswählen.', 422);
     }
     if (!$isExistingContract && ($validityDays < 0 || $validityHours < 0 || $validityHours > 24
         || ($validityDays === 0 && $validityHours === 0))) {
@@ -330,7 +340,7 @@ if ($method === 'PUT') {
 
         $pdo->prepare(
             'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
-                original_start_date = :original_start_date,
+                original_start_date = :original_start_date, signing_location = :signing_location,
                 price = :price, base_price = :base_price, discount_percent = :discount_percent, vat_applicable = :vat_applicable, notes = :notes,
                 customer_obligations_note = :customer_obligations_note,
                 validity_days = :validity_days, validity_hours = :validity_hours,
@@ -340,6 +350,7 @@ if ($method === 'PUT') {
             'interval_label' => $intervalLabel,
             'start_date' => $isExistingContract ? $effectiveStartDate : $startDate,
             'original_start_date' => $originalStartDate,
+            'signing_location' => $signingLocation,
             'price' => $price,
             'base_price' => $basePrice,
             'discount_percent' => $discountPercent,

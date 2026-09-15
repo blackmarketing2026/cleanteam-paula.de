@@ -17,6 +17,19 @@ const CONTRACTOR = [
 ];
 
 const SIGNING_LOCATION = 'Linz, Österreich';
+const SIGNING_LOCATIONS = ['Linz, Österreich', 'Solingen, Deutschland'];
+
+function normalize_contract_signing_location(?string $location): ?string
+{
+    $location = trim((string) $location);
+
+    return in_array($location, SIGNING_LOCATIONS, true) ? $location : null;
+}
+
+function contract_offer_signing_location(array $offer): string
+{
+    return normalize_contract_signing_location($offer['signing_location'] ?? null) ?? SIGNING_LOCATION;
+}
 
 const LEGAL = [
     'jurisdiction_city' => 'Solingen',
@@ -668,7 +681,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $contractorTrade = h(CONTRACTOR['trade_description']);
     $contractorStreetZipCity = h(CONTRACTOR['street'] . ' ' . CONTRACTOR['postal_code'] . ' ' . CONTRACTOR['city']);
     $contractorServicePoint = h(CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city']);
-    $contractorSigningLocation = h(SIGNING_LOCATION);
+    $contractorSigningLocation = h(contract_offer_signing_location($offer));
 
     $customerName = h(contract_customer_display_name($customer));
     $signatoryName = h(contract_signatory_display($customer));

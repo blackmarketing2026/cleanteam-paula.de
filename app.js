@@ -61,6 +61,7 @@ const els = {
   existingOfferBasePricePreview: document.querySelector("#existing-offer-base-price-preview"),
   existingOfferDiscountAmountPreview: document.querySelector("#existing-offer-discount-amount-preview"),
   existingOfferFinalPricePreview: document.querySelector("#existing-offer-final-price-preview"),
+  existingOfferSigningLocation: document.querySelector("#existing-offer-signing-location"),
   offerCustomerName: document.querySelector("#offer-customer-name"),
   offerContactPerson: document.querySelector("#offer-contact-person"),
   offerEmail: document.querySelector("#offer-email"),
@@ -76,6 +77,7 @@ const els = {
   offerFinalPricePreview: document.querySelector("#offer-final-price-preview"),
   offerGrossPricePreview: document.querySelector("#offer-gross-price-preview"),
   offerStartDate: document.querySelector("#offer-start-date"),
+  offerSigningLocation: document.querySelector("#offer-signing-location"),
   offerValidityDays: document.querySelector("#offer-validity-days"),
   offerValidityHours: document.querySelector("#offer-validity-hours"),
   offerVat: document.querySelector("#offer-vat"),
@@ -213,6 +215,7 @@ const els = {
   offerEditOriginalStartFields: document.querySelector("#offer-edit-original-start-fields"),
   offerEditOriginalStart: document.querySelector("#offer-edit-original-start"),
   offerEditEffectiveStart: document.querySelector("#offer-edit-effective-start"),
+  offerEditSigningLocation: document.querySelector("#offer-edit-signing-location"),
   offerEditValidityFields: document.querySelector("#offer-edit-validity-fields"),
   offerEditValidityDays: document.querySelector("#offer-edit-validity-days"),
   offerEditValidityHours: document.querySelector("#offer-edit-validity-hours"),
@@ -1672,6 +1675,7 @@ async function handleExistingOfferSubmit(event) {
       vatApplicable: value("#existing-offer-vat") === "yes",
       originalStartDate: value("#existing-offer-original-start"),
       startDate: value("#existing-offer-effective-start"),
+      signingLocation: value("#existing-offer-signing-location"),
       serviceText,
       customerObligationsNote: obligationsText,
     });
@@ -1709,6 +1713,7 @@ async function handleOfferSubmit(event) {
   const basePrice = Number(els.offerPrice.value);
   const discountPercent = Number(els.offerDiscount.value || 0);
   const startDate = els.offerStartDate.value;
+  const signingLocation = els.offerSigningLocation.value;
   const validityDays = Number(els.offerValidityDays.value);
   const validityHours = Number(els.offerValidityHours.value);
   const serviceText = els.offerServiceText.value.replace(/\r\n?/g, "\n");
@@ -1801,6 +1806,7 @@ async function handleOfferSubmit(event) {
     discountPercent,
     vatApplicable: els.offerVat.value === "yes",
     startDate,
+    signingLocation,
     validityDays,
     validityHours,
     serviceText,
@@ -2154,6 +2160,7 @@ function openOfferEditModal(id) {
   els.offerEditEffectiveStart.value = offer.isExistingContract && offer.startDate
     ? offer.startDate.slice(0, 7)
     : "";
+  els.offerEditSigningLocation.value = offer.signingLocation || "Linz, Österreich";
   els.offerEditValidityDays.value = offer.validityDays ?? 14;
   els.offerEditValidityHours.value = offer.validityHours ?? 0;
   els.offerEditServiceText.value = offer.notes || "";
@@ -2201,6 +2208,7 @@ async function handleOfferEditSubmit(event) {
     serviceText: els.offerEditServiceText.value.replace(/\r\n?/g, "\n"),
     customerObligationsNote: els.offerEditObligationsText.value.replace(/\r\n?/g, "\n"),
     originalStartDate: els.offerEditOriginalStart.value,
+    signingLocation: els.offerEditSigningLocation.value,
   };
 
   if (!Number.isFinite(payload.basePrice) || payload.basePrice <= 0) {

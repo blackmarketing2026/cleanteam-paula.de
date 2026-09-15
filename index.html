@@ -302,6 +302,14 @@
                 <input id="offer-start-date" type="date" required />
               </label>
               <label>
+                Signaturort *
+                <select id="offer-signing-location" required>
+                  <option value="">Bitte w&auml;hlen</option>
+                  <option value="Linz, &Ouml;sterreich">Linz, &Ouml;sterreich</option>
+                  <option value="Solingen, Deutschland">Solingen, Deutschland</option>
+                </select>
+              </label>
+              <label>
                 Gültigkeitsdauer (Tage) *
                 <input id="offer-validity-days" type="number" min="0" step="1" required value="14" />
               </label>
@@ -383,6 +391,7 @@
               <label>Umsatzsteuer berechnen? *<select id="existing-offer-vat" required><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
               <label>Urspr&uuml;nglicher Vertrag *<input id="existing-offer-original-start" type="month" min="1900-01" required /></label>
               <label>Neuer Vertrag tritt in Kraft ab *<input id="existing-offer-effective-start" type="month" min="1900-01" required /></label>
+              <label>Signaturort *<select id="existing-offer-signing-location" required><option value="">Bitte w&auml;hlen</option><option value="Linz, &Ouml;sterreich">Linz, &Ouml;sterreich</option><option value="Solingen, Deutschland">Solingen, Deutschland</option></select></label>
               <label class="span-2">Leistungsbeschreibung *<textarea id="existing-offer-service-text" class="offer-service-editor" rows="18" required placeholder="Alle vereinbarten Leistungen als Flie&szlig;text eintragen"></textarea></label>
               <label class="span-2">Pflichten des Auftraggebers (optional)<textarea id="existing-offer-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6" placeholder="Zus&auml;tzliche kundenspezifische Pflichten, eine Pflicht pro Zeile"></textarea></label>
               <p class="muted span-2">Link, Versand und E-Mail-Vorlage werden manuell ausgel&ouml;st. Automatische Signatur-Erinnerungen und E-Mail-Serien bleiben deaktiviert.</p>
@@ -1323,6 +1332,14 @@
             <input id="offer-edit-effective-start" type="month" min="1900-01" />
           </label>
         </div>
+        <label class="modal-field">
+          Signaturort *
+          <select id="offer-edit-signing-location" required>
+            <option value="">Bitte w&auml;hlen</option>
+            <option value="Linz, &Ouml;sterreich">Linz, &Ouml;sterreich</option>
+            <option value="Solingen, Deutschland">Solingen, Deutschland</option>
+          </select>
+        </label>
         <div id="offer-edit-validity-fields" class="offer-edit-subgrid">
         <label class="modal-field">
           Gültigkeitsdauer (Tage) *
@@ -1466,7 +1483,7 @@
     </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=existing-dates-20260915"></script>
+    <script src="app.js?v=signing-location-20260915"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

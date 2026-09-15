@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS offers (
   service VARCHAR(80) NOT NULL,
   start_date DATE NULL,
   original_start_date DATE NULL,
+  signing_location VARCHAR(80) NOT NULL DEFAULT 'Linz, Österreich',
   notes TEXT NULL,
   agb_snapshot_text LONGTEXT NULL,
   agb_snapshot_captured_at DATETIME NULL,
