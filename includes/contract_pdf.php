@@ -89,16 +89,18 @@ final class SimplePdfDocument
     {
         // 10.5pt statt vormals 13pt: h2 ist in der Vorschau genauso groß wie der Fließtext
         // (14px) und hebt sich nur durch das Fett ab, nicht durch eine deutlich größere Schrift.
-        $this->ensureSpace(24.0);
-        $this->y -= 8.0;
+        // Abstände an CSS "h2 { margin: 20px 0 8px }" angenähert (px * 0.75 ≈ pt).
+        $this->ensureSpace(32.0);
+        $this->y -= 14.0;
         $this->line($text, self::MARGIN_LEFT, $this->y, 10.5, 'F2');
-        $this->y -= 16.0;
+        $this->y -= 15.0;
     }
 
     public function subheading(string $text): void
     {
-        $this->ensureSpace(22.0);
-        $this->y -= 4.0;
+        // Abstände an CSS "h4 { margin: 16px 0 4px }" angenähert.
+        $this->ensureSpace(28.0);
+        $this->y -= 10.0;
         $this->line($text, self::MARGIN_LEFT, $this->y, 10.5, 'F2');
         $this->y -= 14.0;
     }
@@ -112,7 +114,7 @@ final class SimplePdfDocument
             $this->line($line, self::MARGIN_LEFT + $indent, $this->y, $fontSize, 'F1');
             $this->y -= $fontSize + 4.5;
         }
-        $this->y -= 4.0;
+        $this->y -= 8.0;
     }
 
     // Wie paragraph(), aber erlaubt fett hervorgehobene Textabschnitte und erzwungene
@@ -205,7 +207,7 @@ final class SimplePdfDocument
             $flush();
             $this->y -= $fontSize + 4.5;
         }
-        $this->y -= 4.0;
+        $this->y -= 8.0;
     }
 
     // Windows-1252-Zeichenbreiten (je 1/1000 em) für Helvetica bzw. Helvetica-Bold, aus den
@@ -836,6 +838,9 @@ final class SimplePdfDocument
             $this->y -= 13.5;
             $first = false;
         }
+        // Entspricht "ol.obligations li { margin-bottom: 14px }" / "ul li { margin-bottom: 4px }"
+        // in der Vorschau - ein kleiner Abstand zwischen Listenpunkten statt direkt aneinander.
+        $this->y -= 5.0;
     }
 
     private function ensureSpace(float $height): void
