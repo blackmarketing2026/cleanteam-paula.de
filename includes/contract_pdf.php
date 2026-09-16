@@ -1342,6 +1342,23 @@ function contract_has_authorization_details(array $contract): bool
         && contract_authorization_company_address($contract) !== '';
 }
 
+// Wie contract_logo_html() in contract_template.php: erst das über die Einstellungen
+// hochgeladene Logo, sonst das mitgelieferte Standardlogo - damit im finalen PDF (das anders
+// als die HTML-Vorschau nur PNG/JPEG einbetten kann) dasselbe Logo wie in der Vorschau erscheint.
+function contract_pdf_logo_path(PDO $pdo): ?string
+{
+    $uploaded = contract_pdf_brand_logo_path($pdo);
+    // Das PDF kann nur PNG/JPEG einbetten (siehe SimplePdfDocument::parseImageFile) - ein
+    // hochgeladenes Logo in einem anderen Format (z.B. WebP) faellt auf das mitgelieferte
+    // Standardlogo zurueck, statt im PDF still zu fehlen.
+    if ($uploaded !== null && in_array((string) (@getimagesize($uploaded)['mime'] ?? ''), ['image/png', 'image/jpeg'], true)) {
+        return $uploaded;
+    }
+
+    $defaultJpg = __DIR__ . '/../assets/cleanteam-logo.jpg';
+    return is_file($defaultJpg) ? $defaultJpg : null;
+}
+
 function contract_pdf_brand_logo_path(PDO $pdo): ?string
 {
     try {
@@ -1437,6 +1454,12 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $contractorServicePoint = CONTRACTOR['service_point_street'] . ', ' . CONTRACTOR['service_point_postal_code'] . ' ' . CONTRACTOR['service_point_city'];
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
+    $logoPath = contract_pdf_logo_path(db());
+    if ($logoPath !== null) {
+        // Entspricht der Größe von ".doc-logo { max-height: 64px; max-width: 260px }" in der
+        // HTML-Vertragsvorschau (px * 0.75 ≈ pt).
+        $pdf->imageFile($logoPath, 195.0, 48.0);
+    }
     $pdf->meta('Datum: ' . $currentDate);
     $pdf->title($isSigned ? 'Vertrag' : 'Auftragsbestätigung');
     $pdf->centeredText('zwischen');
