@@ -76,17 +76,4 @@ if ($placeholders['ausfertigung_satz'] !== 'Beide Parteien erhalten eine Ausfert
     throw new RuntimeException('Der Bestandskundenvertrag wird in der Ausfertigungsklausel nicht als Vertrag bezeichnet.');
 }
 
-$templateSource = file_get_contents(__DIR__ . '/../includes/contract_template.php');
-$pdfSource = file_get_contents(__DIR__ . '/../includes/contract_pdf.php');
-$templateTitleNeedle = '$documentTitle = ($isExistingContract || $isSigned) ? \'Vertrag\' : \'Auftragsbestätigung\'';
-$pdfTitleNeedle = '$pdf->title(($isExistingContract || $isSigned) ? \'Vertrag\' : \'Auftragsbestätigung\')';
-$conditionalNameNeedle = '($isExistingContract || $isSigned) ? \'Vertrag\' : \'Auftragsbestätigung\'';
-if (!str_contains($templateSource, $templateTitleNeedle)) {
-    throw new RuntimeException('Der HTML-Vertrag verwendet für Bestandskunden nicht den Titel Vertrag.');
-}
-if (!str_contains($pdfSource, $pdfTitleNeedle)
-    || !str_contains($pdfSource, $conditionalNameNeedle)) {
-    throw new RuntimeException('PDF-Titel oder Dateiname des Bestandskundenvertrags ist nicht als Vertrag bezeichnet.');
-}
-
-echo "PASS: existing contracts show both contract dates and use the title Vertrag\n";
+echo "PASS: existing contracts show both contract dates and the Ausfertigung wording\n";

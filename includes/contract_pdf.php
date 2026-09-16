@@ -1250,7 +1250,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $contractorSignatureDataUrl = get_contract_template_contractor_signature_data(db());
 
     $pdf->meta('Datum: ' . $currentDate);
-    $pdf->title(($isExistingContract || $isSigned) ? 'Vertrag' : 'Auftragsbestätigung');
+    $pdf->title($isSigned ? 'Vertrag' : 'Auftragsbestätigung');
     $pdf->centeredText('zwischen');
 
     $customerFullAddress = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . 'D-' . $customerZipCity, ', ');
@@ -1263,7 +1263,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         'Die ' . $customerName . ', ' . $customerFullAddress . ', Vertragsunterzeichnung durch: ' . $signatoryName . $authorityInline
     );
     $pdf->rightAlignedText('- im Folgenden Auftraggeber genannt -');
-    $pdf->paragraph(($isExistingContract || $isSigned)
+    $pdf->paragraph($isSigned
         ? 'Die Parteien schließen den folgenden Vertrag zur Gebäudereinigung:'
         : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:');
 
@@ -1313,8 +1313,8 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->protocolKeyValue('Kunde', $customerName);
         $pdf->protocolKeyValue('Unterzeichner', $signatoryName);
         $pdf->protocolKeyValue('Vertragsentwurf erstellt', contract_format_datetime($offer['created_at'] ?? null));
-        $pdf->protocolKeyValue(($isExistingContract || $isSigned) ? 'Vertrag erstellt' : 'Auftragsbestätigung erstellt', contract_format_datetime($contract['created_at'] ?? null));
-        $pdf->protocolKeyValue(($isExistingContract || $isSigned) ? 'Vertrag elektronisch signiert' : 'Auftragsbestätigung elektronisch signiert', $signedAtDisplay);
+        $pdf->protocolKeyValue($isSigned ? 'Vertrag erstellt' : 'Auftragsbestätigung erstellt', contract_format_datetime($contract['created_at'] ?? null));
+        $pdf->protocolKeyValue($isSigned ? 'Vertrag elektronisch signiert' : 'Auftragsbestätigung elektronisch signiert', $signedAtDisplay);
         $privacyAcceptedAt = $contract['privacy_accepted_at'] ?? null;
         $pdf->protocolKeyValue('Datenschutz-Zustimmung erteilt', $privacyAcceptedAt !== null ? 'Ja, Zustimmung erteilt' : 'Noch nicht bestätigt');
         $pdf->protocolKeyValue('Zeitpunkt der Datenschutz-Zustimmung', contract_format_datetime($privacyAcceptedAt));
