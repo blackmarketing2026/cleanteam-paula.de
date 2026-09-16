@@ -38,7 +38,10 @@ final class SimplePdfDocument
 
     public function title(string $text): void
     {
-        $fontSize = 13.0;
+        // 11.5pt statt vormals 13pt: die HTML-Vorschau (contract_document_style_css) zeigt die
+        // Überschrift nur geringfügig größer als den 14px-Fließtext (h1: 15px), nicht deutlich
+        // größer wie zuvor im PDF.
+        $fontSize = 11.5;
         $this->ensureSpace(28.0);
         $this->line($text, $this->centeredX($text, $fontSize), $this->y, $fontSize, 'F2');
         $this->y -= 22.0;
@@ -84,9 +87,11 @@ final class SimplePdfDocument
 
     public function heading(string $text): void
     {
+        // 10.5pt statt vormals 13pt: h2 ist in der Vorschau genauso groß wie der Fließtext
+        // (14px) und hebt sich nur durch das Fett ab, nicht durch eine deutlich größere Schrift.
         $this->ensureSpace(24.0);
         $this->y -= 8.0;
-        $this->line($text, self::MARGIN_LEFT, $this->y, 13.0, 'F2');
+        $this->line($text, self::MARGIN_LEFT, $this->y, 10.5, 'F2');
         $this->y -= 16.0;
     }
 
@@ -94,7 +99,7 @@ final class SimplePdfDocument
     {
         $this->ensureSpace(22.0);
         $this->y -= 4.0;
-        $this->line($text, self::MARGIN_LEFT, $this->y, 11.0, 'F2');
+        $this->line($text, self::MARGIN_LEFT, $this->y, 10.5, 'F2');
         $this->y -= 14.0;
     }
 

@@ -112,6 +112,14 @@ $documentAudience = $isPublicTokenAccess
     ? 'customer'
     : (in_array($document, ['customer', 'cleanteam', 'authorization'], true) ? $document : 'cleanteam');
 
+// Ein signierter Vertrag ist rechtlich final: unabhaengig vom angeforderten Format wird
+// ausschliesslich die einmal gespeicherte PDF ausgeliefert, damit sich ueber manipulierte
+// URLs (format=html) keine abweichende Live-Ansicht eines bereits unterschriebenen Vertrags
+// erzeugen laesst.
+if ($contract !== null && in_array($contract['status'], ['signiert', 'bestaetigt'], true)) {
+    $format = 'pdf';
+}
+
 if ($format === 'pdf') {
     if ($contract === null) {
         http_response_code(404);
