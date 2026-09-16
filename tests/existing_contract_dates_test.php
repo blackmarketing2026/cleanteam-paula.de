@@ -78,9 +78,9 @@ if ($placeholders['ausfertigung_satz'] !== 'Beide Parteien erhalten eine Ausfert
 
 $templateSource = file_get_contents(__DIR__ . '/../includes/contract_template.php');
 $pdfSource = file_get_contents(__DIR__ . '/../includes/contract_pdf.php');
-$templateTitleNeedle = '$documentTitle = $isExistingContract ? \'Vertrag\' : \'Auftragsbestätigung\'';
-$pdfTitleNeedle = '$pdf->title($isExistingContract ? \'Vertrag\' : \'Auftragsbestätigung\')';
-$conditionalNameNeedle = '$isExistingContract ? \'Vertrag\' : \'Auftragsbestätigung\'';
+$templateTitleNeedle = '$documentTitle = ($isExistingContract || $isSigned) ? \'Vertrag\' : \'Auftragsbestätigung\'';
+$pdfTitleNeedle = '$pdf->title(($isExistingContract || $isSigned) ? \'Vertrag\' : \'Auftragsbestätigung\')';
+$conditionalNameNeedle = '($isExistingContract || $isSigned) ? \'Vertrag\' : \'Auftragsbestätigung\'';
 if (!str_contains($templateSource, $templateTitleNeedle)) {
     throw new RuntimeException('Der HTML-Vertrag verwendet für Bestandskunden nicht den Titel Vertrag.');
 }

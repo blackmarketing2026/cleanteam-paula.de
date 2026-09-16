@@ -658,8 +658,8 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 
     $isSigned = $contract !== null && $contract['status'] === 'signiert';
     $isExistingContract = !empty($offer['is_existing_contract']);
-    $documentTitle = $isExistingContract ? 'Vertrag' : 'Auftragsbestätigung';
-    $documentLead = $isExistingContract
+    $documentTitle = ($isExistingContract || $isSigned) ? 'Vertrag' : 'Auftragsbestätigung';
+    $documentLead = ($isExistingContract || $isSigned)
         ? 'Die Parteien schließen den folgenden Vertrag zur Gebäudereinigung:'
         : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:';
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '–';
