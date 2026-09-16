@@ -62,12 +62,12 @@ final class SimplePdfDocument
         $this->y -= $fontSize + 6.0;
     }
 
-    public function rightAlignedText(string $text, float $fontSize = 9.5): void
+    public function rightAlignedText(string $text, float $fontSize = 9.5, string $font = 'F1'): void
     {
         $estimatedWidth = $this->textLength($text) * $fontSize * 0.48;
         $x = max(self::MARGIN_LEFT, self::PAGE_WIDTH - self::MARGIN_RIGHT - $estimatedWidth);
         $this->ensureSpace($fontSize + 10.0);
-        $this->line($text, $x, $this->y, $fontSize, 'F1');
+        $this->line($text, $x, $this->y, $fontSize, $font);
         $this->y -= $fontSize + 10.0;
     }
 
@@ -113,6 +113,156 @@ final class SimplePdfDocument
             $this->y -= $fontSize + 4.5;
         }
         $this->y -= 4.0;
+    }
+
+    // Wie paragraph(), aber erlaubt fett hervorgehobene Textabschnitte und erzwungene
+    // Zeilenumbrüche (<strong>/<br> aus der HTML-Vorlage), damit z.B. Namen und Daten in der
+    // PDF-Ausgabe genauso hervorgehoben werden wie in der HTML-Vertragsvorschau.
+    // $runs: Liste von ['text' => string, 'bold' => bool] bzw. ['break' => true] für <br>.
+    //
+    // Nutzt echte Helvetica-Zeichenbreiten (measureText) statt der groben 0.48-Schätzung, die
+    // andernorts fürs Umbrechen ausreicht: hier zeichnen wir pro Zeile mehrere Tj-Blöcke
+    // (ein Block je Fett-/Normal-Abschnitt) und müssen den Cursor selbst exakt weiterschieben,
+    // sonst entstehen sichtbare Lücken oder Überlappungen zwischen den Abschnitten.
+    public function richParagraph(array $runs, float $fontSize = 10.5, float $indent = 0.0): void
+    {
+        $availableWidth = self::PAGE_WIDTH - self::MARGIN_LEFT - self::MARGIN_RIGHT - $indent;
+
+        $tokens = [];
+        foreach ($runs as $run) {
+            if (!empty($run['break'])) {
+                $tokens[] = ['break' => true];
+                continue;
+            }
+            $bold = !empty($run['bold']);
+            foreach (preg_split('/\s+/u', (string) ($run['text'] ?? '')) ?: [] as $word) {
+                if ($word === '') {
+                    continue;
+                }
+                $tokens[] = ['word' => $word, 'bold' => $bold];
+            }
+        }
+
+        $lines = [];
+        $current = [];
+        $currentWidth = 0.0;
+        foreach ($tokens as $token) {
+            if (!empty($token['break'])) {
+                if ($current !== []) {
+                    $lines[] = $current;
+                }
+                $current = [];
+                $currentWidth = 0.0;
+                continue;
+            }
+
+            $font = $token['bold'] ? 'F2' : 'F1';
+            $wordWidth = $this->measureText($token['word'], $fontSize, $font);
+            $spaceWidth = $this->measureText(' ', $fontSize, 'F1');
+            $candidateWidth = $currentWidth === 0.0 ? $wordWidth : $currentWidth + $spaceWidth + $wordWidth;
+            if ($current !== [] && $candidateWidth > $availableWidth) {
+                $lines[] = $current;
+                $current = [$token];
+                $currentWidth = $wordWidth;
+            } else {
+                $current[] = $token;
+                $currentWidth = $candidateWidth;
+            }
+        }
+        if ($current !== []) {
+            $lines[] = $current;
+        }
+
+        foreach ($lines as $lineTokens) {
+            $this->ensureSpace($fontSize + 4.5);
+            $x = self::MARGIN_LEFT + $indent;
+            $segmentText = '';
+            $segmentBold = null;
+            $flush = function () use (&$segmentText, &$segmentBold, &$x, $fontSize): void {
+                if ($segmentText === '') {
+                    return;
+                }
+                $font = $segmentBold ? 'F2' : 'F1';
+                $this->line($segmentText, $x, $this->y, $fontSize, $font);
+                $x += $this->measureText($segmentText, $fontSize, $font);
+                $segmentText = '';
+            };
+            $first = true;
+            foreach ($lineTokens as $token) {
+                if ($segmentBold !== null && $segmentBold !== $token['bold']) {
+                    $flush();
+                }
+                $segmentBold = $token['bold'];
+                // Jedes Wort außer dem allerersten der Zeile bekommt ein führendes Leerzeichen,
+                // auch direkt nach einem Segmentwechsel (fett<->normal) - sonst fehlt der
+                // sichtbare Zwischenraum an der Segmentgrenze. Ausnahme: ein reines
+                // Satzzeichen-Token (z.B. "," direkt nach "<strong>Name</strong>,") rückt ohne
+                // Leerzeichen an das vorherige Wort heran, wie im HTML-Original.
+                $isTrailingPunctuation = (bool) preg_match('/^[,.;:!?]+$/u', $token['word']);
+                $segmentText .= ($first || $isTrailingPunctuation ? '' : ' ') . $token['word'];
+                $first = false;
+            }
+            $flush();
+            $this->y -= $fontSize + 4.5;
+        }
+        $this->y -= 4.0;
+    }
+
+    // Windows-1252-Zeichenbreiten (je 1/1000 em) für Helvetica bzw. Helvetica-Bold, aus den
+    // Adobe-AFM-Standardmetriken. Ohne diese Tabelle lässt sich der Cursor zwischen mehreren
+    // Tj-Textabschnitten pro Zeile nicht exakt genug positionieren (siehe richParagraph).
+    private const HELVETICA_WIDTHS = [
+        32 => 278, 33 => 278, 34 => 355, 35 => 556, 36 => 556, 37 => 889, 38 => 667, 39 => 191,
+        40 => 333, 41 => 333, 42 => 389, 43 => 584, 44 => 278, 45 => 333, 46 => 278, 47 => 278,
+        48 => 556, 49 => 556, 50 => 556, 51 => 556, 52 => 556, 53 => 556, 54 => 556, 55 => 556,
+        56 => 556, 57 => 556, 58 => 278, 59 => 278, 60 => 584, 61 => 584, 62 => 584, 63 => 556,
+        64 => 1015, 65 => 667, 66 => 667, 67 => 722, 68 => 722, 69 => 667, 70 => 611, 71 => 778,
+        72 => 722, 73 => 278, 74 => 500, 75 => 667, 76 => 556, 77 => 833, 78 => 722, 79 => 778,
+        80 => 667, 81 => 778, 82 => 722, 83 => 667, 84 => 611, 85 => 722, 86 => 667, 87 => 944,
+        88 => 667, 89 => 667, 90 => 611, 91 => 278, 92 => 278, 93 => 278, 94 => 469, 95 => 556,
+        96 => 333, 97 => 556, 98 => 556, 99 => 500, 100 => 556, 101 => 556, 102 => 278, 103 => 556,
+        104 => 556, 105 => 222, 106 => 222, 107 => 500, 108 => 222, 109 => 833, 110 => 556,
+        111 => 556, 112 => 556, 113 => 556, 114 => 333, 115 => 500, 116 => 278, 117 => 556,
+        118 => 500, 119 => 722, 120 => 500, 121 => 500, 122 => 500, 123 => 334, 124 => 260,
+        125 => 334, 126 => 584, 196 => 667, 214 => 778, 220 => 722, 223 => 611, 228 => 556,
+        246 => 556, 252 => 556,
+    ];
+
+    private const HELVETICA_BOLD_WIDTHS = [
+        32 => 278, 33 => 333, 34 => 474, 35 => 556, 36 => 556, 37 => 889, 38 => 722, 39 => 238,
+        40 => 333, 41 => 333, 42 => 389, 43 => 584, 44 => 278, 45 => 333, 46 => 278, 47 => 278,
+        48 => 556, 49 => 556, 50 => 556, 51 => 556, 52 => 556, 53 => 556, 54 => 556, 55 => 556,
+        56 => 556, 57 => 556, 58 => 333, 59 => 333, 60 => 584, 61 => 584, 62 => 584, 63 => 611,
+        64 => 975, 65 => 722, 66 => 722, 67 => 722, 68 => 722, 69 => 667, 70 => 611, 71 => 778,
+        72 => 722, 73 => 278, 74 => 556, 75 => 722, 76 => 611, 77 => 833, 78 => 722, 79 => 778,
+        80 => 667, 81 => 778, 82 => 722, 83 => 667, 84 => 611, 85 => 722, 86 => 667, 87 => 944,
+        88 => 667, 89 => 667, 90 => 611, 91 => 333, 92 => 278, 93 => 333, 94 => 584, 95 => 556,
+        96 => 333, 97 => 556, 98 => 611, 99 => 556, 100 => 611, 101 => 556, 102 => 333, 103 => 611,
+        104 => 611, 105 => 278, 106 => 278, 107 => 556, 108 => 278, 109 => 889, 110 => 611,
+        111 => 611, 112 => 611, 113 => 611, 114 => 389, 115 => 556, 116 => 333, 117 => 611,
+        118 => 556, 119 => 778, 120 => 556, 121 => 556, 122 => 500, 123 => 389, 124 => 280,
+        125 => 389, 126 => 584, 196 => 722, 214 => 778, 220 => 722, 223 => 611, 228 => 611,
+        246 => 611, 252 => 611,
+    ];
+
+    private function measureText(string $text, float $fontSize, string $font = 'F1'): float
+    {
+        $bytes = $text;
+        if (function_exists('iconv')) {
+            $converted = @iconv('UTF-8', 'Windows-1252//TRANSLIT', $text);
+            if ($converted !== false) {
+                $bytes = $converted;
+            }
+        }
+
+        $widths = $font === 'F2' ? self::HELVETICA_BOLD_WIDTHS : self::HELVETICA_WIDTHS;
+        $total = 0;
+        $length = strlen($bytes);
+        for ($i = 0; $i < $length; $i++) {
+            $total += $widths[ord($bytes[$i])] ?? 556;
+        }
+
+        return ($total / 1000.0) * $fontSize;
     }
 
     public function bulletList(array $items): void
@@ -602,7 +752,7 @@ final class SimplePdfDocument
 
     public function output(): string
     {
-        $objectCount = 4;
+        $objectCount = 5;
         $imageObjects = [];
         foreach (array_keys($this->images) as $name) {
             $objectCount++;
@@ -622,6 +772,7 @@ final class SimplePdfDocument
         $objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
         $objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
         $objects[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+        $objects[5] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>';
 
         foreach ($this->images as $name => $image) {
             if (($image['filter'] ?? 'FlateDecode') === 'DCTDecode') {
@@ -645,7 +796,7 @@ final class SimplePdfDocument
                 $xObjects .= '/' . $imageName . ' ' . $imageObjects[$imageName] . ' 0 R ';
             }
             $xObjectResource = $xObjects !== '' ? ' /XObject << ' . $xObjects . '>>' : '';
-            $objects[$pageObjects[$index]] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>' . $xObjectResource . ' >> /Contents ' . $contentObjects[$index] . ' 0 R >>';
+            $objects[$pageObjects[$index]] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>' . $xObjectResource . ' >> /Contents ' . $contentObjects[$index] . ' 0 R >>';
             $kids[] = $pageObjects[$index] . ' 0 R';
         }
         $objects[2] = '<< /Type /Pages /Kids [' . implode(' ', $kids) . '] /Count ' . count($kids) . ' >>';
@@ -1040,12 +1191,39 @@ function contract_template_walk_pdf_nodes(SimplePdfDocument $pdf, DOMNodeList $n
         } elseif ($tag === 'section' || $tag === 'div') {
             contract_template_walk_pdf_nodes($pdf, $node->childNodes);
         } else {
-            $text = contract_template_pdf_node_text($node);
-            if ($text !== '') {
-                $pdf->paragraph($text);
+            $runs = contract_template_pdf_node_runs($node);
+            if ($runs !== []) {
+                $pdf->richParagraph($runs);
             }
         }
     }
+}
+
+// Zerlegt einen Knoten in Text-Fragmente mit Fett- und Zeilenumbruch-Information (<strong>/<b>,
+// <br>), damit die PDF-Ausgabe dieselbe Hervorhebung wie die HTML-Vertragsvorschau zeigt statt
+// alles zu einem einzigen ununterbrochenen Absatz zu verflachen.
+function contract_template_pdf_node_runs(DOMNode $node, bool $bold = false): array
+{
+    $runs = [];
+    foreach ($node->childNodes as $child) {
+        if ($child->nodeType === XML_TEXT_NODE) {
+            $text = (string) preg_replace('/\s+/u', ' ', $child->textContent);
+            if ($text !== '') {
+                $runs[] = ['text' => $text, 'bold' => $bold];
+            }
+        } elseif ($child->nodeType === XML_ELEMENT_NODE) {
+            $childTag = strtolower($child->nodeName);
+            if ($childTag === 'br') {
+                $runs[] = ['break' => true];
+            } elseif ($childTag === 'strong' || $childTag === 'b') {
+                $runs = array_merge($runs, contract_template_pdf_node_runs($child, true));
+            } else {
+                $runs = array_merge($runs, contract_template_pdf_node_runs($child, $bold));
+            }
+        }
+    }
+
+    return $runs;
 }
 
 function contract_template_pdf_node_text(DOMNode $node): string
@@ -1261,13 +1439,20 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $customerFullAddress = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . 'D-' . $customerZipCity, ', ');
     $authorityInline = $authorized === false && $representationNote ? ' (' . $authorityText . ')' : '';
 
-    $pdf->paragraph('der ' . CONTRACTOR['legal_name'] . ' ' . CONTRACTOR['trade_description'] . ', Geschäftsführer: ' . $managingDirectors);
-    $pdf->paragraph(CONTRACTOR['street'] . ' ' . $contractorZipCity . '/Service Point: ' . $contractorServicePoint);
-    $pdf->rightAlignedText('- im Folgenden Auftragnehmer genannt -');
-    $pdf->paragraph(
-        'Die ' . $customerName . ', ' . $customerFullAddress . ', Vertragsunterzeichnung durch: ' . $signatoryName . $authorityInline
-    );
-    $pdf->rightAlignedText('- im Folgenden Auftraggeber genannt -');
+    $pdf->richParagraph([
+        ['text' => 'der '],
+        ['text' => CONTRACTOR['legal_name'], 'bold' => true],
+        ['text' => ' ' . CONTRACTOR['trade_description'] . ', Geschäftsführer: ' . $managingDirectors],
+        ['break' => true],
+        ['text' => CONTRACTOR['street'] . ' ' . $contractorZipCity . '/Service Point: ' . $contractorServicePoint],
+    ]);
+    $pdf->rightAlignedText('- im Folgenden Auftragnehmer genannt -', 9.5, 'F3');
+    $pdf->richParagraph([
+        ['text' => 'Die '],
+        ['text' => $customerName, 'bold' => true],
+        ['text' => ', ' . $customerFullAddress . ', Vertragsunterzeichnung durch: ' . $signatoryName . $authorityInline],
+    ]);
+    $pdf->rightAlignedText('- im Folgenden Auftraggeber genannt -', 9.5, 'F3');
     $pdf->paragraph($isSigned
         ? 'Die Parteien schließen den folgenden Vertrag zur Gebäudereinigung:'
         : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:');
