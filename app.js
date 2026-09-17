@@ -25,6 +25,8 @@ const state = {
   selectedContractId: null,
   pendingSendOfferId: null,
   pendingSendKind: "contract",
+  pendingSendContractId: null,
+  contractSendRecipientMode: "customer",
   offerSendRecipientMode: "customer",
   contractFilters: {
     search: "",
@@ -92,6 +94,14 @@ const els = {
   offerSendEmail: document.querySelector("#offer-send-email"),
   offerSendCancel: document.querySelector("#offer-send-cancel"),
   offerSendSubmit: document.querySelector("#offer-send-submit"),
+  contractSendModal: document.querySelector("#contract-send-modal"),
+  contractSendForm: document.querySelector("#contract-send-form"),
+  contractSendCustomer: document.querySelector("#contract-send-customer"),
+  contractSendSuggested: document.querySelector("#contract-send-suggested"),
+  contractSendManual: document.querySelector("#contract-send-manual"),
+  contractSendEmail: document.querySelector("#contract-send-email"),
+  contractSendCancel: document.querySelector("#contract-send-cancel"),
+  contractSendSubmit: document.querySelector("#contract-send-submit"),
   contractList: document.querySelector("#contract-list"),
   contractSearch: document.querySelector("#contract-search"),
   contractPeriodFilter: document.querySelector("#contract-period-filter"),
@@ -1567,6 +1577,10 @@ function renderContractRow(contract) {
           <i data-lucide="file-text" aria-hidden="true"></i>
           Kunde
         </a>
+        <button class="secondary-button" type="button" data-action="send-contract-email" data-id="${escapeHtml(contract.id)}">
+          <i data-lucide="send" aria-hidden="true"></i>
+          Vertrag an den Kunden senden
+        </button>
       `
     : "";
   const authorizationButton = contract.hasAuthorizationDocument
@@ -1925,6 +1939,100 @@ async function submitOfferSendForm(event) {
   els.offerSendSubmit.disabled = false;
   if (sent) {
     closeOfferSendModal();
+  }
+}
+
+function setContractSendRecipientMode(mode) {
+  const suggestedEmail = els.contractSendModal.dataset.suggestedEmail || "";
+  const canUseSuggested = isValidEmail(suggestedEmail);
+  const nextMode = mode === "customer" && canUseSuggested ? "customer" : "manual";
+
+  state.contractSendRecipientMode = nextMode;
+  els.contractSendSuggested.classList.toggle("active", nextMode === "customer");
+  els.contractSendManual.classList.toggle("active", nextMode === "manual");
+  els.contractSendSuggested.disabled = !canUseSuggested;
+  els.contractSendEmail.readOnly = nextMode === "customer";
+
+  if (nextMode === "customer") {
+    els.contractSendEmail.value = suggestedEmail;
+  } else if (!els.contractSendEmail.value && canUseSuggested) {
+    els.contractSendEmail.value = suggestedEmail;
+  }
+}
+
+function openContractSendModal(id) {
+  const contract = getContract(id);
+  if (!contract) {
+    showToast("Vertrag wurde nicht gefunden.");
+    return;
+  }
+
+  const suggestedEmail = String(contract.customer?.email || "").trim();
+  const hasSuggestedEmail = isValidEmail(suggestedEmail);
+  const customerLabel = contract.customer?.name || "Kunde";
+
+  state.pendingSendContractId = id;
+  els.contractSendModal.dataset.contractId = id;
+  els.contractSendModal.dataset.suggestedEmail = suggestedEmail;
+  els.contractSendCustomer.textContent = hasSuggestedEmail
+    ? `Vorschlag aus dem Kunden „${customerLabel}“: ${suggestedEmail}`
+    : `Für „${customerLabel}“ ist keine gültige Kunden-E-Mail hinterlegt.`;
+  els.contractSendEmail.value = "";
+  setContractSendRecipientMode(hasSuggestedEmail ? "customer" : "manual");
+
+  els.contractSendModal.hidden = false;
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+  els.contractSendEmail.focus();
+  if (state.contractSendRecipientMode === "manual") {
+    els.contractSendEmail.select();
+  }
+}
+
+function closeContractSendModal() {
+  els.contractSendModal.hidden = true;
+  state.pendingSendContractId = null;
+  els.contractSendModal.dataset.contractId = "";
+  els.contractSendModal.dataset.suggestedEmail = "";
+  els.contractSendForm.reset();
+  els.contractSendEmail.readOnly = false;
+  els.contractSendSubmit.disabled = false;
+}
+
+async function sendContractEmail(id, toEmail) {
+  try {
+    const result = await apiPost(`api/send-contract-email.php?id=${encodeURIComponent(id)}`, { toEmail });
+    showToast(`Vertrag wurde an ${result.sentTo || toEmail} versendet.`);
+    return true;
+  } catch (error) {
+    showToast(error.message);
+    return false;
+  }
+}
+
+async function submitContractSendForm(event) {
+  event.preventDefault();
+  const id = state.pendingSendContractId;
+  const toEmail = els.contractSendEmail.value.trim();
+
+  if (!id) {
+    showToast("Vertrag wurde nicht gefunden.");
+    closeContractSendModal();
+    return;
+  }
+
+  if (!isValidEmail(toEmail)) {
+    showToast("Bitte eine gültige E-Mail-Adresse eintragen.");
+    els.contractSendEmail.focus();
+    return;
+  }
+
+  els.contractSendSubmit.disabled = true;
+  const sent = await sendContractEmail(id, toEmail);
+  els.contractSendSubmit.disabled = false;
+  if (sent) {
+    closeContractSendModal();
   }
 }
 
@@ -3494,6 +3602,10 @@ function handleRecordAction(event) {
   if (action === "release-contract") {
     releaseContract(id);
   }
+
+  if (action === "send-contract-email") {
+    openContractSendModal(id);
+  }
 }
 
 function bindEvents() {
@@ -3678,6 +3790,20 @@ function bindEvents() {
     }
   });
 
+  els.contractSendForm.addEventListener("submit", submitContractSendForm);
+  els.contractSendCancel.addEventListener("click", closeContractSendModal);
+  els.contractSendSuggested.addEventListener("click", () => setContractSendRecipientMode("customer"));
+  els.contractSendManual.addEventListener("click", () => {
+    setContractSendRecipientMode("manual");
+    els.contractSendEmail.focus();
+    els.contractSendEmail.select();
+  });
+  els.contractSendModal.addEventListener("click", (event) => {
+    if (event.target === els.contractSendModal) {
+      closeContractSendModal();
+    }
+  });
+
   els.linkModalCopy.addEventListener("click", copyLinkModalValue);
   els.linkModalClose.addEventListener("click", closeLinkModal);
   els.linkModal.addEventListener("click", (event) => {
@@ -3724,6 +3850,10 @@ function bindEvents() {
     }
     if (event.key === "Escape" && !els.offerEditModal.hidden) {
       closeOfferEditModal();
+      return;
+    }
+    if (event.key === "Escape" && !els.contractSendModal.hidden) {
+      closeContractSendModal();
     }
   });
 

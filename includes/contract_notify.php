@@ -159,6 +159,66 @@ function notify_contract_created(PDO $pdo, string $contractId): void
     }
 }
 
+// Baut die Willkommens-/Auftragsbestätigungs-E-Mail für einen unterschriebenen Vertrag und
+// verschickt sie inkl. PDF-Anhang an die angegebene Adresse. Wirft bei Fehlern (kein SMTP-Konto,
+// PDF nicht ladbar, Versand fehlgeschlagen) eine Exception - Aufrufer entscheiden, ob das best
+// effort (automatischer Versand nach Unterschrift) oder fatal (manueller Versand über die UI) ist.
+function send_signed_contract_email_to_customer(PDO $pdo, array $context, string $toEmail): void
+{
+    $smtp = load_mailbox_smtp($pdo);
+    if ($smtp === null) {
+        throw new RuntimeException('Kein E-Mail-Versand-Konto unter Einstellungen > E-Mails eingerichtet.');
+    }
+
+    $pdf = save_contract_pdf($pdo, $context['contract']['id'], 'customer', true);
+
+    $signatureSettings = load_email_signature_settings($pdo);
+    $senderName = trim((string) $signatureSettings['senderName']) !== ''
+        ? trim((string) $signatureSettings['senderName'])
+        : 'Ihr CleanTeam-Team';
+
+    $downloadToken = trim((string) ($context['offer']['token'] ?? ''));
+    $downloadUrl = $downloadToken !== ''
+        ? base_url() . '/contract.php?token=' . rawurlencode($downloadToken) . '&format=pdf&download=1'
+        : '';
+    $documentLabel = 'Ihre unterschriebene Auftragsbestätigung';
+    $downloadLabel = 'Auftragsbestätigung herunterladen';
+
+    $messageContent = '<p style="margin:0 0 14px 0;">Willkommen bei CleanTeam!</p>'
+        . '<p>Mein Name ist ' . email_h($senderName) . '. Ich bin Ihr Ansprechpartner f&uuml;r Ihre Auftragsbest&auml;tigung.</p>'
+        . '<p>Sie finden ' . $documentLabel . ' im Anhang dieser E-Mail. Alternativ können Sie das Dokument jederzeit über den folgenden Button herunterladen:</p>'
+        . ($downloadUrl !== '' ? email_button_html($downloadUrl, $downloadLabel) : '')
+        . '<p>Bei Fragen stehe ich Ihnen gerne zur Verf&uuml;gung &ndash; per E-Mail oder direkt telefonisch im B&uuml;ro.</p>';
+    $message = render_email_template_message($pdo, $messageContent, [
+        'title' => 'Ihre Auftragsbestätigung von CleanTeam',
+        'preheader' => 'Ihre unterschriebene Auftragsbestätigung steht bereit.',
+        'fromName' => $smtp['from_name'] ?? 'CleanTeam',
+        'signatureText' => $smtp['signature'] ?? '',
+        'signatureContext' => 'contract_customer',
+    ]);
+
+    $mailer = new SmtpMailer(
+        $smtp['host'],
+        (int) $smtp['smtp_port'],
+        $smtp['smtp_encryption'],
+        $smtp['username'],
+        decrypt_secret($smtp['password_encrypted'])
+    );
+
+    $mailer->sendWithAttachment(
+        $smtp['username'],
+        $smtp['from_name'],
+        $toEmail,
+        $context['customer']['name'],
+        'Ihre Auftragsbestätigung von CleanTeam',
+        $message['html'],
+        (string) $pdf['filename'],
+        (string) $pdf['content'],
+        'application/pdf',
+        $message['inlineImages']
+    );
+}
+
 // Schickt dem Kunden nach dem Unterschreiben eine Willkommens-E-Mail mit dem unterschriebenen
 // Vertrag als Anhang. Unabhaengig von der Vertragsbenachrichtigung an die Buchhaltung, immer
 // aktiv sobald ein SMTP-Konto hinterlegt ist. Best effort, wirft keine Exceptions nach aussen.
@@ -181,58 +241,7 @@ function notify_customer_contract_signed(PDO $pdo, string $contractId): void
             return;
         }
 
-        $smtp = load_mailbox_smtp($pdo);
-        if ($smtp === null) {
-            return;
-        }
-
-        $pdf = save_contract_pdf($pdo, $contractId, 'customer', true);
-
-        $signatureSettings = load_email_signature_settings($pdo);
-        $senderName = trim((string) $signatureSettings['senderName']) !== ''
-            ? trim((string) $signatureSettings['senderName'])
-            : 'Ihr CleanTeam-Team';
-
-        $downloadToken = trim((string) ($context['offer']['token'] ?? ''));
-        $downloadUrl = $downloadToken !== ''
-            ? base_url() . '/contract.php?token=' . rawurlencode($downloadToken) . '&format=pdf&download=1'
-            : '';
-        $documentLabel = 'Ihre unterschriebene Auftragsbestätigung';
-        $downloadLabel = 'Auftragsbestätigung herunterladen';
-
-        $messageContent = '<p style="margin:0 0 14px 0;">Willkommen bei CleanTeam!</p>'
-            . '<p>Mein Name ist ' . email_h($senderName) . '. Ich bin Ihr Ansprechpartner f&uuml;r Ihre Auftragsbest&auml;tigung.</p>'
-            . '<p>Sie finden ' . $documentLabel . ' im Anhang dieser E-Mail. Alternativ können Sie das Dokument jederzeit über den folgenden Button herunterladen:</p>'
-            . ($downloadUrl !== '' ? email_button_html($downloadUrl, $downloadLabel) : '')
-            . '<p>Bei Fragen stehe ich Ihnen gerne zur Verf&uuml;gung &ndash; per E-Mail oder direkt telefonisch im B&uuml;ro.</p>';
-        $message = render_email_template_message($pdo, $messageContent, [
-            'title' => 'Ihre Auftragsbestätigung von CleanTeam',
-            'preheader' => 'Ihre unterschriebene Auftragsbestätigung steht bereit.',
-            'fromName' => $smtp['from_name'] ?? 'CleanTeam',
-            'signatureText' => $smtp['signature'] ?? '',
-            'signatureContext' => 'contract_customer',
-        ]);
-
-        $mailer = new SmtpMailer(
-            $smtp['host'],
-            (int) $smtp['smtp_port'],
-            $smtp['smtp_encryption'],
-            $smtp['username'],
-            decrypt_secret($smtp['password_encrypted'])
-        );
-
-        $mailer->sendWithAttachment(
-            $smtp['username'],
-            $smtp['from_name'],
-            $customerEmail,
-            $context['customer']['name'],
-            'Ihre Auftragsbestätigung von CleanTeam',
-            $message['html'],
-            (string) $pdf['filename'],
-            (string) $pdf['content'],
-            'application/pdf',
-            $message['inlineImages']
-        );
+        send_signed_contract_email_to_customer($pdo, $context, $customerEmail);
     } catch (Throwable $exception) {
         error_log('Kunden-Vertragsbestätigung fehlgeschlagen: ' . $exception->getMessage());
     }
