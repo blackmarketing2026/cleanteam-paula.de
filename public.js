@@ -236,6 +236,11 @@ function routeToState(data) {
     const finalText = document.querySelector("#screen-fertig p");
     finalHeading.textContent = "Auftragsbestätigung erfolgreich abgeschlossen";
     finalText.textContent = "Die Auftragsbestätigung wurde erfolgreich unterschrieben. Sie können das vollständige Dokument unten einsehen, ausdrucken oder als PDF speichern.";
+
+    const privacyEyebrow = document.querySelector("#screen-datenschutz .step-indicator");
+    const privacyText = document.querySelector("#screen-datenschutz p.muted");
+    privacyEyebrow.textContent = "Aktualisierung zu Ihrem bestehenden Vertrag";
+    privacyText.textContent = "Dürfen wir Ihre Daten für die aktualisierte Auftragsbestätigung hier abspeichern?";
   }
 
   const contract = data.contract;

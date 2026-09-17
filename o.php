@@ -151,6 +151,6 @@ header('Cache-Control: no-store, private');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=existing-contract-day-20260917"></script>
+    <script src="public.js?v=repeat-privacy-consent-20260917"></script>
   </body>
 </html>

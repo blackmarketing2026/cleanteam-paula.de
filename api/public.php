@@ -248,16 +248,16 @@ if ($method === 'GET' && $action === 'offer') {
         )->execute(['quote_status' => $fallbackStatus, 'id' => $offer['id']]);
         $offer = load_offer($pdo, $token);
     }
-    if ($contract !== null && normalize_current_step((string) $contract['current_step']) === 'signatur'
-        && $contract['current_step'] !== 'signatur') {
-        $nextStep = empty($contract['privacy_accepted_at']) ? 'datenschutz' : 'signatur';
-        $pdo->prepare("UPDATE contracts SET current_step = :step, data_confirmed = CASE WHEN :step_confirmed = 'signatur' THEN 1 ELSE data_confirmed END, interval_confirmed = CASE WHEN :step_confirmed_2 = 'signatur' THEN 1 ELSE interval_confirmed END WHERE id = :id")
-            ->execute([
-                'step' => $nextStep,
-                'step_confirmed' => $nextStep,
-                'step_confirmed_2' => $nextStep,
-                'id' => $contract['id'],
-            ]);
+    // Die Datenschutz-Zustimmung muss bei jedem Aufruf des Links erneut eingeholt werden -
+    // ein bereits einmal bestaetigter Vertrag springt also nicht mehr dauerhaft zur
+    // Signatur, solange er noch nicht unterschrieben ist. confirm-privacy ueberschreibt
+    // den Zeitstempel bei jeder erneuten Zustimmung.
+    if ($contract !== null
+        && !in_array($contract['status'], TERMINAL_STATUSES, true)
+        && !in_array($contract['status'], ['signiert', 'bestaetigt'], true)
+        && normalize_current_step((string) $contract['current_step']) !== 'datenschutz') {
+        $pdo->prepare("UPDATE contracts SET current_step = 'datenschutz' WHERE id = :id")
+            ->execute(['id' => $contract['id']]);
         $contract = load_contract($pdo, $offer['id']);
     }
     json_response(public_state($offer, $contract));
