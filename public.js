@@ -117,14 +117,6 @@ function renderDataCheck() {
   ]);
 }
 
-function formatMonthYear(value) {
-  if (!value) {
-    return "Nicht angegeben";
-  }
-  return new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: "UTC" })
-    .format(new Date(`${String(value).slice(0, 7)}-01T00:00:00Z`));
-}
-
 function showExpiredLink() {
   els.errorMessage.textContent = EXPIRED_LINK_MESSAGE;
   els.linkValidity.textContent = "Link abgelaufen";
@@ -187,8 +179,8 @@ function renderServiceDetails() {
   const offer = state.offer;
   const items = offer.isExistingContract
     ? [
-        ["Ursprünglicher Vertrag", formatMonthYear(offer.originalStartDate)],
-        ["Neuer Vertrag in Kraft ab", formatMonthYear(offer.startDate)],
+        ["Ursprünglicher Vertrag", formatDate(offer.originalStartDate)],
+        ["Neuer Vertrag in Kraft ab", formatDate(offer.startDate)],
         ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
       ]
     : [

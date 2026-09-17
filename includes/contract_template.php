@@ -207,19 +207,6 @@ function contract_format_date(?string $isoOrMysqlDate): string
     return gmdate('d.m.Y', $timestamp);
 }
 
-function contract_format_month_year(?string $isoOrMysqlDate): string
-{
-    if ($isoOrMysqlDate === null || $isoOrMysqlDate === '') {
-        return '–';
-    }
-
-    $date = new DateTimeImmutable($isoOrMysqlDate);
-    $months = [1 => 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
-        'September', 'Oktober', 'November', 'Dezember'];
-
-    return $months[(int) $date->format('n')] . ' ' . $date->format('Y');
-}
-
 function contract_current_date(): string
 {
     return (new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin')))->format('d.m.Y');
@@ -528,11 +515,7 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $vatAmount = $vatApplicable ? round($netPrice * VAT_RATE / 100, 2) : 0.0;
     $grossPrice = $vatApplicable ? round($netPrice + $vatAmount, 2) : $netPrice;
     $isExistingContract = !empty($offer['is_existing_contract']);
-    if ($isExistingContract) {
-        $effectiveDate = contract_format_month_year((string) ($offer['start_date'] ?? $offer['original_start_date'] ?? $offer['created_at']));
-    } else {
-        $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['created_at']);
-    }
+    $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['original_start_date'] ?? $offer['created_at']);
     $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
     $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
     $customerFullAddress = trim($customerAddress . ', ' . $customerZipCity, ', ');
@@ -580,7 +563,7 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $values['logo'] = $forPdf ? '' : contract_logo_html();
     $legalChoiceText = 'Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.';
     $values['beginn_block'] = $isExistingContract
-        ? '<p>1. Der ursprüngliche Vertrag besteht seit <strong>' . h(contract_format_month_year($offer['original_start_date'] ?? null)) . '</strong>.<br>'
+        ? '<p>1. Der ursprüngliche Vertrag besteht seit <strong>' . h(contract_format_date($offer['original_start_date'] ?? null)) . '</strong>.<br>'
             . '2. Der neue Vertrag tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>3. ' . h($legalChoiceText) . '</p>'
         : '<p>1. Der Vertrag zur Gebäudereinigung tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>2. ' . h($legalChoiceText) . '</p>';
     $values['ausfertigung_satz'] = $isExistingContract

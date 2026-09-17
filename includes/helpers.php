@@ -144,12 +144,17 @@ function offer_discounted_price(float $basePrice, float $discountPercent): float
 
 function offer_month_start_date($value): ?string
 {
-    $monthValue = trim((string) $value);
-    if (!preg_match('/^([1-9][0-9]{3})-(0[1-9]|1[0-2])(?:-(?:0[1-9]|[12][0-9]|3[01]))?$/', $monthValue, $matches)) {
-        return null;
+    $input = trim((string) $value);
+
+    if (preg_match('/^([1-9][0-9]{3})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/', $input, $matches)) {
+        return checkdate((int) $matches[2], (int) $matches[3], (int) $matches[1]) ? $input : null;
     }
 
-    return $matches[1] . '-' . $matches[2] . '-01';
+    if (preg_match('/^([1-9][0-9]{3})-(0[1-9]|1[0-2])$/', $input, $matches)) {
+        return $matches[1] . '-' . $matches[2] . '-01';
+    }
+
+    return null;
 }
 
 function ensure_quote_workflow_columns(PDO $pdo): void

@@ -389,8 +389,8 @@
                 <div><span>Preis nach Rabatt</span><strong id="existing-offer-final-price-preview">0,00&nbsp;&euro;</strong></div>
               </div>
               <label>Umsatzsteuer berechnen? *<select id="existing-offer-vat" required><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
-              <label>Urspr&uuml;nglicher Vertrag *<input id="existing-offer-original-start" type="month" min="1900-01" required /></label>
-              <label>Neuer Vertrag tritt in Kraft ab *<input id="existing-offer-effective-start" type="month" min="1900-01" required /></label>
+              <label>Urspr&uuml;nglicher Vertrag *<input id="existing-offer-original-start" type="date" min="1900-01-01" required /></label>
+              <label>Neuer Vertrag tritt in Kraft ab *<input id="existing-offer-effective-start" type="date" min="1900-01-01" required /></label>
               <label>Signaturort *<select id="existing-offer-signing-location" required><option value="">Bitte w&auml;hlen</option><option value="Linz, &Ouml;sterreich">Linz, &Ouml;sterreich</option><option value="Solingen, Deutschland">Solingen, Deutschland</option></select></label>
               <label class="span-2">Leistungsbeschreibung *<textarea id="existing-offer-service-text" class="offer-service-editor" rows="18" required placeholder="Alle vereinbarten Leistungen als Flie&szlig;text eintragen"></textarea></label>
               <label class="span-2">Pflichten des Auftraggebers (optional)<textarea id="existing-offer-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6" placeholder="Zus&auml;tzliche kundenspezifische Pflichten, eine Pflicht pro Zeile"></textarea></label>
@@ -1354,10 +1354,10 @@
         </label>
         <div id="offer-edit-original-start-fields" class="offer-edit-subgrid" hidden>
           <label class="modal-field">Urspr&uuml;nglicher Vertrag *
-            <input id="offer-edit-original-start" type="month" min="1900-01" />
+            <input id="offer-edit-original-start" type="date" min="1900-01-01" />
           </label>
           <label class="modal-field">Neuer Vertrag tritt in Kraft ab *
-            <input id="offer-edit-effective-start" type="month" min="1900-01" />
+            <input id="offer-edit-effective-start" type="date" min="1900-01-01" />
           </label>
         </div>
         <label class="modal-field">
@@ -1511,7 +1511,7 @@
     </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=send-contract-email-20260917"></script>
+    <script src="app.js?v=existing-contract-day-20260917"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

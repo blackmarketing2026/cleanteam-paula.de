@@ -361,18 +361,6 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-function formatMonthYear(value) {
-  if (!value) {
-    return "Nicht angegeben";
-  }
-
-  return new Intl.DateTimeFormat("de-DE", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${String(value).slice(0, 7)}-01T00:00:00Z`));
-}
-
 function formatDateTime(value) {
   if (!value) {
     return "";
@@ -1335,7 +1323,7 @@ function renderOfferCard(offer) {
           <div class="record-title">Firma: ${escapeHtml(offer.customer.name)}</div>
           <div class="record-meta">
             ${offer.squareMeters > 0 ? `<span>${offer.squareMeters} m²</span>` : ""}
-            <span>Erstellt am ${formatDate(offer.createdAt)}${offer.isExistingContract ? ` · Ursprünglicher Vertrag ${formatMonthYear(offer.originalStartDate)} · Neuer Vertrag ab ${formatMonthYear(offer.startDate)}` : offer.startDate ? ` · Start ${formatDate(offer.startDate)}` : ""}</span>
+            <span>Erstellt am ${formatDate(offer.createdAt)}${offer.isExistingContract ? ` · Ursprünglicher Vertrag ${formatDate(offer.originalStartDate)} · Neuer Vertrag ab ${formatDate(offer.startDate)}` : offer.startDate ? ` · Start ${formatDate(offer.startDate)}` : ""}</span>
             <span>${escapeHtml(sentLabel)}</span>
           </div>
         </div>
@@ -2263,10 +2251,10 @@ function openOfferEditModal(id) {
   els.offerEditValidityDays.required = !offer.isExistingContract;
   els.offerEditValidityHours.required = !offer.isExistingContract;
   els.offerEditOriginalStart.value = offer.isExistingContract && offer.originalStartDate
-    ? offer.originalStartDate.slice(0, 7)
+    ? offer.originalStartDate
     : "";
   els.offerEditEffectiveStart.value = offer.isExistingContract && offer.startDate
-    ? offer.startDate.slice(0, 7)
+    ? offer.startDate
     : "";
   els.offerEditSigningLocation.value = offer.signingLocation || "Linz, Österreich";
   els.offerEditValidityDays.value = offer.validityDays ?? 14;
