@@ -392,6 +392,36 @@
               <label>Urspr&uuml;nglicher Vertrag *<input id="existing-offer-original-start" type="date" min="1900-01-01" required /></label>
               <label>Neuer Vertrag tritt in Kraft ab *<input id="existing-offer-effective-start" type="date" min="1900-01-01" required /></label>
               <label>Signaturort *<select id="existing-offer-signing-location" required><option value="">Bitte w&auml;hlen</option><option value="Linz, &Ouml;sterreich">Linz, &Ouml;sterreich</option><option value="Solingen, Deutschland">Solingen, Deutschland</option></select></label>
+              <label>Gültigkeitsdauer (Tage) *<input id="existing-offer-validity-days" type="number" min="0" step="1" required value="14" /></label>
+              <label>Zusätzliche Stunden (0–24) *
+                <select id="existing-offer-validity-hours" required>
+                  <option value="0" selected>0 Stunden</option>
+                  <option value="1">1 Stunde</option>
+                  <option value="2">2 Stunden</option>
+                  <option value="3">3 Stunden</option>
+                  <option value="4">4 Stunden</option>
+                  <option value="5">5 Stunden</option>
+                  <option value="6">6 Stunden</option>
+                  <option value="7">7 Stunden</option>
+                  <option value="8">8 Stunden</option>
+                  <option value="9">9 Stunden</option>
+                  <option value="10">10 Stunden</option>
+                  <option value="11">11 Stunden</option>
+                  <option value="12">12 Stunden</option>
+                  <option value="13">13 Stunden</option>
+                  <option value="14">14 Stunden</option>
+                  <option value="15">15 Stunden</option>
+                  <option value="16">16 Stunden</option>
+                  <option value="17">17 Stunden</option>
+                  <option value="18">18 Stunden</option>
+                  <option value="19">19 Stunden</option>
+                  <option value="20">20 Stunden</option>
+                  <option value="21">21 Stunden</option>
+                  <option value="22">22 Stunden</option>
+                  <option value="23">23 Stunden</option>
+                  <option value="24">24 Stunden</option>
+                </select>
+              </label>
               <label class="span-2">Leistungsbeschreibung *<textarea id="existing-offer-service-text" class="offer-service-editor" rows="18" required placeholder="Alle vereinbarten Leistungen als Flie&szlig;text eintragen"></textarea></label>
               <label class="span-2">Pflichten des Auftraggebers (optional)<textarea id="existing-offer-obligations-text" class="offer-service-editor offer-obligations-editor" rows="6" placeholder="Zus&auml;tzliche kundenspezifische Pflichten, eine Pflicht pro Zeile"></textarea></label>
               <p class="muted span-2">Link, Versand und E-Mail-Vorlage werden manuell ausgel&ouml;st. Automatische Signatur-Erinnerungen und E-Mail-Serien bleiben deaktiviert.</p>
@@ -1511,7 +1541,7 @@
     </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=existing-contract-day-20260917"></script>
+    <script src="app.js?v=existing-contract-validity-20260917"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

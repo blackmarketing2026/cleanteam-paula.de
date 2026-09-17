@@ -1329,7 +1329,8 @@ function renderOfferCard(offer) {
         </div>
         <div class="record-side">
           ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}</span>` : ""}
-          ${offer.isExistingContract ? '<span class="badge">Bestand</span>' : `<span class="badge ${validity.className}">${escapeHtml(validity.label)}</span>`}
+          ${offer.isExistingContract ? '<span class="badge">Bestand</span>' : ""}
+          <span class="badge ${validity.className}">${escapeHtml(validity.label)}</span>
         </div>
       </div>
       <div class="record-lines">
@@ -1662,6 +1663,16 @@ async function handleExistingOfferSubmit(event) {
     return;
   }
 
+  const validityDays = Number(value("#existing-offer-validity-days"));
+  const validityHours = Number(value("#existing-offer-validity-hours"));
+  if (!Number.isInteger(validityDays) || validityDays < 0
+      || !Number.isInteger(validityHours) || validityHours < 0 || validityHours > 24
+      || (validityDays === 0 && validityHours === 0)) {
+    showToast("Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.");
+    document.querySelector("#existing-offer-validity-days").focus();
+    return;
+  }
+
   try {
     const result = await apiPost("api/existing-offers.php", {
       customerName: value("#existing-offer-customer-name"),
@@ -1678,6 +1689,8 @@ async function handleExistingOfferSubmit(event) {
       originalStartDate: value("#existing-offer-original-start"),
       startDate: value("#existing-offer-effective-start"),
       signingLocation: value("#existing-offer-signing-location"),
+      validityDays,
+      validityHours,
       serviceText,
       customerObligationsNote: obligationsText,
     });
@@ -2247,9 +2260,9 @@ function openOfferEditModal(id) {
   els.offerEditOriginalStartFields.hidden = !offer.isExistingContract;
   els.offerEditOriginalStart.required = offer.isExistingContract;
   els.offerEditEffectiveStart.required = offer.isExistingContract;
-  els.offerEditValidityFields.hidden = offer.isExistingContract;
-  els.offerEditValidityDays.required = !offer.isExistingContract;
-  els.offerEditValidityHours.required = !offer.isExistingContract;
+  els.offerEditValidityFields.hidden = false;
+  els.offerEditValidityDays.required = true;
+  els.offerEditValidityHours.required = true;
   els.offerEditOriginalStart.value = offer.isExistingContract && offer.originalStartDate
     ? offer.originalStartDate
     : "";
@@ -2277,9 +2290,9 @@ async function handleOfferEditSubmit(event) {
   const isExistingContract = els.offerEditModal.dataset.existingContract === "true";
   const validityDays = Number(els.offerEditValidityDays.value);
   const validityHours = Number(els.offerEditValidityHours.value);
-  if (!isExistingContract && (!Number.isInteger(validityDays) || validityDays < 0
+  if (!Number.isInteger(validityDays) || validityDays < 0
       || !Number.isInteger(validityHours) || validityHours < 0 || validityHours > 24
-      || (validityDays === 0 && validityHours === 0))) {
+      || (validityDays === 0 && validityHours === 0)) {
     showToast("Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.");
     els.offerEditValidityDays.focus();
     return;

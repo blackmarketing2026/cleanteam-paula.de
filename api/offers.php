@@ -308,8 +308,8 @@ if ($method === 'PUT') {
     if ($signingLocation === null) {
         json_error('Bitte einen gültigen Signaturort auswählen.', 422);
     }
-    if (!$isExistingContract && ($validityDays < 0 || $validityHours < 0 || $validityHours > 24
-        || ($validityDays === 0 && $validityHours === 0))) {
+    if ($validityDays < 0 || $validityHours < 0 || $validityHours > 24
+        || ($validityDays === 0 && $validityHours === 0)) {
         json_error('Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.', 422);
     }
     $originalStartDate = $isExistingContract ? offer_month_start_date($originalStartInput) : null;
@@ -344,7 +344,7 @@ if ($method === 'PUT') {
                 price = :price, base_price = :base_price, discount_percent = :discount_percent, vat_applicable = :vat_applicable, notes = :notes,
                 customer_obligations_note = :customer_obligations_note,
                 validity_days = :validity_days, validity_hours = :validity_hours,
-                expires_at = CASE WHEN is_existing_contract = 1 THEN expires_at ELSE DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) END WHERE id = :id'
+                expires_at = DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) WHERE id = :id'
         )->execute([
             'square_meters' => $squareMeters,
             'interval_label' => $intervalLabel,

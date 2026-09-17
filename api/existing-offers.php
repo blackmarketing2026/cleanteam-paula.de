@@ -31,6 +31,8 @@ $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
 $originalStartInput = trim((string) ($body['originalStartDate'] ?? ''));
 $effectiveStartInput = trim((string) ($body['startDate'] ?? ''));
 $signingLocation = normalize_contract_signing_location($body['signingLocation'] ?? null);
+$validityDays = (int) ($body['validityDays'] ?? 14);
+$validityHours = (int) ($body['validityHours'] ?? 0);
 $legacyStartMonth = (int) ($body['originalStartMonth'] ?? 0);
 $legacyStartYear = (int) ($body['originalStartYear'] ?? 0);
 if ($originalStartInput === '' && $legacyStartMonth > 0 && $legacyStartYear > 0) {
@@ -65,6 +67,10 @@ if ($effectiveStartDate === null || (int) substr($effectiveStartDate, 0, 4) < 19
 if ($signingLocation === null) {
     json_error('Bitte einen gültigen Signaturort auswählen.', 422);
 }
+if ($validityDays < 0 || $validityHours < 0 || $validityHours > 24
+    || ($validityDays === 0 && $validityHours === 0)) {
+    json_error('Bitte mindestens einen Tag oder eine Stunde als Gültigkeitsdauer auswählen.', 422);
+}
 
 try {
     $pdo->beginTransaction();
@@ -81,7 +87,8 @@ try {
             original_start_date, signing_location, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note,
             price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
          VALUES (:id, :customer_id, 1, :square_meters, :interval_label, :service, :start_date, :original_start_date, :signing_location,
-            :notes, :obligations, :base_price, :discount_percent, 0, NULL, :price, :vat, :token, UTC_TIMESTAMP(), \'2099-12-31 23:59:59\', 0, 0)'
+            :notes, :obligations, :base_price, :discount_percent, 0, NULL, :price, :vat, :token, UTC_TIMESTAMP(),
+            DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), INTERVAL :validity_hours HOUR), :validity_days2, :validity_hours2)'
     )->execute([
         'id' => $id, 'customer_id' => $customerId, 'square_meters' => $squareMeters,
         'interval_label' => $interval, 'service' => 'Individuelle Leistung', 'start_date' => $effectiveStartDate,
@@ -91,6 +98,8 @@ try {
         'obligations' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
         'base_price' => $basePrice, 'discount_percent' => $discountPercent,
         'price' => $price, 'vat' => $vatApplicable ? 1 : 0, 'token' => generate_token(),
+        'validity_days' => $validityDays, 'validity_days2' => $validityDays,
+        'validity_hours' => $validityHours, 'validity_hours2' => $validityHours,
     ]);
 
     $agbSnapshotText = fetch_agb_text_snapshot();
