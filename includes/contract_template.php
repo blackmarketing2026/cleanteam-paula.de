@@ -563,8 +563,10 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $values['logo'] = $forPdf ? '' : contract_logo_html();
     $legalChoiceText = 'Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.';
     $values['beginn_block'] = $isExistingContract
-        ? '<p>1. Der ursprüngliche Vertrag besteht seit <strong>' . h(contract_format_date($offer['original_start_date'] ?? null)) . '</strong>.<br>'
-            . '2. Der neue Vertrag tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>3. ' . h($legalChoiceText) . '</p>'
+        ? ($forPdf
+            ? '<p>1. Der Vertrag zur Gebäudereinigung tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>2. ' . h($legalChoiceText) . '</p>'
+            : '<p>1. Der ursprüngliche Vertrag besteht seit <strong>' . h(contract_format_date($offer['original_start_date'] ?? null)) . '</strong>.<br>'
+                . '2. Der neue Vertrag tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>3. ' . h($legalChoiceText) . '</p>')
         : '<p>1. Der Vertrag zur Gebäudereinigung tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>2. ' . h($legalChoiceText) . '</p>';
     $values['ausfertigung_satz'] = $isExistingContract
         ? 'Beide Parteien erhalten eine Ausfertigung dieses Vertrags.'
