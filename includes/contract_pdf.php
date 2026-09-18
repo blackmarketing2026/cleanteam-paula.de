@@ -1461,11 +1461,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->imageFile($logoPath, 195.0, 48.0);
     }
     $pdf->meta('Datum: ' . $currentDate);
-    $pdf->title($isSigned
-        ? 'Vertrag'
-        : ($isExistingContract
-            ? 'Vertrag vom ' . contract_format_date($offer['original_start_date'] ?? null)
-            : 'Auftragsbestätigung'));
+    $pdf->title(($isSigned || $isExistingContract) ? 'Vertrag' : 'Auftragsbestätigung');
     $pdf->centeredText('zwischen');
 
     $customerFullAddress = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . 'D-' . $customerZipCity, ', ');

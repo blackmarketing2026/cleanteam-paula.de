@@ -242,10 +242,11 @@ function routeToState(data) {
     privacyEyebrow.textContent = "Aktualisierung zu Ihrem bestehenden Vertrag";
     privacyText.textContent = "Dürfen wir Ihre Daten für den aktualisierten Vertrag hier abspeichern?";
 
-    document.title = "CleanTeam - Ihr Vertrag";
-    document.querySelector("#public-document-label").textContent = "Ihr persönlicher Vertrag";
-    document.querySelector("#screen-signatur h2").textContent = "Ihr Vertrag";
-    document.querySelector("#screen-signatur p.muted").textContent = "Lesen Sie den Vertrag bitte vollständig durch.";
+    const originalContractDate = formatDate(data.offer.originalStartDate);
+    document.title = "CleanTeam - Ihre Vertragsaktualisierung";
+    document.querySelector("#public-document-label").textContent = "Ihre Vertragsaktualisierung";
+    document.querySelector("#screen-signatur h2").textContent = `Ihre Vertragsaktualisierung zum Vertrag vom ${originalContractDate}`;
+    document.querySelector("#screen-signatur p.muted").textContent = "Lesen Sie die Vertragsaktualisierung bitte vollständig durch.";
     document.querySelector(".signature-section-heading").textContent = "Vertrag unterschreiben";
     els.saveSignature.textContent = "Vertrag unterschreiben";
   }
