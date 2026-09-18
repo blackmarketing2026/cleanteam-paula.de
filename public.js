@@ -234,13 +234,20 @@ function routeToState(data) {
   if (data.offer.isExistingContract) {
     const finalHeading = document.querySelector("#screen-fertig h2");
     const finalText = document.querySelector("#screen-fertig p");
-    finalHeading.textContent = "Auftragsbestätigung erfolgreich abgeschlossen";
-    finalText.textContent = "Die Auftragsbestätigung wurde erfolgreich unterschrieben. Sie können das vollständige Dokument unten einsehen, ausdrucken oder als PDF speichern.";
+    finalHeading.textContent = "Vertrag erfolgreich abgeschlossen";
+    finalText.textContent = "Der Vertrag wurde erfolgreich unterschrieben. Sie können das vollständige Dokument unten einsehen, ausdrucken oder als PDF speichern.";
 
     const privacyEyebrow = document.querySelector("#screen-datenschutz .step-indicator");
     const privacyText = document.querySelector("#screen-datenschutz p.muted");
     privacyEyebrow.textContent = "Aktualisierung zu Ihrem bestehenden Vertrag";
-    privacyText.textContent = "Dürfen wir Ihre Daten für die aktualisierte Auftragsbestätigung hier abspeichern?";
+    privacyText.textContent = "Dürfen wir Ihre Daten für den aktualisierten Vertrag hier abspeichern?";
+
+    document.title = "CleanTeam - Ihr Vertrag";
+    document.querySelector("#public-document-label").textContent = "Ihr persönlicher Vertrag";
+    document.querySelector("#screen-signatur h2").textContent = "Ihr Vertrag";
+    document.querySelector("#screen-signatur p.muted").textContent = "Lesen Sie den Vertrag bitte vollständig durch.";
+    document.querySelector(".signature-section-heading").textContent = "Vertrag unterschreiben";
+    els.saveSignature.textContent = "Vertrag unterschreiben";
   }
 
   const contract = data.contract;
@@ -405,7 +412,7 @@ function updateSignerControls() {
   const button = document.querySelector("#add-signer");
   button.hidden = additionalSigners.length >= 4;
   button.textContent = "Weitere Personen hinzufügen";
-  els.saveSignature.textContent = "Auftragsbestätigung unterschreiben";
+  els.saveSignature.textContent = state.offer && state.offer.isExistingContract ? "Vertrag unterschreiben" : "Auftragsbestätigung unterschreiben";
   additionalSigners.forEach((signer, index) => {
     signer.heading.textContent = `Person ${index + 2}`;
     signer.canvas.setAttribute("aria-label", `Unterschrift Person ${index + 2}`);

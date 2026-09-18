@@ -1464,7 +1464,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $pdf->title($isSigned
         ? 'Vertrag'
         : ($isExistingContract
-            ? 'Vertragsänderung vom ' . contract_format_date($offer['original_start_date'] ?? null)
+            ? 'Vertrag vom ' . contract_format_date($offer['original_start_date'] ?? null)
             : 'Auftragsbestätigung'));
     $pdf->centeredText('zwischen');
 
@@ -1488,7 +1488,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $pdf->paragraph($isSigned
         ? 'Die Parteien schließen den folgenden Vertrag zur Gebäudereinigung:'
         : ($isExistingContract
-            ? 'Wir bestätigen die folgende Vertragsänderung zur Gebäudereinigung:'
+            ? 'Wir bestätigen den folgenden Vertrag zur Gebäudereinigung:'
             : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:'));
 
     $templateHtml = get_contract_template_html(db());

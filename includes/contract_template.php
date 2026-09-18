@@ -646,12 +646,12 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $documentTitle = $isSigned
         ? 'Vertrag'
         : ($isExistingContract
-            ? 'Vertragsänderung vom ' . h(contract_format_date($offer['original_start_date'] ?? null))
+            ? 'Vertrag vom ' . h(contract_format_date($offer['original_start_date'] ?? null))
             : 'Auftragsbestätigung');
     $documentLead = $isSigned
         ? 'Die Parteien schließen den folgenden Vertrag zur Gebäudereinigung:'
         : ($isExistingContract
-            ? 'Wir bestätigen die folgende Vertragsänderung zur Gebäudereinigung:'
+            ? 'Wir bestätigen den folgenden Vertrag zur Gebäudereinigung:'
             : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:');
     $signedAt = $isSigned ? contract_format_date($contract['signed_at']) : '–';
     $signatureImage = $isSigned && !empty($contract['signature_data'])

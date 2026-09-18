@@ -14,17 +14,23 @@ foreach ([$template, $pdf] as $documentSource) {
     if (!str_contains($documentSource, 'Auftragsbestätigung')) {
         throw new RuntimeException('Die Bezeichnung Auftragsbestätigung fehlt im Dokument.');
     }
-    if (!str_contains($documentSource, 'Vertragsänderung vom ')) {
-        throw new RuntimeException('Bestandskunden bekommen in der ersten Stufe keinen "Vertragsänderung vom ..."-Titel.');
+    if (!str_contains($documentSource, 'Vertrag vom ')) {
+        throw new RuntimeException('Bestandskunden bekommen in der ersten Stufe keinen "Vertrag vom ..."-Titel.');
     }
-    if (!str_contains($documentSource, 'Wir bestätigen die folgende Vertragsänderung zur Gebäudereinigung:')) {
-        throw new RuntimeException('Der Einleitungssatz der Vertragsänderung fehlt.');
+    if (!str_contains($documentSource, 'Wir bestätigen den folgenden Vertrag zur Gebäudereinigung:')) {
+        throw new RuntimeException('Der Einleitungssatz für den Vertrag von Bestandskunden fehlt.');
     }
 }
 
 if (!str_contains($publicPage, 'Auftragsbest&auml;tigung unterschreiben')
     || !str_contains($publicJs, 'Auftragsbestätigung unterschreiben')) {
     throw new RuntimeException('Der letzte Signaturschritt ist nicht korrekt benannt.');
+}
+
+foreach (['Vertrag unterschreiben', 'Ihr persönlicher Vertrag', 'Lesen Sie den Vertrag bitte vollständig durch.', 'Vertrag erfolgreich abgeschlossen'] as $existingContractWording) {
+    if (!str_contains($publicJs, $existingContractWording)) {
+        throw new RuntimeException('Bestandskunden sehen im öffentlichen Vertragsprozess nicht durchgängig "Vertrag" statt "Auftragsbestätigung": ' . $existingContractWording);
+    }
 }
 
 if (str_contains($contractPage, 'excludeContractorSignature')
