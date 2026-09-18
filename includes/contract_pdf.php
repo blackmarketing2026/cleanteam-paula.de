@@ -1461,7 +1461,11 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
         $pdf->imageFile($logoPath, 195.0, 48.0);
     }
     $pdf->meta('Datum: ' . $currentDate);
-    $pdf->title($isSigned ? 'Vertrag' : 'Auftragsbestätigung');
+    $pdf->title($isSigned
+        ? 'Vertrag'
+        : ($isExistingContract
+            ? 'Vertragsänderung vom ' . contract_format_date($offer['original_start_date'] ?? null)
+            : 'Auftragsbestätigung'));
     $pdf->centeredText('zwischen');
 
     $customerFullAddress = trim($customerAddress . ($customerAddress !== '' ? ', ' : '') . 'D-' . $customerZipCity, ', ');
@@ -1483,7 +1487,9 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
     $pdf->rightAlignedText('- im Folgenden Auftraggeber genannt -', 9.5, 'F3');
     $pdf->paragraph($isSigned
         ? 'Die Parteien schließen den folgenden Vertrag zur Gebäudereinigung:'
-        : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:');
+        : ($isExistingContract
+            ? 'Wir bestätigen die folgende Vertragsänderung zur Gebäudereinigung:'
+            : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:'));
 
     $templateHtml = get_contract_template_html(db());
     $pdfPlaceholders = contract_template_placeholder_map($offer, $customer, $contract, true);

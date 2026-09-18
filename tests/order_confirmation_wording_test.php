@@ -14,6 +14,12 @@ foreach ([$template, $pdf] as $documentSource) {
     if (!str_contains($documentSource, 'Auftragsbestätigung')) {
         throw new RuntimeException('Die Bezeichnung Auftragsbestätigung fehlt im Dokument.');
     }
+    if (!str_contains($documentSource, 'Vertragsänderung vom ')) {
+        throw new RuntimeException('Bestandskunden bekommen in der ersten Stufe keinen "Vertragsänderung vom ..."-Titel.');
+    }
+    if (!str_contains($documentSource, 'Wir bestätigen die folgende Vertragsänderung zur Gebäudereinigung:')) {
+        throw new RuntimeException('Der Einleitungssatz der Vertragsänderung fehlt.');
+    }
 }
 
 if (!str_contains($publicPage, 'Auftragsbest&auml;tigung unterschreiben')
