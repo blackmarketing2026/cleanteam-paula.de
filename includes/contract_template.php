@@ -703,6 +703,12 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $captureProtectionScript = !empty($options['captureProtected'])
         ? '<script>document.addEventListener("contextmenu",function(e){e.preventDefault()});document.addEventListener("copy",function(e){e.preventDefault()});document.addEventListener("dragstart",function(e){e.preventDefault()});document.addEventListener("keydown",function(e){if(e.key==="PrintScreen"||((e.ctrlKey||e.metaKey)&&e.shiftKey&&["3","4","5","s"].includes(e.key.toLowerCase()))){e.preventDefault();document.body.style.visibility="hidden";setTimeout(function(){document.body.style.visibility="visible"},1200)}});</script>'
         : '';
+    // Offene Vorschau-Tabs laden sich neu, sobald der Vertragsentwurf im Admin bearbeitet wurde
+    // (Signal kommt aus app.js per BroadcastChannel bzw. localStorage-Event als Fallback).
+    $liveRefreshOfferId = trim((string) ($options['liveRefreshOfferId'] ?? ''));
+    $liveRefreshScript = $liveRefreshOfferId !== ''
+        ? '<script>(function(){var id=' . json_encode($liveRefreshOfferId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';function check(data){if(data&&data.offerId===id){window.location.reload()}}try{new BroadcastChannel("contract-preview").onmessage=function(e){check(e.data)}}catch(e){}window.addEventListener("storage",function(e){if(e.key!=="contract-preview-updated"||!e.newValue)return;try{check(JSON.parse(e.newValue))}catch(err){}})})();</script>'
+        : '';
 
     return <<<HTML
 <!doctype html>
@@ -755,6 +761,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 {$protocolHtml}
 
 {$captureProtectionScript}
+{$liveRefreshScript}
 </body>
 </html>
 HTML;

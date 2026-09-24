@@ -144,4 +144,5 @@ echo render_contract_document($offer, $customer, $contract, [
     'excludeAgb' => $isPreview,
     'excludeProtocol' => $isPreview,
     'captureProtected' => $isPreview,
+    'liveRefreshOfferId' => $isPreview ? (string) $offer['id'] : '',
 ]);

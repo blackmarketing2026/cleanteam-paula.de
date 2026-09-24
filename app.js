@@ -1338,7 +1338,7 @@ function renderOfferCard(offer) {
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
-        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `contract.php?offerId=${encodeURIComponent(offer.id)}&preview=1`}" target="_blank" rel="noopener">
+        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `contract.php?offerId=${encodeURIComponent(offer.id)}&preview=1`}" target="contract-preview-${escapeHtml(offer.id)}" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
           <span>Vertrag Vorschau</span>
         </a>
@@ -2216,11 +2216,30 @@ async function handleContractCorrectionSubmit(event) {
 
   try {
     await apiPatch(`api/contracts.php?id=${encodeURIComponent(id)}`, payload);
+    notifyContractPreviewUpdated(getContract(id)?.offerId);
     closeContractCorrectionModal();
     await loadAll();
     showToast("Daten wurden aktualisiert.");
   } catch (error) {
     showToast(error.message);
+  }
+}
+
+// Bereits geöffnete Vertragsvorschau-Tabs (contract.php?preview=1) laden sich daraufhin neu.
+function notifyContractPreviewUpdated(offerId) {
+  if (!offerId) return;
+  const message = { offerId, at: Date.now() };
+  try {
+    const channel = new BroadcastChannel("contract-preview");
+    channel.postMessage(message);
+    channel.close();
+  } catch (error) {
+    // BroadcastChannel nicht verfügbar – localStorage-Event unten reicht als Fallback.
+  }
+  try {
+    localStorage.setItem("contract-preview-updated", JSON.stringify(message));
+  } catch (error) {
+    // Speicher blockiert (z. B. privater Modus) – dann bleibt nur manuelles Neuladen.
   }
 }
 
@@ -2349,6 +2368,7 @@ async function handleOfferEditSubmit(event) {
 
   try {
     await apiPut(`api/offers.php?id=${encodeURIComponent(id)}`, payload);
+    notifyContractPreviewUpdated(id);
     closeOfferEditModal();
     await loadAll();
     showToast("Vertragsentwurf wurde aktualisiert.");
