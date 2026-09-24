@@ -199,7 +199,14 @@ function contract_format_date(?string $isoOrMysqlDate): string
         return '–';
     }
 
-    $timestamp = strtotime($isoOrMysqlDate);
+    // Reine Kalenderdaten (z. B. "2020-03-15" oder "2020-03-15 00:00:00") ohne Zeitzonen-Umrechnung
+    // formatieren: strtotime() liest sie in der Server-Zeitzone (Europe/Berlin), gmdate() gibt UTC
+    // aus – dadurch wurde vorher ein Tag abgezogen.
+    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:[ T]00:00(?::00)?)?$/', trim($isoOrMysqlDate), $matches)) {
+        return $matches[3] . '.' . $matches[2] . '.' . $matches[1];
+    }
+
+    $timestamp = strtotime($isoOrMysqlDate . (preg_match('/(Z|[+-]\d{2}:?\d{2}|UTC)$/i', $isoOrMysqlDate) ? '' : ' UTC'));
     if ($timestamp === false) {
         return '–';
     }
