@@ -16,11 +16,11 @@ assertIncludes(
   "Die Aktionen der Vertragsentwürfe sind nicht zentral registriert.",
 );
 
-for (const action of ["edit-offer", "open-contract", "open-email-template", "copy-offer-link", "copy-quote-link"]) {
+for (const action of ["edit-offer", "open-contract", "open-email-template", "copy-offer-link", "copy-quote-link", "reset-offer-links"]) {
   assertIncludes(app, `action === "${action}"`, `Der Handler für ${action} fehlt.`);
 }
 
-for (const action of ["edit-offer", "open-contract", "open-email-template", "copy-offer-link", "copy-quote-link"]) {
+for (const action of ["edit-offer", "open-contract", "open-email-template", "copy-offer-link", "copy-quote-link", "reset-offer-links"]) {
   assertIncludes(index + app, `data-action="${action}"`, `Der Button für ${action} fehlt.`);
 }
 

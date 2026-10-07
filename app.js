@@ -1357,6 +1357,12 @@ function renderOfferCard(offer) {
           <i data-lucide="link" aria-hidden="true"></i>
           <span>Vertragslink kopieren</span>
         </button>
+        ${["signiert", "bestaetigt"].includes(offer.contractStatus)
+          ? ""
+          : `<button class="secondary-button" type="button" data-action="reset-offer-links" data-id="${escapeHtml(offer.id)}">
+              <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+              <span>Alle Links zurücksetzen</span>
+            </button>`}
         <button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="mail" aria-hidden="true"></i>
           <span>E-Mail-Vorlage</span>
@@ -2424,6 +2430,21 @@ async function copyQuoteLink(id) {
     } catch (error) {
       // Der Link ist erstellt; ein spätes Listen-Refresh darf den Nutzer nicht irritieren.
     }
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function resetOfferLinks(id) {
+  const confirmed = window.confirm("Alle Links zurücksetzen? Der Kunde startet beim nächsten Öffnen wieder von vorne, bisherige Angaben im Link gehen verloren. Die Links und ihre Gültigkeit bleiben gleich.");
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await apiPost(`api/reset-offer-links.php?id=${encodeURIComponent(id)}`, {});
+    await loadAll();
+    showToast("Links wurden zurückgesetzt und können wieder geöffnet werden.");
   } catch (error) {
     showToast(error.message);
   }
@@ -3610,6 +3631,10 @@ function handleRecordAction(event) {
 
   if (action === "copy-quote-link") {
     copyQuoteLink(id);
+  }
+
+  if (action === "reset-offer-links") {
+    resetOfferLinks(id);
   }
 
   if (action === "open-email-template") {
