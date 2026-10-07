@@ -16,8 +16,9 @@ $sendOffer = file_get_contents(__DIR__ . '/../api/send-offer.php');
 $publicJs = file_get_contents(__DIR__ . '/../public.js');
 $quotePdf = file_get_contents(__DIR__ . '/../includes/quote_pdf.php');
 
-if (!str_contains($sendOffer, 'QUOTE_VALIDITY_DAYS')
-    || !str_contains($sendOffer, 'validity_hours = 0')
+if (!str_contains($sendOffer, 'prepare_quote_link(')
+    || !str_contains($quotePdf, 'INTERVAL :validity_days2 DAY')
+    || !str_contains($quotePdf, 'validity_hours = 0')
     || !str_contains($quotePdf, "const QUOTE_VALIDITY_DAYS = 14;")) {
     throw new RuntimeException('Beim KVA-Versand wird die feste Gültigkeit von 14 Tagen nicht gesetzt.');
 }
@@ -48,25 +49,36 @@ if (!str_contains($signBlock, "status = 'signiert'") || str_contains($signBlock,
     throw new RuntimeException('Nur die Vertragsunterschrift darf den Abschlussstatus bestimmen.');
 }
 
-if (!str_contains($sendOffer, "&start=online-contract")
-    || !str_contains($sendOffer, "email_button_html(\$publicUrl, 'Kostenvoranschlag annehmen')")
+if (str_contains($sendOffer, "&start=online-contract")
+    || !str_contains($sendOffer, "email_button_html(\$publicUrl, 'Kostenvoranschlag öffnen')")
     || str_contains($sendOffer, 'Danach erhalten Sie automatisch Ihre Auftragsbestätigung.')) {
-    throw new RuntimeException('Der KVA-E-Mail-Button startet nicht korrekt den Online-Vertragsabschluss.');
+    throw new RuntimeException('Der KVA-E-Mail-Button öffnet nicht zuerst den Kostenvoranschlag.');
 }
 
-if (!str_contains($publicJs, 'startsQuoteContract')
+$publicPage = file_get_contents(__DIR__ . '/../o.php');
+if (str_contains($publicJs, 'startsQuoteContract')
     || !str_contains($publicJs, '["entwurf", "sent"].includes(data.offer.quoteStatus)')
+    || !str_contains($publicJs, 'els.quotePreviewFrame.src')
+    || !str_contains($publicPage, 'id="quote-preview-frame"')
+    || !str_contains($publicPage, 'Jetzt Auftragsbestätigung annehmen')
     || str_contains($publicJs, 'Kostenvoranschlag angenommen')) {
-    throw new RuntimeException('Die öffentliche Oberfläche bildet den Signaturstatus nicht korrekt ab.');
+    throw new RuntimeException('Der KVA-Link zeigt nicht zuerst den Kostenvoranschlag mit Annahme-Button.');
+}
+
+$quoteLinkApi = file_get_contents(__DIR__ . '/../api/quote-link.php');
+if (!str_contains($quoteLinkApi, 'prepare_quote_link(') || !str_contains($quoteLinkApi, 'quote_status_after_sharing(')
+    || str_contains($quoteLinkApi, 'quote_sent_at')) {
+    throw new RuntimeException('Der kopierbare KVA-Link wird nicht wie beim Versand vorbereitet.');
 }
 if (str_contains($publicJs, 'offer.price * 1.19') || str_contains($publicJs, 'Monatlicher Preis brutto')) {
     throw new RuntimeException('Die KVA-Webansicht darf den Nettopreis nicht zu einem Bruttopreis hochrechnen.');
 }
 
 if (str_contains($sendOffer, 'Der Kostenvoranschlag wurde bereits angenommen.')
-    || !str_contains($sendOffer, "\$contractStatus !== 'signiert'")
-    || !str_contains($sendOffer, "? 'signing'")
-    || !str_contains($sendOffer, ": 'sent'")) {
+    || !str_contains($sendOffer, 'quote_status_after_sharing(')
+    || !str_contains($quotePdf, "\$contractStatus !== 'signiert'")
+    || !str_contains($quotePdf, "? 'signing'")
+    || !str_contains($quotePdf, ": 'sent'")) {
     throw new RuntimeException('Ein Kostenvoranschlag muss auch nach der Vertragsunterschrift erneut versendet werden können.');
 }
 
@@ -82,4 +94,4 @@ if ($signedPosition === false || $quotePosition === false || $signedPosition > $
     throw new RuntimeException('Ein unterschriebener Vertrag wird nicht vor dem KVA-Zwischenstatus angezeigt.');
 }
 
-echo "PASS: quote starts online signing, contract signature is authoritative, and legacy states self-heal\n";
+echo "PASS: quote link shows the quote first, acceptance starts online signing, contract signature is authoritative, and legacy states self-heal\n";

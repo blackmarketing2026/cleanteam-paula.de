@@ -52,11 +52,10 @@ header('Cache-Control: no-store, private');
         <section id="screen-kostenvoranschlag" class="public-screen">
           <p class="step-indicator">Kostenvoranschlag</p>
           <h2>Ihr Kostenvoranschlag</h2>
-          <p class="muted">Bitte prüfen Sie die folgenden Angaben. Mit der Annahme starten Sie den Online-Vertragsabschluss. Der Kostenvoranschlag gilt erst nach der Unterschrift als angenommen.</p>
-          <div id="quote-details" class="public-service-summary"></div>
-          <div class="form-actions"><a id="quote-pdf-link" class="secondary-button" href="#" target="_blank" rel="noopener">Kostenvoranschlag als PDF ansehen</a></div>
-          <label class="modal-field"><input id="quote-acceptance-check" type="checkbox" /> Ich möchte den Online-Vertragsabschluss starten.</label>
-          <div class="form-actions"><button id="accept-quote" class="primary-button" type="button" disabled>Online abschließen</button></div>
+          <p class="muted">Bitte lesen Sie Ihren Kostenvoranschlag. Mit dem Button unten nehmen Sie die Auftragsbestätigung an und schließen sie online ab.</p>
+          <iframe id="quote-preview-frame" class="contract-frame" title="Kostenvoranschlag"></iframe>
+          <div class="form-actions"><a id="quote-pdf-link" class="secondary-button" href="#" target="_blank" rel="noopener">Kostenvoranschlag als PDF öffnen</a></div>
+          <div class="form-actions"><button id="accept-quote" class="primary-button" type="button">Jetzt Auftragsbestätigung annehmen</button></div>
         </section>
 
         <section id="screen-datenschutz" class="public-screen wizard-screen">
@@ -151,6 +150,6 @@ header('Cache-Control: no-store, private');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <script src="public.js?v=existing-contract-wording-20260918b"></script>
+    <script src="public.js?v=quote-first-20261007"></script>
   </body>
 </html>

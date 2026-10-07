@@ -92,3 +92,29 @@ function save_quote_pdf(PDO $pdo, array $offer, array $customer): array
     $stmt = $pdo->prepare('SELECT * FROM quote_documents WHERE offer_id = :id'); $stmt->execute(['id' => $offer['id']]);
     return $stmt->fetch();
 }
+
+// Stellt sicher, dass der Entwurf einen KVA-Link hat, und setzt dessen feste Gültigkeit neu.
+function prepare_quote_link(PDO $pdo, array $offer): string
+{
+    $token = (string) ($offer['quote_token'] ?? '');
+    if ($token === '') {
+        $token = generate_token();
+        $pdo->prepare('UPDATE offers SET quote_token = :token WHERE id = :id')->execute(['token' => $token, 'id' => $offer['id']]);
+    }
+    $pdo->prepare(
+        'UPDATE offers SET validity_days = :validity_days, validity_hours = 0,
+            expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY) WHERE id = :id'
+    )->execute(['validity_days' => QUOTE_VALIDITY_DAYS, 'validity_days2' => QUOTE_VALIDITY_DAYS, 'id' => $offer['id']]);
+    return $token;
+}
+
+// Ein laufender, noch nicht unterschriebener Vertragsabschluss bleibt erhalten; sonst zeigt der Link wieder den KVA.
+function quote_status_after_sharing(PDO $pdo, array $offer): string
+{
+    $contractStmt = $pdo->prepare('SELECT status FROM contracts WHERE offer_id = :offer_id');
+    $contractStmt->execute(['offer_id' => $offer['id']]);
+    $contractStatus = $contractStmt->fetchColumn();
+    return ($offer['quote_status'] ?? '') === 'signing' && $contractStatus && $contractStatus !== 'signiert'
+        ? 'signing'
+        : 'sent';
+}

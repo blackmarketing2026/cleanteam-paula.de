@@ -39,6 +39,7 @@ assert_source_contains($contractTemplate, '$contractorSignatureDataUrl !== null'
 if (str_contains($sendOffer, 'Der Kostenvoranschlag wurde bereits angenommen.')) {
     throw new RuntimeException('Ein bereits versendeter Kostenvoranschlag wird weiterhin für den erneuten Versand gesperrt.');
 }
-assert_source_contains($sendOffer, "\$contractStatus !== 'signiert'", 'Ein erneuter Versand berücksichtigt den tatsächlichen Vertragsstatus nicht.');
+assert_source_contains($sendOffer, 'quote_status_after_sharing(', 'Ein erneuter Versand berücksichtigt den tatsächlichen Vertragsstatus nicht.');
+assert_source_contains(file_get_contents(__DIR__ . '/../includes/quote_pdf.php'), "\$contractStatus !== 'signiert'", 'Ein erneuter Versand berücksichtigt den tatsächlichen Vertragsstatus nicht.');
 
 echo "PASS: contract deletion resets completion data and quote resend remains available\n";

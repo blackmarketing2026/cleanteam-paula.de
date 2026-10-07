@@ -1348,10 +1348,14 @@ function renderOfferCard(offer) {
         </button>
         <a class="secondary-button" href="quote.php?offerId=${encodeURIComponent(offer.id)}&v=cleanteam-3" target="_blank" rel="noopener"><i data-lucide="receipt-text" aria-hidden="true"></i><span>Kostenvoranschlag ansehen</span></a>
         <button class="secondary-button" type="button" data-action="send-quote" data-id="${escapeHtml(offer.id)}"><i data-lucide="file-output" aria-hidden="true"></i><span>Kostenvoranschlag verschicken</span></button>
+        <button class="secondary-button" type="button" data-action="copy-quote-link" data-id="${escapeHtml(offer.id)}">
+          <i data-lucide="link" aria-hidden="true"></i>
+          <span>Kostenvoranschlag-Link kopieren</span>
+        </button>
         ${contractProcessAction}
         <button class="secondary-button" type="button" data-action="copy-offer-link" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="link" aria-hidden="true"></i>
-          <span>Link kopieren</span>
+          <span>Vertragslink kopieren</span>
         </button>
         <button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="mail" aria-hidden="true"></i>
@@ -2037,7 +2041,12 @@ async function submitContractSendForm(event) {
   }
 }
 
-function openLinkModal(url) {
+function openLinkModal(url, kind = "contract") {
+  const isQuote = kind === "quote";
+  document.querySelector("#link-modal-heading").textContent = isQuote ? "Kostenvoranschlag-Link" : "Vertragslink";
+  document.querySelector("#link-modal-text").textContent = isQuote
+    ? "Diesen Link können Sie dem Kunden schicken. Der Kunde sieht zuerst den Kostenvoranschlag und kann danach die Auftragsbestätigung annehmen und unterschreiben."
+    : "Diesen Link können Sie dem Kunden schicken. Der Kunde sieht den Vertrag und kann ihn darüber abschließen.";
   els.linkModalInput.value = url;
   els.linkModal.hidden = false;
   els.linkModalInput.focus();
@@ -2404,6 +2413,20 @@ function copyOfferLink(id) {
   }
 
   openLinkModal(offer.publicUrl);
+}
+
+async function copyQuoteLink(id) {
+  try {
+    const result = await apiPost(`api/quote-link.php?id=${encodeURIComponent(id)}`, {});
+    openLinkModal(result.url, "quote");
+    try {
+      await loadAll();
+    } catch (error) {
+      // Der Link ist erstellt; ein spätes Listen-Refresh darf den Nutzer nicht irritieren.
+    }
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 function openOfferContractLink(id) {
@@ -3583,6 +3606,10 @@ function handleRecordAction(event) {
 
   if (action === "copy-offer-link") {
     copyOfferLink(id);
+  }
+
+  if (action === "copy-quote-link") {
+    copyQuoteLink(id);
   }
 
   if (action === "open-email-template") {

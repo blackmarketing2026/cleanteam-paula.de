@@ -1,5 +1,4 @@
 const token = document.body.dataset.token || "";
-const startsQuoteContract = new URLSearchParams(window.location.search).get("start") === "online-contract";
 
 const state = {
   offer: null,
@@ -30,8 +29,7 @@ const els = {
   identityCheckName: document.querySelector("#identity-check-name"),
   identityCheckAuthorizedYes: document.querySelector("#identity-check-authorized-yes"),
   identityCheckAuthorizedNo: document.querySelector("#identity-check-authorized-no"),
-  quoteDetails: document.querySelector("#quote-details"),
-  quoteAcceptanceCheck: document.querySelector("#quote-acceptance-check"),
+  quotePreviewFrame: document.querySelector("#quote-preview-frame"),
   acceptQuote: document.querySelector("#accept-quote"),
   quotePdfLink: document.querySelector("#quote-pdf-link"),
 };
@@ -265,11 +263,12 @@ function routeToState(data) {
   }
 
   if (data.accessMode === "quote") {
-    if (data.offer.quoteStatus === "sent") {
+    if (["entwurf", "sent"].includes(data.offer.quoteStatus)) {
       document.title = "CleanTeam - Ihr Kostenvoranschlag";
       document.querySelector("#public-document-label").textContent = "Ihr persönlicher Kostenvoranschlag";
-      els.quotePdfLink.href = `quote.php?token=${encodeURIComponent(token)}&v=cleanteam-3`;
-      renderQuoteDetails();
+      const quoteUrl = `quote.php?token=${encodeURIComponent(token)}&v=cleanteam-3`;
+      els.quotePdfLink.href = quoteUrl;
+      if (els.quotePreviewFrame.getAttribute("src") !== quoteUrl) els.quotePreviewFrame.src = quoteUrl;
       showScreen("kostenvoranschlag");
       return;
     }
@@ -319,11 +318,6 @@ async function loadOffer() {
   try {
     const data = await api("offer");
     if (data.accessMode === "quote" && !data.offer.expired) {
-      if (startsQuoteContract && ["entwurf", "sent"].includes(data.offer.quoteStatus)) {
-        const started = await api("accept-quote", {});
-        routeToState(started);
-        return;
-      }
       routeToState(data);
       return;
     }
@@ -420,21 +414,6 @@ function updateSignerControls() {
   });
 }
 
-function renderQuoteDetails() {
-  const offer = state.offer;
-  const priceFacts = [["Leistungsbeginn", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"], ["Reinigungsintervall", offer.interval]];
-  if (Number(offer.discountPercent) > 0) {
-    priceFacts.push(["Gesamtpreis netto", formatCurrency(offer.basePrice)]);
-    priceFacts.push([`Rabatt (${String(offer.discountPercent).replace(".", ",")} %)`, `- ${formatCurrency(offer.basePrice - offer.price)}`]);
-    priceFacts.push(["Preis nach Rabatt netto", formatCurrency(offer.price)]);
-  } else {
-    priceFacts.push(["Monatlicher Preis netto", formatCurrency(offer.price)]);
-  }
-  els.quoteDetails.innerHTML = `<div class="public-service-card"><h3>Leistung und Preis</h3>${renderFactGrid(priceFacts)}</div><div class="public-service-card"><h3>Leistungsbeschreibung</h3><p class="public-service-text">${escapeHtml(offer.notes || "")}</p></div>`;
-  els.quoteAcceptanceCheck.checked = false;
-  els.acceptQuote.disabled = true;
-}
-
 function addSigner() {
   if (additionalSigners.length >= 4) return;
   const section = document.createElement("section");
@@ -512,11 +491,7 @@ function bindEvents() {
   });
 
   els.clearSignature.addEventListener("click", () => clearSignaturePad());
-  els.quoteAcceptanceCheck.addEventListener("change", () => {
-    els.acceptQuote.disabled = !els.quoteAcceptanceCheck.checked;
-  });
   els.acceptQuote.addEventListener("click", async () => {
-    if (!els.quoteAcceptanceCheck.checked) return;
     els.acceptQuote.disabled = true;
     try { await handleAction("accept-quote", {}); } finally { els.acceptQuote.disabled = false; }
   });

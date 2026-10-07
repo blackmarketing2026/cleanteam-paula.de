@@ -22,15 +22,8 @@ if (empty($offer['agb_snapshot_text'])) {
     $stmt->execute(['id' => $offerId]);
     $offer = $stmt->fetch();
 }
-if ($sendAsQuote && empty($offer['quote_token'])) {
-    $offer['quote_token'] = generate_token();
-    $pdo->prepare('UPDATE offers SET quote_token = :token WHERE id = :id')->execute(['token' => $offer['quote_token'], 'id' => $offerId]);
-}
 if ($sendAsQuote) {
-    $pdo->prepare(
-        'UPDATE offers SET validity_days = :validity_days, validity_hours = 0,
-            expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY) WHERE id = :id'
-    )->execute(['validity_days' => QUOTE_VALIDITY_DAYS, 'validity_days2' => QUOTE_VALIDITY_DAYS, 'id' => $offerId]);
+    prepare_quote_link($pdo, $offer);
     $stmt->execute(['id' => $offerId]);
     $offer = $stmt->fetch();
 }
@@ -39,11 +32,10 @@ if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) json_error('Bitte eine gültig
 $settings = $pdo->query('SELECT * FROM mailbox_settings WHERE id = 1')->fetch();
 if (!$settings || $settings['host'] === '' || $settings['username'] === '' || ($settings['password_encrypted'] ?? '') === '') json_error('Bitte zuerst das E-Mail-Versand-Konto unter Einstellungen > E-Mails einrichten.', 422);
 $publicUrl = base_url() . '/o.php?token=' . ($sendAsQuote ? $offer['quote_token'] : $offer['token']);
-if ($sendAsQuote) $publicUrl .= '&start=online-contract';
 $contact = trim($offer['c_salutation'] . ' ' . $offer['c_contact_last_name']); $company = trim((string) $offer['c_name']);
 $validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i');
 $bodyContent = $sendAsQuote
-    ? '<p>Guten Tag ' . email_h($contact) . ',</p><p>anbei erhalten Sie Ihren Kostenvoranschlag von CleanTeam für ' . email_h($company) . '.</p><p>Über den folgenden Button starten Sie den Online-Vertragsabschluss. Der Kostenvoranschlag gilt erst als angenommen, nachdem der Vertrag online unterschrieben wurde.</p>' . email_button_html($publicUrl, 'Kostenvoranschlag annehmen') . '<p style="color:#51657d;font-size:13px;">Der Link ist bis ' . email_h($validUntil) . ' Uhr gültig.</p>'
+    ? '<p>Guten Tag ' . email_h($contact) . ',</p><p>anbei erhalten Sie Ihren Kostenvoranschlag von CleanTeam für ' . email_h($company) . '.</p><p>Über den folgenden Button öffnen Sie Ihren Kostenvoranschlag online. Dort können Sie anschließend die Auftragsbestätigung annehmen und online unterschreiben.</p>' . email_button_html($publicUrl, 'Kostenvoranschlag öffnen') . '<p style="color:#51657d;font-size:13px;">Der Link ist bis ' . email_h($validUntil) . ' Uhr gültig.</p>'
     : '<p>Guten Tag ' . email_h($contact) . ',</p><p>vielen Dank für Ihr Interesse an unserem Angebot für ' . email_h($company) . '.</p><p>Über den folgenden Link können Sie Ihren Vertrag wie gewohnt online prüfen und digital abschließen.</p>' . email_button_html($publicUrl, 'Jetzt Vertrag online abschließen') . '<p style="color:#51657d;font-size:13px;">Der Vertragslink ist bis ' . email_h($validUntil) . ' Uhr gültig.</p>';
 $bodyContent .= '<img src="' . email_h(base_url() . '/api/track-open.php?token=' . $offer['token']) . '" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />';
 $message = render_email_template_message($pdo, $bodyContent, ['title' => $sendAsQuote ? 'Ihr Kostenvoranschlag von CleanTeam' : 'Ihr Vertrag von CleanTeam', 'preheader' => $sendAsQuote ? 'Online-Vertrag ansehen und unterschreiben.' : 'Bitte schließen Sie Ihren Vertrag online ab.', 'fromName' => $settings['from_name'] ?? 'CleanTeam', 'signatureText' => $settings['signature'] ?? '', 'signatureContext' => 'offer']);
@@ -58,12 +50,7 @@ try {
     }
 } catch (Throwable $exception) { json_error('E-Mail-Versand fehlgeschlagen: ' . $exception->getMessage(), 502); }
 if ($sendAsQuote) {
-    $contractStmt = $pdo->prepare('SELECT status FROM contracts WHERE offer_id = :offer_id');
-    $contractStmt->execute(['offer_id' => $offerId]);
-    $contractStatus = $contractStmt->fetchColumn();
-    $quoteStatus = ($offer['quote_status'] ?? '') === 'signing' && $contractStatus && $contractStatus !== 'signiert'
-        ? 'signing'
-        : 'sent';
+    $quoteStatus = quote_status_after_sharing($pdo, $offer);
     $pdo->prepare(
         'UPDATE offers SET quote_sent_at = UTC_TIMESTAMP(), quote_status = :quote_status,
             quote_accepted_at = NULL, quote_accepted_ip = NULL, quote_accepted_user_agent = NULL

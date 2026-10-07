@@ -34,7 +34,7 @@ foreach (['height: 44px', 'max-height: 44px', '-webkit-line-clamp: 2', 'overflow
     }
 }
 
-foreach (['<span>Kostenvoranschlag ansehen</span>', '<span>Kostenvoranschlag verschicken</span>', '<span>Vertrag verschicken</span>'] as $needle) {
+foreach (['<span>Kostenvoranschlag ansehen</span>', '<span>Kostenvoranschlag verschicken</span>', '<span>Vertrag verschicken</span>', '<span>Kostenvoranschlag-Link kopieren</span>', '<span>Vertragslink kopieren</span>'] as $needle) {
     if (!str_contains($app, $needle)) {
         throw new RuntimeException('Beschriftung für begrenzten Button-Umbruch fehlt: ' . $needle);
     }
