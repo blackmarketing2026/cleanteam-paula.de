@@ -706,8 +706,8 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $styleCss = contract_document_style_css();
     // Druck- und Kopiersperre gilt fuer jede HTML-Ansicht; Ausdrucke laufen nur ueber die PDFs.
     $captureProtectionCss = !empty($options['captureProtected']) ? 'img { pointer-events: none; }' : '';
-    $captureProtectionLink = '<link rel="stylesheet" href="protect.css?v=20261013">';
-    $captureProtectionScript = '<script src="protect.js?v=20261013"></script>';
+    $captureProtectionLink = '<link rel="stylesheet" href="protect.css?v=20261013b">';
+    $captureProtectionScript = '<script src="protect.js?v=20261013b"></script>';
     // Offene Vorschau-Tabs laden sich neu, sobald der Vertragsentwurf im Admin bearbeitet wurde
     // (Signal kommt aus app.js per BroadcastChannel bzw. localStorage-Event als Fallback).
     $liveRefreshOfferId = trim((string) ($options['liveRefreshOfferId'] ?? ''));

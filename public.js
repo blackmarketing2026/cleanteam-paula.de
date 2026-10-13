@@ -15,7 +15,6 @@ const els = {
   signaturePad: document.querySelector("#signature-pad"),
   contractPreviewFrame: document.querySelector("#contract-preview-frame"),
   protectedContract: document.querySelector("#protected-contract"),
-  captureShield: document.querySelector("#capture-shield"),
   clearSignature: document.querySelector("#clear-signature"),
   saveSignature: document.querySelector("#save-signature"),
   finalContractFrame: document.querySelector("#final-contract-frame"),
@@ -244,28 +243,7 @@ function loadPdfJs() {
   return pdfJsPromise;
 }
 
-// Screenshots lassen sich (vor allem am Handy) technisch nicht verhindern. Das Wasserzeichen wird
-// deshalb direkt in die Seitenbilder gezeichnet, damit jeder Screenshot als Online-Kopie des
-// jeweiligen Kunden erkennbar ist.
-function drawQuoteWatermark(canvas, label) {
-  const ctx = canvas.getContext("2d");
-  const fontSize = Math.round(canvas.width / 34);
-  ctx.save();
-  ctx.fillStyle = "rgba(15, 35, 70, 0.11)";
-  ctx.font = `700 ${fontSize}px Arial, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate(-Math.PI / 6);
-  const stepY = fontSize * 7;
-  const reach = Math.hypot(canvas.width, canvas.height) / 2;
-  for (let y = -reach; y <= reach; y += stepY) {
-    ctx.fillText(label, 0, y);
-  }
-  ctx.restore();
-}
-
-async function renderQuotePreview(url, watermarkLabel) {
+async function renderQuotePreview(url) {
   if (quotePreviewUrl === url) return;
   quotePreviewUrl = url;
   const container = els.quotePreview;
@@ -286,7 +264,6 @@ async function renderQuotePreview(url, watermarkLabel) {
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
       await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-      drawQuoteWatermark(canvas, watermarkLabel);
       pages.push(canvas);
     }
     container.replaceChildren(...pages);
@@ -344,11 +321,7 @@ function routeToState(data) {
       document.title = "CleanTeam - Ihr Kostenvoranschlag";
       document.querySelector("#public-document-label").textContent = "Ihr persönlicher Kostenvoranschlag";
       showScreen("kostenvoranschlag");
-      const watermarkDate = new Intl.DateTimeFormat("de-DE").format(new Date());
-      renderQuotePreview(
-        `quote.php?token=${encodeURIComponent(token)}&v=cleanteam-3`,
-        `Nur zur Online-Ansicht · ${data.offer.customer?.name || "CleanTeam"} · ${watermarkDate}`,
-      );
+      renderQuotePreview(`quote.php?token=${encodeURIComponent(token)}&v=cleanteam-3`);
       return;
     }
     if (data.offer.quoteStatus === "signing") {
@@ -609,16 +582,6 @@ function setupCaptureProtection() {
   els.protectedContract.addEventListener("contextmenu", preventCaptureAction);
   els.protectedContract.addEventListener("copy", preventCaptureAction);
   els.protectedContract.addEventListener("dragstart", preventCaptureAction);
-
-  document.addEventListener("keydown", (event) => {
-    const captureShortcut = event.key === "PrintScreen"
-      || ((event.ctrlKey || event.metaKey) && event.shiftKey && ["3", "4", "5", "s"].includes(event.key.toLowerCase()));
-    if (!captureShortcut) return;
-    event.preventDefault();
-    els.captureShield.hidden = false;
-    showToast("Bildschirmaufnahmen der Vertragsvorschau sind deaktiviert.");
-    window.setTimeout(() => { els.captureShield.hidden = true; }, 1600);
-  });
 }
 
 async function loadBranding() {

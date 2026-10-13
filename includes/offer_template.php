@@ -61,7 +61,7 @@ function render_offer_document(array $offer, array $customer): string
   .offer-service-text { white-space: pre-wrap; border: 1px solid #ddd; border-radius: 8px; padding: 14px; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.55; }
   .muted { color: #666; font-size: 13px; }
 </style>
-<link rel="stylesheet" href="protect.css?v=20261013">
+<link rel="stylesheet" href="protect.css?v=20261013b">
 </head>
 <body>
 
@@ -91,7 +91,7 @@ function render_offer_document(array $offer, array $customer): string
   <a href="{$signUrl}">Jetzt Vertrag abschließen</a>
 </div>
 
-<script src="protect.js?v=20261013"></script>
+<script src="protect.js?v=20261013b"></script>
 </body>
 </html>
 HTML;

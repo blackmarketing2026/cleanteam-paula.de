@@ -2303,23 +2303,6 @@ button.compact-item.selected {
   background: #fff;
 }
 
-.capture-shield {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: #102033;
-  color: #fff;
-  text-align: center;
-  font-weight: 800;
-}
-
-.capture-shield[hidden] {
-  display: none;
-}
-
 .signature-section-heading {
   margin-top: 24px;
   padding-top: 24px;
