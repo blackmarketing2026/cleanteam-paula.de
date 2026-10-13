@@ -60,8 +60,8 @@ function render_offer_document(array $offer, array $customer): string
   .floor-plan-floor li span { display: block; }
   .offer-service-text { white-space: pre-wrap; border: 1px solid #ddd; border-radius: 8px; padding: 14px; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.55; }
   .muted { color: #666; font-size: 13px; }
-  @media print { .cta { display: none; } body { margin: 0; } }
 </style>
+<link rel="stylesheet" href="protect.css?v=20261013">
 </head>
 <body>
 
@@ -91,6 +91,7 @@ function render_offer_document(array $offer, array $customer): string
   <a href="{$signUrl}">Jetzt Vertrag abschließen</a>
 </div>
 
+<script src="protect.js?v=20261013"></script>
 </body>
 </html>
 HTML;

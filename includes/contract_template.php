@@ -704,12 +704,10 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $placeholders = contract_template_placeholder_map($offer, $customer, $contract, false);
     $templateBody = render_contract_template_body($templateHtml, $placeholders);
     $styleCss = contract_document_style_css();
-    $captureProtectionCss = !empty($options['captureProtected'])
-        ? "body { user-select: none; -webkit-user-select: none; } img { pointer-events: none; } @media print { body { display: none !important; } }"
-        : '';
-    $captureProtectionScript = !empty($options['captureProtected'])
-        ? '<script>document.addEventListener("contextmenu",function(e){e.preventDefault()});document.addEventListener("copy",function(e){e.preventDefault()});document.addEventListener("dragstart",function(e){e.preventDefault()});document.addEventListener("keydown",function(e){if(e.key==="PrintScreen"||((e.ctrlKey||e.metaKey)&&e.shiftKey&&["3","4","5","s"].includes(e.key.toLowerCase()))){e.preventDefault();document.body.style.visibility="hidden";setTimeout(function(){document.body.style.visibility="visible"},1200)}});</script>'
-        : '';
+    // Druck- und Kopiersperre gilt fuer jede HTML-Ansicht; Ausdrucke laufen nur ueber die PDFs.
+    $captureProtectionCss = !empty($options['captureProtected']) ? 'img { pointer-events: none; }' : '';
+    $captureProtectionLink = '<link rel="stylesheet" href="protect.css?v=20261013">';
+    $captureProtectionScript = '<script src="protect.js?v=20261013"></script>';
     // Offene Vorschau-Tabs laden sich neu, sobald der Vertragsentwurf im Admin bearbeitet wurde
     // (Signal kommt aus app.js per BroadcastChannel bzw. localStorage-Event als Fallback).
     $liveRefreshOfferId = trim((string) ($options['liveRefreshOfferId'] ?? ''));
@@ -727,6 +725,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
 {$styleCss}
 {$captureProtectionCss}
 </style>
+{$captureProtectionLink}
 </head>
 <body>
 

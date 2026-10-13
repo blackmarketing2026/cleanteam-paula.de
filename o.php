@@ -17,6 +17,7 @@ header('Cache-Control: no-store, private');
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css?v=link-expiry-countdown-20260910" />
+    <link rel="stylesheet" href="protect.css?v=20261013" />
   </head>
   <body data-token="<?php echo $token; ?>">
     <main class="public-shell">
@@ -150,6 +151,7 @@ header('Cache-Control: no-store, private');
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
+    <script src="protect.js?v=20261013"></script>
     <script src="public.js?v=quote-first-20261007"></script>
   </body>
 </html>
