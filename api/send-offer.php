@@ -35,16 +35,17 @@ $publicUrl = base_url() . '/o.php?token=' . ($sendAsQuote ? $offer['quote_token'
 $contact = trim($offer['c_salutation'] . ' ' . $offer['c_contact_last_name']); $company = trim((string) $offer['c_name']);
 $validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i');
 $bodyContent = $sendAsQuote
-    ? '<p>Guten Tag ' . email_h($contact) . ',</p><p>anbei erhalten Sie Ihren Kostenvoranschlag von CleanTeam für ' . email_h($company) . '.</p><p>Über den folgenden Button öffnen Sie Ihren Kostenvoranschlag online. Dort können Sie anschließend die Auftragsbestätigung annehmen und online unterschreiben.</p>' . email_button_html($publicUrl, 'Kostenvoranschlag öffnen') . '<p style="color:#51657d;font-size:13px;">Der Link ist bis ' . email_h($validUntil) . ' Uhr gültig.</p>'
+    ? '<p>Guten Tag ' . email_h($contact) . ',</p><p>Ihr Kostenvoranschlag von CleanTeam für ' . email_h($company) . ' steht für Sie online bereit.</p><p>Über den folgenden Button öffnen Sie Ihren Kostenvoranschlag online. Dort können Sie anschließend die Auftragsbestätigung annehmen und online unterschreiben.</p>' . email_button_html($publicUrl, 'Kostenvoranschlag öffnen') . '<p style="color:#51657d;font-size:13px;">Der Link ist bis ' . email_h($validUntil) . ' Uhr gültig.</p>'
     : '<p>Guten Tag ' . email_h($contact) . ',</p><p>vielen Dank für Ihr Interesse an unserem Angebot für ' . email_h($company) . '.</p><p>Über den folgenden Link können Sie Ihren Vertrag wie gewohnt online prüfen und digital abschließen.</p>' . email_button_html($publicUrl, 'Jetzt Vertrag online abschließen') . '<p style="color:#51657d;font-size:13px;">Der Vertragslink ist bis ' . email_h($validUntil) . ' Uhr gültig.</p>';
 $bodyContent .= '<img src="' . email_h(base_url() . '/api/track-open.php?token=' . $offer['token']) . '" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />';
 $message = render_email_template_message($pdo, $bodyContent, ['title' => $sendAsQuote ? 'Ihr Kostenvoranschlag von CleanTeam' : 'Ihr Vertrag von CleanTeam', 'preheader' => $sendAsQuote ? 'Online-Vertrag ansehen und unterschreiben.' : 'Bitte schließen Sie Ihren Vertrag online ab.', 'fromName' => $settings['from_name'] ?? 'CleanTeam', 'signatureText' => $settings['signature'] ?? '', 'signatureContext' => 'offer']);
 try {
     $mailer = new SmtpMailer($settings['host'], (int) $settings['smtp_port'], $settings['smtp_encryption'], $settings['username'], decrypt_secret($settings['password_encrypted']));
     if ($sendAsQuote) {
+        // Der KVA geht bewusst nicht als PDF-Anhang raus; der Kunde sieht ihn nur online ueber den Link.
         $customerStmt = $pdo->prepare('SELECT * FROM customers WHERE id = :id'); $customerStmt->execute(['id' => $offer['customer_id']]);
-        $quote = save_quote_pdf($pdo, $offer, $customerStmt->fetch());
-        $mailer->sendWithAttachment($settings['username'], $settings['from_name'], $toEmail, $company, 'Kostenvoranschlag CleanTeam für Firma ' . $company, $message['html'], $quote['filename'], $quote['content'], 'application/pdf', $message['inlineImages']);
+        save_quote_pdf($pdo, $offer, $customerStmt->fetch());
+        $mailer->send($settings['username'], $settings['from_name'], $toEmail, $company, 'Kostenvoranschlag CleanTeam für Firma ' . $company, $message['html'], true, $message['inlineImages']);
     } else {
         $mailer->send($settings['username'], $settings['from_name'], $toEmail, $company, 'Vertragsunterlagen CleanTeam für Firma ' . $company, $message['html'], true, $message['inlineImages']);
     }

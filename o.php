@@ -16,7 +16,7 @@ header('Cache-Control: no-store, private');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=link-expiry-countdown-20260910" />
+    <link rel="stylesheet" href="styles.css?v=quote-view-only-20261013" />
     <link rel="stylesheet" href="protect.css?v=20261013" />
   </head>
   <body data-token="<?php echo $token; ?>">
@@ -54,8 +54,7 @@ header('Cache-Control: no-store, private');
           <p class="step-indicator">Kostenvoranschlag</p>
           <h2>Ihr Kostenvoranschlag</h2>
           <p class="muted">Bitte lesen Sie Ihren Kostenvoranschlag. Mit dem Button unten nehmen Sie die Auftragsbestätigung an und schließen sie online ab.</p>
-          <iframe id="quote-preview-frame" class="contract-frame" title="Kostenvoranschlag"></iframe>
-          <div class="form-actions"><a id="quote-pdf-link" class="secondary-button" href="#" target="_blank" rel="noopener">Kostenvoranschlag als PDF öffnen</a></div>
+          <div id="quote-preview" class="quote-preview" role="document" aria-label="Kostenvoranschlag"></div>
           <div class="form-actions"><button id="accept-quote" class="primary-button" type="button">Jetzt Auftragsbestätigung annehmen</button></div>
         </section>
 
@@ -152,6 +151,6 @@ header('Cache-Control: no-store, private');
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <script src="protect.js?v=20261013"></script>
-    <script src="public.js?v=quote-first-20261007"></script>
+    <script src="public.js?v=quote-watermark-20261013"></script>
   </body>
 </html>

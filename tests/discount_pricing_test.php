@@ -58,7 +58,7 @@ if (!str_contains($app, 'updateDiscountPricePreview') || !str_contains($index, '
     throw new RuntimeException('Die Live-Anzeige für Ausgangspreis, Rabatt und Endpreis fehlt.');
 }
 // Der öffentliche KVA zeigt das KVA-PDF; dessen Rabattdarstellung prüft quote_pdf_test.php.
-if (!str_contains($publicApi, "'discountPercent'") || !str_contains($publicJs, 'els.quotePreviewFrame.src = quoteUrl')) {
+if (!str_contains($publicApi, "'discountPercent'") || !str_contains($publicJs, '`quote.php?token=${encodeURIComponent(token)}')) {
     throw new RuntimeException('Der Rabatt wird im öffentlichen KVA-Prozess nicht angezeigt.');
 }
 foreach ([$offersApi, $contractsApi] as $source) {

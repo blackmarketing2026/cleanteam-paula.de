@@ -58,8 +58,9 @@ if (str_contains($sendOffer, "&start=online-contract")
 $publicPage = file_get_contents(__DIR__ . '/../o.php');
 if (str_contains($publicJs, 'startsQuoteContract')
     || !str_contains($publicJs, '["entwurf", "sent"].includes(data.offer.quoteStatus)')
-    || !str_contains($publicJs, 'els.quotePreviewFrame.src')
-    || !str_contains($publicPage, 'id="quote-preview-frame"')
+    || !str_contains($publicJs, 'renderQuotePreview(')
+    || !str_contains($publicPage, 'id="quote-preview"')
+    || str_contains($publicPage, 'quote-pdf-link')
     || !str_contains($publicPage, 'Jetzt Auftragsbestätigung annehmen')
     || str_contains($publicJs, 'Kostenvoranschlag angenommen')) {
     throw new RuntimeException('Der KVA-Link zeigt nicht zuerst den Kostenvoranschlag mit Annahme-Button.');
