@@ -28,8 +28,9 @@ const els = {
   identityCheckName: document.querySelector("#identity-check-name"),
   identityCheckAuthorizedYes: document.querySelector("#identity-check-authorized-yes"),
   identityCheckAuthorizedNo: document.querySelector("#identity-check-authorized-no"),
-  quotePreview: document.querySelector("#quote-preview"),
+  quotePreviewFrame: document.querySelector("#quote-preview-frame"),
   acceptQuote: document.querySelector("#accept-quote"),
+  quotePdfLink: document.querySelector("#quote-pdf-link"),
 };
 
 const signatureInk = new WeakSet();
@@ -217,62 +218,6 @@ function renderFinalContract() {
   els.printFinalContract.href = pdfUrl;
 }
 
-// Der Kostenvoranschlag wird mit PDF.js auf Canvas-Seiten gezeichnet statt im PDF-Viewer des
-// Browsers angezeigt: So gibt es keine Download- oder Druck-Schaltflaeche. Ganz verhindern laesst
-// sich ein Abgreifen der Datei im Browser nicht, das ist nur eine Huerde.
-const PDFJS_BASE = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174";
-let pdfJsPromise = null;
-let quotePreviewUrl = "";
-
-function loadPdfJs() {
-  if (!pdfJsPromise) {
-    pdfJsPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = `${PDFJS_BASE}/pdf.min.js`;
-      script.onload = () => {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}/pdf.worker.min.js`;
-        resolve(window.pdfjsLib);
-      };
-      script.onerror = () => {
-        pdfJsPromise = null;
-        reject(new Error("PDF.js konnte nicht geladen werden."));
-      };
-      document.head.appendChild(script);
-    });
-  }
-  return pdfJsPromise;
-}
-
-async function renderQuotePreview(url) {
-  if (quotePreviewUrl === url) return;
-  quotePreviewUrl = url;
-  const container = els.quotePreview;
-  container.textContent = "Kostenvoranschlag wird geladen …";
-  try {
-    const pdfjsLib = await loadPdfJs();
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error("Kostenvoranschlag nicht gefunden.");
-    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await response.arrayBuffer()) }).promise;
-    const pages = [];
-    for (let number = 1; number <= pdf.numPages; number += 1) {
-      const page = await pdf.getPage(number);
-      const baseWidth = page.getViewport({ scale: 1 }).width;
-      const targetWidth = (container.clientWidth || 800) * Math.min(window.devicePixelRatio || 1, 2);
-      const viewport = page.getViewport({ scale: Math.max(targetWidth / baseWidth, 1) });
-      const canvas = document.createElement("canvas");
-      canvas.className = "quote-preview-page";
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-      pages.push(canvas);
-    }
-    container.replaceChildren(...pages);
-  } catch (error) {
-    quotePreviewUrl = "";
-    container.textContent = "Der Kostenvoranschlag konnte nicht geladen werden. Bitte laden Sie die Seite neu.";
-  }
-}
-
 function routeToState(data) {
   state.offer = data.offer;
   state.contract = data.contract;
@@ -320,8 +265,10 @@ function routeToState(data) {
     if (["entwurf", "sent"].includes(data.offer.quoteStatus)) {
       document.title = "CleanTeam - Ihr Kostenvoranschlag";
       document.querySelector("#public-document-label").textContent = "Ihr persönlicher Kostenvoranschlag";
+      const quoteUrl = `quote.php?token=${encodeURIComponent(token)}&v=cleanteam-3`;
+      els.quotePdfLink.href = quoteUrl;
+      if (els.quotePreviewFrame.getAttribute("src") !== quoteUrl) els.quotePreviewFrame.src = quoteUrl;
       showScreen("kostenvoranschlag");
-      renderQuotePreview(`quote.php?token=${encodeURIComponent(token)}&v=cleanteam-3`);
       return;
     }
     if (data.offer.quoteStatus === "signing") {

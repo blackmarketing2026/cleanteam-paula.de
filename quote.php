@@ -8,14 +8,6 @@ $pdo = db(); ensure_offers_discount_column($pdo); ensure_quote_workflow_columns(
 $offerId = trim((string) ($_GET['offerId'] ?? '')); $token = trim((string) ($_GET['token'] ?? ''));
 if ($token === '' && current_user_id() === null) { header('Location: /index.html'); exit; }
 if ($offerId === '' && $token === '') { http_response_code(400); echo 'Kostenvoranschlag fehlt.'; exit; }
-// Kunden sehen den KVA nur in der Online-Ansicht (o.php rendert ihn per fetch + PDF.js). Direktes
-// Oeffnen des PDFs ueber den Kunden-Link (Adresszeile, iframe, embed) wird abgelehnt, damit es dort
-// keinen Download- oder Druck-Button gibt. Browser ohne Sec-Fetch-Dest-Header bleiben unberuehrt.
-$fetchDest = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? ''));
-if ($token !== '' && in_array($fetchDest, ['document', 'iframe', 'frame', 'embed', 'object'], true)) {
-    http_response_code(403); header('Content-Type: text/plain; charset=utf-8');
-    echo 'Der Kostenvoranschlag kann nur online angesehen werden.'; exit;
-}
 $stmt = $pdo->prepare($token !== '' ? 'SELECT * FROM offers WHERE token = :value OR quote_token = :value2' : 'SELECT * FROM offers WHERE id = :value');
 $params = ['value' => $token !== '' ? $token : $offerId]; if ($token !== '') $params['value2'] = $token;
 $stmt->execute($params); $offer = $stmt->fetch();
@@ -33,6 +25,5 @@ header('Pragma: no-cache');
 header('Expires: 0');
 header('Content-Type: application/pdf');
 header('Content-Length: ' . strlen($quote['content']));
-header('X-Content-Type-Options: nosniff');
 header('Content-Disposition: inline; filename="' . str_replace('"', '', $quote['filename']) . '"');
 echo $quote['content'];
