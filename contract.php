@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/contract_template.php';
 require_once __DIR__ . '/includes/contract_pdf.php';
+require_once __DIR__ . '/includes/link_access.php';
 
 $pdo = db();
 $contractId = trim((string) ($_GET['contractId'] ?? ''));
@@ -37,6 +38,7 @@ if ($isPublicTokenAccess) {
         echo 'Vertrag nicht gefunden.';
         exit;
     }
+    require_offer_link_access_page($pdo, $offer);
 
     $stmt = $pdo->prepare('SELECT * FROM contracts WHERE offer_id = :offer_id');
     $stmt->execute(['offer_id' => $offer['id']]);

@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/quote_pdf.php';
+require_once __DIR__ . '/includes/link_access.php';
 
 $pdo = db(); ensure_offers_discount_column($pdo); ensure_quote_workflow_columns($pdo);
 $offerId = trim((string) ($_GET['offerId'] ?? '')); $token = trim((string) ($_GET['token'] ?? ''));
@@ -12,6 +13,7 @@ $stmt = $pdo->prepare($token !== '' ? 'SELECT * FROM offers WHERE token = :value
 $params = ['value' => $token !== '' ? $token : $offerId]; if ($token !== '') $params['value2'] = $token;
 $stmt->execute($params); $offer = $stmt->fetch();
 if (!$offer) { http_response_code(404); echo 'Kostenvoranschlag nicht gefunden.'; exit; }
+if ($token !== '') require_offer_link_access_page($pdo, $offer);
 $customer = $pdo->prepare('SELECT * FROM customers WHERE id = :id'); $customer->execute(['id' => $offer['customer_id']]);
 $customer = $customer->fetch();
 if (!$customer) { http_response_code(404); echo 'Kunde nicht gefunden.'; exit; }

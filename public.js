@@ -84,7 +84,9 @@ async function api(action, body) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.error || "Es ist ein Fehler aufgetreten.");
+    const error = new Error(data.error || "Es ist ein Fehler aufgetreten.");
+    error.code = data.code || "";
+    throw error;
   }
 
   return data;
@@ -112,6 +114,12 @@ function renderDataCheck() {
     ["E-Mail", offer.customer.email],
     ["Adresse", customerAddress(offer.customer)],
   ]);
+}
+
+function showLockedLink() {
+  window.clearInterval(validityTimer);
+  els.linkValidity.hidden = true;
+  showScreen("gesperrt");
 }
 
 function showExpiredLink() {
@@ -327,6 +335,10 @@ async function loadOffer() {
     }
     routeToState(data);
   } catch (error) {
+    if (error.code === "link_locked") {
+      showLockedLink();
+      return;
+    }
     els.errorMessage.textContent = error.message;
     showScreen("error");
   }
@@ -337,6 +349,10 @@ async function handleAction(action, body) {
     const data = await api(action, body || {});
     routeToState(data);
   } catch (error) {
+    if (error.code === "link_locked") {
+      showLockedLink();
+      return;
+    }
     showToast(error.message);
   }
 }

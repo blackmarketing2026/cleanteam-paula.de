@@ -4,6 +4,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/contract_template.php';
+require_once __DIR__ . '/../includes/link_access.php';
 
 require_login();
 
@@ -104,6 +105,9 @@ function offer_row_to_json(array $row): array
         'quoteAcceptedAt' => to_iso($row['quote_accepted_at'] ?? null),
         'contractId' => $row['contract_id'],
         'contractStatus' => $row['contract_status'],
+        'linkLocked' => (int) ($row['link_locked'] ?? 0) === 1,
+        'linkLockedAt' => to_iso($row['link_locked_at'] ?? null),
+        'linkOpenedAt' => to_iso($row['link_opened_at'] ?? null),
     ];
 }
 
@@ -126,6 +130,7 @@ ensure_offers_customer_obligations_column($pdo);
 ensure_offers_reminder_columns($pdo);
 ensure_offers_existing_contract_columns($pdo);
 ensure_quote_workflow_columns($pdo);
+ensure_offer_link_access_columns($pdo);
 
 if ($method === 'GET') {
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();

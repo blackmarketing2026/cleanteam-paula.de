@@ -16,7 +16,7 @@ header('Cache-Control: no-store, private');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=quote-pdf-iframe-20261013" />
+    <link rel="stylesheet" href="styles.css?v=link-lock-20261014" />
     <link rel="stylesheet" href="protect.css?v=20261013b" />
   </head>
   <body data-token="<?php echo $token; ?>">
@@ -40,6 +40,14 @@ header('Cache-Control: no-store, private');
         <section id="screen-error" class="public-screen">
           <h2>Link nicht verf&uuml;gbar</h2>
           <p id="error-message" class="muted"></p>
+        </section>
+
+        <section id="screen-gesperrt" class="public-screen link-locked-screen">
+          <div class="link-locked-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path class="lock-shackle" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          </div>
+          <h2>Link ist gesperrt</h2>
+          <p class="muted">Bitte melden Sie sich bei CleanTeam.</p>
         </section>
 
         <section id="screen-abgelehnt" class="public-screen">
@@ -151,6 +159,6 @@ header('Cache-Control: no-store, private');
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <script src="protect.js?v=20261013b"></script>
-    <script src="public.js?v=quote-pdf-iframe-20261013"></script>
+    <script src="public.js?v=link-lock-20261014"></script>
   </body>
 </html>

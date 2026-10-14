@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/ftp_export.php';
 
 require_once __DIR__ . '/../includes/contract_signers.php';
 require_once __DIR__ . '/../includes/quote_pdf.php';
+require_once __DIR__ . '/../includes/link_access.php';
 
 $pdo = db();
 ensure_offers_existing_contract_columns($pdo);
@@ -226,6 +227,8 @@ function migrate_legacy_quote_confirmation(PDO $pdo, array $offer, array $contra
 
 ensure_quote_workflow_columns($pdo);
 $offer = load_offer($pdo, $token);
+// Gesperrte oder bereits in einem anderen Browser geoeffnete Links zeigen den Sperrbildschirm.
+require_offer_link_access_json($pdo, $offer);
 $isQuoteAccess = !empty($offer['quote_token']) && hash_equals((string) $offer['quote_token'], $token);
 ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_privacy_accepted_at_column($pdo);

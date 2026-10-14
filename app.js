@@ -1292,6 +1292,21 @@ function renderOffers() {
     : `<div class="empty-state">Noch keine Vertragsentwürfe erstellt.</div>`;
 }
 
+const LINK_LOCK_ICON = `<svg class="link-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path class="lock-shackle" d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
+
+// Gesperrt: manuell gesperrt. Geöffnet: der Kunde hat den Link bereits einmal
+// geöffnet, jeder weitere Aufruf zeigt den Sperrbildschirm. Freigegeben: noch offen.
+function renderLinkLockBadge(offer) {
+  const animate = state.linkLockAnimation === offer.id ? " lock-animate" : "";
+  if (offer.linkLocked) {
+    return `<span class="badge danger link-lock-badge is-locked${animate}">${LINK_LOCK_ICON}<span>Link gesperrt</span></span>`;
+  }
+  if (offer.linkOpenedAt) {
+    return `<span class="badge warning link-lock-badge is-locked${animate}" title="Geöffnet am ${escapeHtml(formatDate(offer.linkOpenedAt))}">${LINK_LOCK_ICON}<span>Bereits geöffnet</span></span>`;
+  }
+  return `<span class="badge success link-lock-badge${animate}">${LINK_LOCK_ICON}<span>Link freigegeben</span></span>`;
+}
+
 function renderOfferCard(offer) {
   const validity = offerValidity(offer);
   const deliveryLabels = [];
@@ -1331,6 +1346,7 @@ function renderOfferCard(offer) {
           ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}</span>` : ""}
           ${offer.isExistingContract ? '<span class="badge">Bestand</span>' : ""}
           <span class="badge ${validity.className}">${escapeHtml(validity.label)}</span>
+          ${renderLinkLockBadge(offer)}
         </div>
       </div>
       <div class="record-lines">
@@ -1363,6 +1379,10 @@ function renderOfferCard(offer) {
               <i data-lucide="rotate-ccw" aria-hidden="true"></i>
               <span>Alle Links zurücksetzen</span>
             </button>`}
+        <button class="secondary-button link-lock-button${offer.linkLocked ? " is-locked" : ""}" type="button" data-action="toggle-offer-link-lock" data-id="${escapeHtml(offer.id)}" aria-pressed="${offer.linkLocked ? "true" : "false"}">
+          ${LINK_LOCK_ICON}
+          <span>${offer.linkLocked ? "Link freigeben" : "Link sperren"}</span>
+        </button>
         <button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="mail" aria-hidden="true"></i>
           <span>E-Mail-Vorlage</span>
@@ -2436,7 +2456,7 @@ async function copyQuoteLink(id) {
 }
 
 async function resetOfferLinks(id) {
-  const confirmed = window.confirm("Alle Links zurücksetzen? Der Kunde startet beim nächsten Öffnen wieder von vorne, bisherige Angaben im Link gehen verloren. Die Links und ihre Gültigkeit bleiben gleich.");
+  const confirmed = window.confirm("Alle Links zurücksetzen? Der Kunde startet beim nächsten Öffnen wieder von vorne, bisherige Angaben im Link gehen verloren. Die Links können danach wieder einmal geöffnet werden, ihre Gültigkeit bleibt gleich.");
   if (!confirmed) {
     return;
   }
@@ -2445,6 +2465,28 @@ async function resetOfferLinks(id) {
     await apiPost(`api/reset-offer-links.php?id=${encodeURIComponent(id)}`, {});
     await loadAll();
     showToast("Links wurden zurückgesetzt und können wieder geöffnet werden.");
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function toggleOfferLinkLock(id) {
+  const offer = getOffer(id);
+  if (!offer) {
+    showToast("Vertragsentwurf wurde nicht gefunden.");
+    return;
+  }
+  const locked = !offer.linkLocked;
+  try {
+    await apiPost(`api/lock-offer-links.php?id=${encodeURIComponent(id)}`, { locked });
+    state.linkLockAnimation = id;
+    await loadAll();
+    window.setTimeout(() => {
+      if (state.linkLockAnimation === id) state.linkLockAnimation = null;
+    }, 1200);
+    showToast(locked
+      ? "Link wurde gesperrt. Der Kunde sieht beim Öffnen den Sperrbildschirm."
+      : "Link wurde freigegeben und kann wieder einmal geöffnet werden.");
   } catch (error) {
     showToast(error.message);
   }
@@ -3635,6 +3677,10 @@ function handleRecordAction(event) {
 
   if (action === "reset-offer-links") {
     resetOfferLinks(id);
+  }
+
+  if (action === "toggle-offer-link-lock") {
+    toggleOfferLinkLock(id);
   }
 
   if (action === "open-email-template") {

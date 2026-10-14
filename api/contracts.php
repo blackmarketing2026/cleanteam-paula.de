@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/contract_template.php';
+require_once __DIR__ . '/../includes/link_access.php';
 
 require_login();
 
@@ -133,6 +134,7 @@ ensure_offers_reminder_columns($pdo);
 ensure_offers_existing_contract_columns($pdo);
 ensure_offer_agb_snapshot_storage($pdo);
 ensure_quote_workflow_columns($pdo);
+ensure_offer_link_access_columns($pdo);
 
 function contract_documents_table_exists(PDO $pdo): bool
 {
@@ -304,6 +306,7 @@ if ($method === 'DELETE') {
                 reminder1_sent_at = NULL, reminder2_sent_at = NULL, reminder3_sent_at = NULL,
                 quote_status = 'entwurf', quote_token = NULL, quote_sent_at = NULL,
                 quote_accepted_at = NULL, quote_accepted_ip = NULL, quote_accepted_user_agent = NULL,
+                link_opened_at = NULL, link_session_hash = NULL,
                 agb_snapshot_text = NULL, agb_snapshot_captured_at = NULL,
                 expires_at = CASE WHEN is_existing_contract = 1 THEN expires_at
                     ELSE DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL validity_days DAY), INTERVAL validity_hours HOUR) END
