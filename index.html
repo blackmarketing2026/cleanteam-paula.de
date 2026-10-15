@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=link-lock-20261014" />
+    <link rel="stylesheet" href="styles.css?v=contract-open-alert-20261015" />
     <link rel="stylesheet" href="protect.css?v=20261013b" />
   </head>
   <body>
@@ -87,6 +87,11 @@
             <i data-lucide="chevron-down" class="nav-group-chevron" aria-hidden="true"></i>
           </button>
           <div id="settings-subgroup" class="nav-subgroup" hidden>
+            <button id="updates-settings-button" class="nav-link" type="button" aria-haspopup="dialog">
+              <i data-lucide="bell" aria-hidden="true"></i>
+              <span>Paula-Updates</span>
+              <span class="updates-nav-badge" aria-hidden="true">Neu</span>
+            </button>
             <button class="nav-link" type="button" data-view="settings-smtp" hidden>
               <i data-lucide="server" aria-hidden="true"></i>
               <span>SMTP-Server</span>
@@ -137,6 +142,10 @@
             <p class="eyebrow">CleanTeam</p>
             <h2 id="view-title">Übersicht</h2>
           </div>
+          <button id="updates-bell" class="updates-bell" type="button" aria-label="Aktuelle Paula-Updates anzeigen" aria-haspopup="dialog">
+            <i data-lucide="bell" aria-hidden="true"></i>
+            <span class="updates-bell-dot" aria-hidden="true"></span>
+          </button>
         </header>
 
         <div id="mobile-backdrop" class="mobile-backdrop" hidden></div>
@@ -841,7 +850,7 @@
         <section id="settings-notify-view" class="view" aria-label="Vertragsbenachrichtigungen-Einstellungen">
           <div class="section-heading">
             <div>
-              <p class="muted">Sendet den unterschriebenen Vertrag automatisch per E-Mail an die Buchhaltung, sobald der Kunde unterschrieben hat.</p>
+              <p class="muted">Interne E-Mails beim Öffnen und nach dem Unterschreiben eines Vertrags.</p>
             </div>
           </div>
 
@@ -861,6 +870,21 @@
                 <button id="contract-notify-add-email" class="ghost-button" type="button">
                   <i data-lucide="plus" aria-hidden="true"></i>
                   Weitere E-Mail-Adresse
+                </button>
+              </div>
+              <div class="span-2 contract-open-notify-section">
+                <h4>Vertrag geöffnet</h4>
+                <p class="muted">Sofortmeldung mit Kundenname, Telefonnummer und Anruf-Button. Sie geht nur an die hier eingetragenen internen Adressen, niemals an den Kunden. Bei schnellem Neuladen oder Tab-Wechsel höchstens einmal alle 15 Minuten pro Vertrag.</p>
+              </div>
+              <label class="span-2 checkbox-row">
+                <input id="contract-open-notify-enabled" type="checkbox" />
+                E-Mail senden, wenn ein noch nicht unterschriebener Vertrag geöffnet wird
+              </label>
+              <div id="contract-open-notify-emails" class="span-2 email-list"></div>
+              <div class="span-2">
+                <button id="contract-open-notify-add-email" class="ghost-button" type="button">
+                  <i data-lucide="plus" aria-hidden="true"></i>
+                  Weitere Empfängeradresse
                 </button>
               </div>
               <div class="form-actions span-2">
@@ -1144,6 +1168,22 @@
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <div id="updates-modal" class="modal-overlay" hidden>
+      <div class="modal-box updates-modal-box" role="dialog" aria-modal="true" aria-labelledby="updates-modal-heading">
+        <div class="updates-modal-heading">
+          <div>
+            <p class="eyebrow">Aktuelle Änderungen</p>
+            <h4 id="updates-modal-heading">Neu bei Paula</h4>
+          </div>
+          <button id="updates-close" class="icon-button" type="button" aria-label="Updates schließen">
+            <i data-lucide="x" aria-hidden="true"></i>
+          </button>
+        </div>
+        <p class="muted">Die neuesten Funktionen im Überblick.</p>
+        <ol id="updates-list" class="updates-list"></ol>
+      </div>
+    </div>
 
     <div id="offer-send-modal" class="modal-overlay" hidden>
       <form id="offer-send-form" class="modal-box" role="dialog" aria-modal="true" aria-labelledby="offer-send-modal-heading">
@@ -1574,7 +1614,7 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="protect.js?v=20261013b"></script>
-    <script src="app.js?v=link-lock-discount-deadline-20261015"></script>
+    <script src="app.js?v=contract-open-alert-20261015"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

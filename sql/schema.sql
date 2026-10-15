@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS offers (
   link_locked_at DATETIME NULL,
   link_opened_at DATETIME NULL,
   link_session_hash CHAR(64) NULL,
+  contract_open_notified_at DATETIME NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uniq_offers_token (token),
   UNIQUE KEY uniq_offers_quote_token (quote_token),
@@ -92,6 +93,21 @@ CREATE TABLE IF NOT EXISTS quote_documents (
   PRIMARY KEY (id),
   UNIQUE KEY uniq_quote_documents_offer (offer_id),
   CONSTRAINT fk_quote_documents_offer FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS offer_link_visits (
+  id VARCHAR(64) NOT NULL,
+  offer_id VARCHAR(64) NOT NULL,
+  link_kind VARCHAR(20) NOT NULL,
+  document_kind VARCHAR(30) NOT NULL,
+  ip_address VARCHAR(45) NOT NULL,
+  opened_at DATETIME NOT NULL,
+  last_seen_at DATETIME NOT NULL,
+  closed_at DATETIME NULL,
+  close_reason VARCHAR(20) NULL,
+  PRIMARY KEY (id),
+  KEY idx_link_visits_offer_opened (offer_id, opened_at),
+  CONSTRAINT fk_link_visits_offer FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS contracts (
@@ -177,6 +193,8 @@ CREATE TABLE IF NOT EXISTS contract_notifications (
   id TINYINT UNSIGNED NOT NULL,
   enabled TINYINT(1) NOT NULL DEFAULT 0,
   recipients TEXT NULL,
+  open_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  open_recipients TEXT NULL,
   updated_at DATETIME NULL,
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

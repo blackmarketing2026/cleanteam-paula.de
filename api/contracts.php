@@ -51,7 +51,7 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
 const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.is_existing_contract, o.original_start_date, o.notes AS offer_notes,
     o.customer_obligations_note AS offer_customer_obligations_note,
     o.base_price, o.discount_percent, o.price, o.vat_applicable, o.created_at AS offer_created_at, o.token,
-    o.sent_at AS offer_sent_at, o.email_opened_at AS offer_email_opened_at,
+    o.sent_at AS offer_sent_at, o.email_opened_at AS offer_email_opened_at, o.link_opened_at AS offer_link_opened_at,
     c.name AS c_name, c.email AS c_email, c.phone AS c_phone, c.salutation AS c_salutation,
     c.contact_last_name AS c_contact_last_name, c.address AS c_address, c.house_number AS c_house_number,
     c.zip AS c_zip, c.city AS c_city
@@ -117,6 +117,7 @@ function contract_row_to_json(array $row): array
             'createdAt' => to_iso($row['offer_created_at']),
             'sentAt' => to_iso($row['offer_sent_at'] ?? null),
             'emailOpenedAt' => to_iso($row['offer_email_opened_at'] ?? null),
+            'linkOpenedAt' => to_iso($row['offer_link_opened_at'] ?? null),
         ],
     ];
 }

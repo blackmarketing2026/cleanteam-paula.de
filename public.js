@@ -36,6 +36,63 @@ const els = {
 const signatureInk = new WeakSet();
 const additionalSigners = [];
 let validityTimer = null;
+let linkVisitId = null;
+let linkVisitOpening = false;
+let linkVisitTimer = null;
+let currentDocumentKind = "sonstiges";
+let trackingAllowed = true;
+
+function documentKindForScreen(name) {
+  if (name === "kostenvoranschlag") return "kostenvoranschlag";
+  if (name === "fertig") return "abschluss";
+  if (["loading", "error", "gesperrt"].includes(name)) return "sonstiges";
+  return "vertrag";
+}
+
+function trackingUrl() {
+  return `api/link-tracking.php?token=${encodeURIComponent(token)}`;
+}
+
+async function startLinkVisit() {
+  if (linkVisitId || linkVisitOpening || !state.offer || !trackingAllowed || currentDocumentKind === "sonstiges" || document.visibilityState !== "visible") return;
+  linkVisitOpening = true;
+  const openedKind = currentDocumentKind;
+  try {
+    const response = await fetch(trackingUrl(), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "open", documentKind: openedKind }),
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    linkVisitId = data.visitId || null;
+    if (linkVisitId && (document.visibilityState !== "visible" || currentDocumentKind !== openedKind || !trackingAllowed)) closeLinkVisit(openedKind);
+    if (linkVisitId && !linkVisitTimer) linkVisitTimer = window.setInterval(heartbeatLinkVisit, 15000);
+  } catch (_) {
+    // Der Kundenprozess bleibt auch bei einem Trackingfehler nutzbar.
+  } finally {
+    linkVisitOpening = false;
+    if (!linkVisitId && currentDocumentKind !== openedKind && document.visibilityState === "visible") startLinkVisit();
+  }
+}
+
+function heartbeatLinkVisit() {
+  if (!linkVisitId || document.visibilityState !== "visible") return;
+  fetch(trackingUrl(), {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "heartbeat", visitId: linkVisitId, documentKind: currentDocumentKind }),
+  }).catch(() => {});
+}
+
+function closeLinkVisit(documentKind = currentDocumentKind) {
+  if (!linkVisitId) return;
+  const body = JSON.stringify({ action: "close", visitId: linkVisitId, documentKind });
+  if (!navigator.sendBeacon || !navigator.sendBeacon(trackingUrl(), new Blob([body], { type: "application/json" }))) {
+    fetch(trackingUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+  }
+  linkVisitId = null;
+  window.clearInterval(linkVisitTimer);
+  linkVisitTimer = null;
+}
 
 const EXPIRED_LINK_MESSAGE = "Vertragslink abgelaufen. Bitte kontaktieren Sie das Clean-Team.";
 
@@ -69,9 +126,14 @@ function showToast(message) {
 }
 
 function showScreen(name) {
+  const nextDocumentKind = documentKindForScreen(name);
+  if (linkVisitId && nextDocumentKind !== currentDocumentKind) closeLinkVisit();
+  currentDocumentKind = nextDocumentKind;
   els.screens.forEach((screen) => {
     screen.classList.toggle("active-screen", screen.id === `screen-${name}`);
   });
+  heartbeatLinkVisit();
+  if (state.offer && !linkVisitId) startLinkVisit();
 }
 
 async function api(action, body) {
@@ -117,6 +179,8 @@ function renderDataCheck() {
 }
 
 function showLockedLink() {
+  trackingAllowed = false;
+  closeLinkVisit();
   window.clearInterval(validityTimer);
   els.linkValidity.hidden = true;
   showScreen("gesperrt");
@@ -337,14 +401,17 @@ async function loadOffer() {
     const data = await api("offer");
     if (data.accessMode === "quote" && !data.offer.expired) {
       routeToState(data);
+      startLinkVisit();
       return;
     }
     if (!data.offer.expired && !data.contract) {
       const started = await api("start", {});
       routeToState(started);
+      startLinkVisit();
       return;
     }
     routeToState(data);
+    startLinkVisit();
   } catch (error) {
     if (error.code === "link_locked") {
       showLockedLink();
@@ -359,6 +426,7 @@ async function handleAction(action, body) {
   try {
     const data = await api(action, body || {});
     routeToState(data);
+    startLinkVisit();
   } catch (error) {
     if (error.code === "link_locked") {
       showLockedLink();
@@ -584,6 +652,11 @@ function init() {
   }
 
   bindEvents();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") closeLinkVisit();
+    else startLinkVisit();
+  });
+  window.addEventListener("pagehide", closeLinkVisit);
   setupCaptureProtection();
   setupSignaturePad(els.signaturePad);
 

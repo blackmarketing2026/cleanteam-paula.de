@@ -3,7 +3,7 @@
 $index = file_get_contents(__DIR__ . '/../index.html');
 $styles = file_get_contents(__DIR__ . '/../styles.css');
 
-foreach (['offer-edit-wide', 'offer-edit-subgrid', 'link-lock-20261014'] as $needle) {
+foreach (['offer-edit-wide', 'offer-edit-subgrid', 'styles.css?v='] as $needle) {
     if (!str_contains($index, $needle)) {
         throw new RuntimeException('Responsive Struktur oder Cache-Version des Bearbeitungsdialogs fehlt: ' . $needle);
     }

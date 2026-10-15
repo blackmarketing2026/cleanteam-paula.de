@@ -15,6 +15,8 @@ if ($method === 'GET') {
     json_response([
         'enabled' => (bool) $settings['enabled'],
         'recipients' => contract_notification_recipients((string) ($settings['recipients'] ?? '')),
+        'openEnabled' => (bool) ($settings['open_enabled'] ?? 1),
+        'openRecipients' => contract_open_recipients($settings),
         'updatedAt' => to_iso($settings['updated_at']),
     ]);
 }
@@ -86,9 +88,14 @@ if ($method === 'POST' && ($_GET['action'] ?? '') === 'test') {
 
 if ($method === 'POST') {
     $body = read_json_body();
+    $current = load_contract_notification_settings($pdo);
     $enabled = (bool) ($body['enabled'] ?? false);
+    $openEnabled = array_key_exists('openEnabled', $body)
+        ? (bool) $body['openEnabled'] : (bool) ($current['open_enabled'] ?? 1);
     $recipientsInput = $body['recipients'] ?? [];
     $recipientsInput = is_array($recipientsInput) ? $recipientsInput : [];
+    $openRecipientsInput = $body['openRecipients'] ?? contract_notification_recipients((string) ($current['open_recipients'] ?? ''));
+    $openRecipientsInput = is_array($openRecipientsInput) ? $openRecipientsInput : [];
 
     $emails = [];
     foreach ($recipientsInput as $entry) {
@@ -103,20 +110,34 @@ if ($method === 'POST') {
     }
     $emails = array_values(array_unique($emails));
 
+    $openEmails = [];
+    foreach ($openRecipientsInput as $entry) {
+        $email = trim((string) $entry);
+        if ($email === '') continue;
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) json_error('Ungültige E-Mail-Adresse für Öffnungsmeldungen: ' . $email, 422);
+        $openEmails[] = $email;
+    }
+    $openEmails = array_values(array_unique($openEmails));
+
     if ($enabled && $emails === []) {
         json_error('Bitte mindestens eine E-Mail-Adresse angeben.', 422);
     }
 
     $stmt = $pdo->prepare(
-        'INSERT INTO contract_notifications (id, enabled, recipients, updated_at)
-         VALUES (1, :enabled, :recipients, UTC_TIMESTAMP())
-         ON DUPLICATE KEY UPDATE enabled = :enabled2, recipients = :recipients2, updated_at = UTC_TIMESTAMP()'
+        'INSERT INTO contract_notifications (id, enabled, recipients, open_enabled, open_recipients, updated_at)
+         VALUES (1, :enabled, :recipients, :open_enabled, :open_recipients, UTC_TIMESTAMP())
+         ON DUPLICATE KEY UPDATE enabled = :enabled2, recipients = :recipients2,
+            open_enabled = :open_enabled2, open_recipients = :open_recipients2, updated_at = UTC_TIMESTAMP()'
     );
     $stmt->execute([
         'enabled' => $enabled ? 1 : 0,
         'recipients' => implode("\n", $emails),
         'enabled2' => $enabled ? 1 : 0,
         'recipients2' => implode("\n", $emails),
+        'open_enabled' => $openEnabled ? 1 : 0,
+        'open_recipients' => implode("\n", $openEmails),
+        'open_enabled2' => $openEnabled ? 1 : 0,
+        'open_recipients2' => implode("\n", $openEmails),
     ]);
 
     json_response(['ok' => true]);

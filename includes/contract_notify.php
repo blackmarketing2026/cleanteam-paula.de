@@ -8,12 +8,28 @@ require_once __DIR__ . '/contract_pdf.php';
 require_once __DIR__ . '/email_template.php';
 require_once __DIR__ . '/email_settings.php';
 
+const CONTRACT_OPEN_DEFAULT_RECIPIENTS = ['cleanteam@function-concept.de', 'info@cleanteam-group.com'];
+
+function ensure_contract_open_notification_columns(PDO $pdo): void
+{
+    foreach ([
+        'open_enabled' => 'ALTER TABLE contract_notifications ADD COLUMN open_enabled TINYINT(1) NOT NULL DEFAULT 1',
+        'open_recipients' => 'ALTER TABLE contract_notifications ADD COLUMN open_recipients TEXT NULL',
+    ] as $column => $sql) {
+        if (!$pdo->query("SHOW COLUMNS FROM contract_notifications LIKE '{$column}'")->fetch()) $pdo->exec($sql);
+    }
+    if (!$pdo->query("SHOW COLUMNS FROM offers LIKE 'contract_open_notified_at'")->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD COLUMN contract_open_notified_at DATETIME NULL');
+    }
+}
+
 function load_contract_notification_settings(PDO $pdo): array
 {
+    ensure_contract_open_notification_columns($pdo);
     $stmt = $pdo->query('SELECT * FROM contract_notifications WHERE id = 1');
     $row = $stmt->fetch();
 
-    return $row ?: ['enabled' => 0, 'recipients' => '', 'updated_at' => null];
+    return $row ?: ['enabled' => 0, 'recipients' => '', 'open_enabled' => 1, 'open_recipients' => '', 'updated_at' => null];
 }
 
 function contract_notification_recipients(string $raw): array
@@ -28,6 +44,104 @@ function contract_notification_recipients(string $raw): array
     }
 
     return array_values(array_unique($emails));
+}
+
+function contract_open_recipients(array $settings): array
+{
+    $configured = contract_notification_recipients((string) ($settings['open_recipients'] ?? ''));
+    if ($configured !== []) return $configured;
+    return CONTRACT_OPEN_DEFAULT_RECIPIENTS;
+}
+
+function contract_call_url(string $phone): ?string
+{
+    $dial = preg_replace('/[^0-9+]/', '', trim($phone)) ?? '';
+    $dial = preg_replace('/(?!^)\+/', '', $dial) ?? '';
+    return strlen(preg_replace('/\D/', '', $dial) ?? '') >= 3 ? 'tel:' . $dial : null;
+}
+
+function contract_open_is_notifiable(array $context, string $linkKind): bool
+{
+    return ($context['status'] ?? '') === 'entwurf'
+        && ($linkKind !== 'quote' || ($context['quote_status'] ?? '') === 'signing');
+}
+
+function contract_open_message_content(array $context): string
+{
+    $phone = trim((string) ($context['phone'] ?? ''));
+    $callUrl = contract_call_url($phone);
+    $contact = trim((string) ($context['salutation'] ?? '') . ' ' . (string) ($context['contact_last_name'] ?? ''));
+    $html = '<p style="margin:0 0 14px 0;">Der Kunde hat gerade den Vertrag geöffnet und befindet sich im Unterschriftsprozess. Der Vertrag ist noch nicht unterschrieben.</p>'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 16px 0;">'
+        . '<tr><td style="padding:5px 10px 5px 0;font-weight:700;">Kunde</td><td>' . email_h((string) ($context['name'] ?? '')) . '</td></tr>'
+        . '<tr><td style="padding:5px 10px 5px 0;font-weight:700;">Ansprechpartner</td><td>' . email_h($contact) . '</td></tr>'
+        . '<tr><td style="padding:5px 10px 5px 0;font-weight:700;">Telefonnummer</td><td>' . email_h($phone !== '' ? $phone : 'Nicht hinterlegt') . '</td></tr>'
+        . '</table>';
+    return $callUrl !== null ? $html . email_button_html($callUrl, 'Kunden jetzt anrufen') : $html;
+}
+
+// Benachrichtigt intern beim Einstieg in eine noch offene Vertragsansicht.
+// Der atomare Zeitstempel verhindert E-Mail-Fluten durch Neuladen oder Tab-Wechsel.
+function notify_contract_opened(PDO $pdo, string $offerId, string $linkKind): void
+{
+    $claimedAt = null;
+    try {
+        if (!email_delivery_is_allowed($pdo, 'internal_contract_notification')) return;
+        $settings = load_contract_notification_settings($pdo);
+        if (empty($settings['open_enabled'])) return;
+        $smtp = load_mailbox_smtp($pdo);
+        if ($smtp === null) return;
+        $recipients = contract_open_recipients($settings);
+        if ($recipients === []) return;
+
+        $stmt = $pdo->prepare('SELECT o.id, o.quote_status, c.name, c.phone, c.salutation, c.contact_last_name, ct.status
+            FROM offers o JOIN customers c ON c.id = o.customer_id
+            JOIN contracts ct ON ct.offer_id = o.id WHERE o.id = :id');
+        $stmt->execute(['id' => $offerId]);
+        $context = $stmt->fetch();
+        if (!$context || !contract_open_is_notifiable($context, $linkKind)) return;
+
+        $messageContent = contract_open_message_content($context);
+        $message = render_email_template_message($pdo, $messageContent, [
+            'title' => 'Vertrag geöffnet',
+            'preheader' => 'Kunde ist im Unterschriftsprozess.',
+            'fromName' => $smtp['from_name'] ?? 'CleanTeam',
+            'signatureText' => $smtp['signature'] ?? '',
+            'signatureContext' => 'internal_contract_notification',
+        ]);
+
+        $claimedAt = gmdate('Y-m-d H:i:s');
+        $threshold = gmdate('Y-m-d H:i:s', time() - 15 * 60);
+        $claim = $pdo->prepare('UPDATE offers SET contract_open_notified_at = :claimed_at
+            WHERE id = :id AND (contract_open_notified_at IS NULL OR contract_open_notified_at <= :threshold)
+            AND EXISTS (SELECT 1 FROM contracts WHERE offer_id = offers.id AND status NOT IN (\'signiert\', \'bestaetigt\'))');
+        $claim->execute(['claimed_at' => $claimedAt, 'id' => $offerId, 'threshold' => $threshold]);
+        if ($claim->rowCount() !== 1) return;
+
+        $mailer = new SmtpMailer($smtp['host'], (int) $smtp['smtp_port'], $smtp['smtp_encryption'],
+            $smtp['username'], decrypt_secret($smtp['password_encrypted']));
+        $sent = false;
+        foreach ($recipients as $recipient) {
+            try {
+                $mailer->send($smtp['username'], $smtp['from_name'], $recipient, $recipient,
+                    'Vertrag geöffnet - ' . $context['name'], $message['html'], true, $message['inlineImages']);
+                $sent = true;
+            } catch (Throwable $exception) {
+                error_log('Vertrag-geöffnet-Benachrichtigung fehlgeschlagen (' . $recipient . '): ' . $exception->getMessage());
+            }
+        }
+        if ($sent) return;
+    } catch (Throwable $exception) {
+        error_log('Vertrag-geöffnet-Benachrichtigung fehlgeschlagen: ' . $exception->getMessage());
+    }
+    if ($claimedAt !== null) {
+        try {
+            $pdo->prepare('UPDATE offers SET contract_open_notified_at = NULL WHERE id = :id AND contract_open_notified_at = :claimed_at')
+                ->execute(['id' => $offerId, 'claimed_at' => $claimedAt]);
+        } catch (Throwable $exception) {
+            error_log('Vertrag-geöffnet-Meldestatus konnte nicht zurückgesetzt werden: ' . $exception->getMessage());
+        }
+    }
 }
 
 // Laedt Vertrag, Vertragsentwurf und Kunde zusammen. Gibt null zurueck, wenn irgendetwas davon fehlt.

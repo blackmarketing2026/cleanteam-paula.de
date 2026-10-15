@@ -3,12 +3,13 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/link_access.php';
+require_once __DIR__ . '/../includes/contract_notify.php';
 
 // Setzt den Kundenfortschritt von Vertrags- und KVA-Link zurück, damit beide wieder
 // wie beim ersten Öffnen starten und wieder einmal geöffnet werden können.
 // Links, Gültigkeit und eine manuelle Sperre bleiben unverändert.
 require_login(); require_method('POST');
-$pdo = db(); ensure_quote_workflow_columns($pdo); ensure_offer_link_access_columns($pdo);
+$pdo = db(); ensure_quote_workflow_columns($pdo); ensure_offer_link_access_columns($pdo); ensure_contract_open_notification_columns($pdo);
 $offerId = (string) ($_GET['id'] ?? '');
 if ($offerId === '') json_error('Vertragsentwurf fehlt.', 422);
 $stmt = $pdo->prepare('SELECT * FROM offers WHERE id = :id');
@@ -33,7 +34,7 @@ try {
     $pdo->prepare(
         'UPDATE offers SET quote_status = :quote_status, quote_accepted_at = NULL,
             quote_accepted_ip = NULL, quote_accepted_user_agent = NULL,
-            link_opened_at = NULL, link_session_hash = NULL WHERE id = :id'
+            link_opened_at = NULL, link_session_hash = NULL, contract_open_notified_at = NULL WHERE id = :id'
     )->execute(['quote_status' => empty($offer['quote_token']) ? 'entwurf' : 'sent', 'id' => $offerId]);
     $pdo->commit();
 } catch (Throwable $exception) {

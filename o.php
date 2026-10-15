@@ -16,7 +16,7 @@ header('Cache-Control: no-store, private');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=link-lock-20261014" />
+    <link rel="stylesheet" href="styles.css?v=paula-updates-20261015" />
     <link rel="stylesheet" href="protect.css?v=20261013b" />
   </head>
   <body data-token="<?php echo $token; ?>">
@@ -31,6 +31,7 @@ header('Cache-Control: no-store, private');
         </div>
         <div id="link-validity" class="link-validity" hidden></div>
       </header>
+      <p class="public-tracking-note">Zur Nachvollziehbarkeit der Linknutzung werden das geöffnete Dokument, Ihre IP-Adresse sowie Öffnungszeit und Besuchsdauer protokolliert.</p>
 
       <div class="public-card" id="public-card">
         <section id="screen-loading" class="public-screen active-screen">
@@ -159,6 +160,6 @@ header('Cache-Control: no-store, private');
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <script src="protect.js?v=20261013b"></script>
-    <script src="public.js?v=link-lock-discount-deadline-20261015"></script>
+    <script src="public.js?v=link-tracking-20261015"></script>
   </body>
 </html>

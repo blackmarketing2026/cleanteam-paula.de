@@ -10,6 +10,35 @@ const CONTRACT_STATUS_LABELS = {
 const REJECTED_CONTRACT_STATUSES = ["daten_abgelehnt", "intervall_abgelehnt", "datenschutz_abgelehnt"];
 const VAT_RATE = 0.19;
 
+// Neue Einträge oben ergänzen; im Dialog wird bewusst nur das Datum angezeigt.
+const PAULA_UPDATES = [
+  {
+    date: "15.10.2026",
+    title: "Sofortmeldung bei geöffnetem Vertrag",
+    description: "Wenn ein Kunde einen noch nicht unterschriebenen Vertrag öffnet, erhalten die internen Empfänger eine E-Mail mit Kundenname, Telefonnummer und Anruf-Button.",
+  },
+  {
+    date: "15.10.2026",
+    title: "Update-Glocke und Änderungsverlauf",
+    description: "Die neuesten Paula-Änderungen erscheinen beim Öffnen und Neuladen und bleiben über die Glocke jederzeit erreichbar.",
+  },
+  {
+    date: "15.10.2026",
+    title: "Link- und Vertragsverlauf",
+    description: "Kostenvoranschlag- und Vertragsaufrufe werden mit IP-Adresse, Öffnungszeit, Ende und Besuchsdauer protokolliert. Der Verlauf ist in Vertragsentwürfen und in der Vertragsliste sichtbar.",
+  },
+  {
+    date: "15.10.2026",
+    title: "Ablaufzeit und Rabatt ändern",
+    description: "Die Rabattfrist eines Vertragsentwurfs kann nachträglich geändert werden. Dazu lässt sich eine E-Mail mit neuer Frist und dem Preis nach Rabattablauf versenden.",
+  },
+  {
+    date: "14.10.2026",
+    title: "Kundenlinks sperren",
+    description: "Vertrags- und Kostenvoranschlagslinks lassen sich sperren; eine erste Öffnung wird am Entwurf angezeigt.",
+  },
+];
+
 const state = {
   data: { customers: [], offers: [], contracts: [] },
   session: {
@@ -50,6 +79,11 @@ const els = {
   offersSubgroup: document.querySelector("#contracts-subgroup"),
   settingsGroupToggle: document.querySelector("#settings-group-toggle"),
   settingsSubgroup: document.querySelector("#settings-subgroup"),
+  updatesBell: document.querySelector("#updates-bell"),
+  updatesSettingsButton: document.querySelector("#updates-settings-button"),
+  updatesModal: document.querySelector("#updates-modal"),
+  updatesClose: document.querySelector("#updates-close"),
+  updatesList: document.querySelector("#updates-list"),
   views: document.querySelectorAll(".view"),
   viewTitle: document.querySelector("#view-title"),
   sidebar: document.querySelector(".sidebar"),
@@ -174,6 +208,9 @@ const els = {
   contractNotifyEmails: document.querySelector("#contract-notify-emails"),
   contractNotifyAddEmail: document.querySelector("#contract-notify-add-email"),
   contractNotifyTest: document.querySelector("#contract-notify-test"),
+  contractOpenNotifyEnabled: document.querySelector("#contract-open-notify-enabled"),
+  contractOpenNotifyEmails: document.querySelector("#contract-open-notify-emails"),
+  contractOpenNotifyAddEmail: document.querySelector("#contract-open-notify-add-email"),
   linkModal: document.querySelector("#link-modal"),
   linkModalInput: document.querySelector("#link-modal-input"),
   linkModalCopy: document.querySelector("#link-modal-copy"),
@@ -514,7 +551,30 @@ function refreshIcons() {
   }
 }
 
+let updatesReturnFocus = null;
+
+function openUpdatesModal(trigger = null) {
+  updatesReturnFocus = trigger || els.updatesBell;
+  els.updatesList.innerHTML = PAULA_UPDATES.map((update) => `
+    <li>
+      <time>${escapeHtml(update.date)}</time>
+      <strong>${escapeHtml(update.title)}</strong>
+      <p>${escapeHtml(update.description)}</p>
+    </li>
+  `).join("");
+  els.updatesModal.hidden = false;
+  els.updatesClose.focus();
+}
+
+function closeUpdatesModal() {
+  if (els.updatesModal.hidden) return;
+  els.updatesModal.hidden = true;
+  updatesReturnFocus?.focus();
+  updatesReturnFocus = null;
+}
+
 function showLogin() {
+  closeUpdatesModal();
   state.session = {
     email: "",
     role: "role_one",
@@ -534,6 +594,7 @@ function showApp(session) {
   els.loginScreen.hidden = true;
   els.appShell.hidden = false;
   switchView(loadPersistedView());
+  openUpdatesModal();
 }
 
 function setSettingsGroupExpanded(expanded) {
@@ -1397,6 +1458,10 @@ function renderOfferCard(offer) {
           ${LINK_LOCK_ICON}
           <span>${offer.linkLocked ? "Link freigeben" : "Link sperren"}</span>
         </button>
+        <button class="secondary-button" type="button" data-action="show-link-history" data-offer-id="${escapeHtml(offer.id)}" aria-haspopup="dialog" aria-expanded="false">
+          <i data-lucide="history" aria-hidden="true"></i>
+          <span>Link-/Vertragsverlauf</span>
+        </button>
         <button class="secondary-button" type="button" data-action="open-email-template" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="mail" aria-hidden="true"></i>
           <span>E-Mail-Vorlage</span>
@@ -1562,14 +1627,19 @@ function contractBadgeClass(status) {
   return "warning";
 }
 
-function renderDeliveryStatus(offer) {
+function renderDeliveryStatus(offer, isExistingContract = false) {
   const steps = [
-    { done: Boolean(offer.sentAt), label: "Gesendet", at: offer.sentAt },
-    {
+    ...(isExistingContract ? [] : [{ done: Boolean(offer.sentAt), label: "Gesendet", at: offer.sentAt }]),
+    ...(isExistingContract ? [] : [{
       done: Boolean(offer.emailOpenedAt),
-      label: "Geöffnet",
+      label: "E-Mail geöffnet",
       at: offer.emailOpenedAt,
       hint: "Technisches Signal (Ladepixel). Kann auch durch Sicherheits-Scanner oder E-Mail-Anbieter ausgelöst werden, bevor ein Mensch die Mail gesehen hat – keine Garantie, dass sie wirklich gelesen wurde.",
+    }]),
+    {
+      done: Boolean(offer.linkOpenedAt),
+      label: "Link geöffnet",
+      at: offer.linkOpenedAt,
     },
   ];
 
@@ -1597,8 +1667,83 @@ function renderDeliveryStatus(offer) {
           )
           .join("")}
       </div>
+      <button class="link-history-trigger" type="button" data-action="show-link-history" data-offer-id="${escapeHtml(offer.id)}" aria-haspopup="dialog" aria-expanded="false">Link-/Vertragsverlauf ansehen</button>
     </div>
   `;
+}
+
+let linkHistoryPopover = null;
+let linkHistoryTrigger = null;
+let linkHistoryPinned = false;
+let linkHistoryCloseTimer = null;
+let linkHistoryRequest = 0;
+
+function formatVisitDuration(seconds) {
+  const total = Math.max(0, Number(seconds) || 0);
+  if (total < 60) return `${total} Sek.`;
+  const minutes = Math.floor(total / 60);
+  return minutes < 60 ? `${minutes} Min. ${total % 60} Sek.` : `${Math.floor(minutes / 60)} Std. ${minutes % 60} Min.`;
+}
+
+function formatVisitDateTime(value) {
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).format(new Date(value)) + " Uhr";
+}
+
+function closeLinkHistory() {
+  window.clearTimeout(linkHistoryCloseTimer);
+  if (linkHistoryTrigger) linkHistoryTrigger.setAttribute("aria-expanded", "false");
+  linkHistoryPopover?.remove();
+  linkHistoryPopover = null;
+  linkHistoryTrigger = null;
+  linkHistoryPinned = false;
+  linkHistoryRequest++;
+}
+
+async function openLinkHistory(button, pinned = false) {
+  window.clearTimeout(linkHistoryCloseTimer);
+  if (linkHistoryTrigger === button && linkHistoryPopover) {
+    linkHistoryPinned = linkHistoryPinned || pinned;
+    return;
+  }
+  closeLinkHistory();
+  linkHistoryTrigger = button;
+  linkHistoryPinned = pinned;
+  button.setAttribute("aria-expanded", "true");
+  const popover = document.createElement("div");
+  popover.className = "link-history-popover";
+  popover.setAttribute("role", "dialog");
+  popover.setAttribute("aria-label", "Link- und Vertragsverlauf");
+  popover.innerHTML = '<div class="link-history-head"><strong>Link- und Vertragsverlauf</strong><button type="button" class="link-history-close" aria-label="Schließen">×</button></div><p class="muted">Verlauf wird geladen ...</p>';
+  document.body.appendChild(popover);
+  linkHistoryPopover = popover;
+  const rect = button.getBoundingClientRect();
+  popover.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - popover.offsetWidth - 12))}px`;
+  popover.style.top = `${Math.max(12, Math.min(rect.bottom + 6, window.innerHeight - popover.offsetHeight - 12))}px`;
+  popover.querySelector(".link-history-close").addEventListener("click", closeLinkHistory);
+  popover.addEventListener("pointerenter", () => window.clearTimeout(linkHistoryCloseTimer));
+  popover.addEventListener("pointerleave", () => { if (!linkHistoryPinned) linkHistoryCloseTimer = window.setTimeout(closeLinkHistory, 250); });
+  const requestId = ++linkHistoryRequest;
+  try {
+    const data = await apiGet(`api/link-tracking.php?offerId=${encodeURIComponent(button.dataset.offerId)}`);
+    if (requestId !== linkHistoryRequest || linkHistoryPopover !== popover) return;
+    const visits = data.visits || [];
+    const content = visits.length ? `<ol class="link-history-list">${visits.map((visit) => `
+      <li>
+        <strong>${escapeHtml(visit.documentKind === "kostenvoranschlag" ? "Kostenvoranschlag" : visit.documentKind === "abschluss" ? "Unterschriebener Vertrag" : visit.documentKind === "vertrag" ? "Vertrag" : "Link")} geöffnet</strong>
+        <span>Link: ${escapeHtml(visit.linkKind === "quote" ? "Kostenvoranschlag" : "Vertrag")}</span>
+        <span>IP-Adresse: ${escapeHtml(visit.ipAddress || "unbekannt")}</span>
+        <span>Geöffnet: ${escapeHtml(formatVisitDateTime(visit.openedAt))}</span>
+        <span>${visit.closedAt ? `Geschlossen: ${escapeHtml(formatVisitDateTime(visit.closedAt))}${visit.closeReason === "timeout" ? " (letzte Aktivität)" : ""}` : "Noch geöffnet"}</span>
+        <span>Dauer: ${escapeHtml(formatVisitDuration(visit.durationSeconds))}</span>
+      </li>`).join("")}</ol>` : '<p class="muted">Noch keine protokollierten Aufrufe. Die Aufzeichnung beginnt mit dieser Funktion.</p>';
+    popover.querySelector("p.muted").outerHTML = content;
+    popover.style.top = `${Math.max(12, Math.min(rect.bottom + 6, window.innerHeight - popover.offsetHeight - 12))}px`;
+  } catch (error) {
+    if (requestId === linkHistoryRequest) popover.querySelector("p.muted").textContent = error.message;
+  }
 }
 
 function renderContractRow(contract) {
@@ -1675,7 +1820,7 @@ function renderContractRow(contract) {
               </button>`}
         </div>
       </td>
-      <td data-label="Zustellung">${contract.isExistingContract ? '<span class="muted">Manuell per Link</span>' : renderDeliveryStatus(contract.offer)}</td>
+      <td data-label="Zustellung">${renderDeliveryStatus(contract.offer, contract.isExistingContract)}</td>
     </tr>
   `;
 }
@@ -3218,14 +3363,23 @@ function addContractNotifyEmailRow(value = "") {
   refreshIcons();
 }
 
+function addContractOpenNotifyEmailRow(value = "") {
+  els.contractOpenNotifyEmails.appendChild(renderEmailRow(value));
+  refreshIcons();
+}
+
 async function loadContractNotifySettings() {
   try {
     const settings = await apiGet("api/contract-notifications.php");
     els.contractNotifyEnabled.checked = settings.enabled;
+    els.contractOpenNotifyEnabled.checked = settings.openEnabled;
     els.contractNotifyEmails.innerHTML = "";
+    els.contractOpenNotifyEmails.innerHTML = "";
 
     const emails = settings.recipients.length ? settings.recipients : [""];
     emails.forEach((email) => addContractNotifyEmailRow(email));
+    const openEmails = settings.openRecipients.length ? settings.openRecipients : [""];
+    openEmails.forEach((email) => addContractOpenNotifyEmailRow(email));
   } catch (error) {
     showToast(error.message);
   }
@@ -3237,11 +3391,16 @@ async function handleContractNotifySubmit(event) {
   const recipients = [...els.contractNotifyEmails.querySelectorAll("input")]
     .map((input) => input.value.trim())
     .filter((value) => value !== "");
+  const openRecipients = [...els.contractOpenNotifyEmails.querySelectorAll("input")]
+    .map((input) => input.value.trim())
+    .filter((value) => value !== "");
 
   try {
     await apiPost("api/contract-notifications.php", {
       enabled: els.contractNotifyEnabled.checked,
       recipients,
+      openEnabled: els.contractOpenNotifyEnabled.checked,
+      openRecipients,
     });
     showToast("Einstellungen wurden gespeichert.");
     await loadContractNotifySettings();
@@ -3752,6 +3911,13 @@ function handleRecordAction(event) {
 
   const { action, id } = button.dataset;
 
+  if (action === "show-link-history") {
+    event.preventDefault();
+    if (linkHistoryTrigger === button && linkHistoryPinned) closeLinkHistory();
+    else openLinkHistory(button, true);
+    return;
+  }
+
   if (action === "send-offer") {
     openOfferSendModal(id, "contract");
   }
@@ -3825,6 +3991,18 @@ function handleRecordAction(event) {
 }
 
 function bindEvents() {
+  els.updatesBell.addEventListener("click", () => openUpdatesModal(els.updatesBell));
+  els.updatesSettingsButton.addEventListener("click", () => openUpdatesModal(els.updatesSettingsButton));
+  els.updatesClose.addEventListener("click", closeUpdatesModal);
+  els.updatesModal.addEventListener("click", (event) => {
+    if (event.target === els.updatesModal) closeUpdatesModal();
+  });
+  els.updatesModal.addEventListener("keydown", (event) => {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      els.updatesClose.focus();
+    }
+  });
   els.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const email = els.loginEmail.value.trim();
@@ -3874,6 +4052,10 @@ function bindEvents() {
   });
   els.mobileBackdrop.addEventListener("click", closeMobileNav);
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !els.updatesModal.hidden) {
+      closeUpdatesModal();
+      return;
+    }
     if (event.key === "Escape" && els.sidebar.classList.contains("open")) {
       closeMobileNav();
       els.bottomMenuButton.focus();
@@ -3887,6 +4069,20 @@ function bindEvents() {
   });
   document.addEventListener("click", handleDashboardAction);
   document.addEventListener("click", handleRecordAction);
+  document.addEventListener("pointerover", (event) => {
+    const button = event.target.closest?.('[data-action="show-link-history"]');
+    if (button && event.pointerType === "mouse" && !button.contains(event.relatedTarget)) openLinkHistory(button);
+  });
+  document.addEventListener("pointerout", (event) => {
+    if (event.pointerType !== "mouse" || linkHistoryPinned || !linkHistoryTrigger) return;
+    if (linkHistoryTrigger.contains(event.target) && !linkHistoryTrigger.contains(event.relatedTarget)) {
+      linkHistoryCloseTimer = window.setTimeout(closeLinkHistory, 250);
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (linkHistoryPopover && !linkHistoryPopover.contains(event.target) && !event.target.closest?.('[data-action="show-link-history"]')) closeLinkHistory();
+  });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && linkHistoryPopover) closeLinkHistory(); });
 
   els.offerForm.addEventListener("submit", handleOfferSubmit);
   els.existingOfferForm.addEventListener("submit", handleExistingOfferSubmit);
@@ -3979,6 +4175,7 @@ function bindEvents() {
 
   els.contractNotifyForm.addEventListener("submit", handleContractNotifySubmit);
   els.contractNotifyAddEmail.addEventListener("click", () => addContractNotifyEmailRow(""));
+  els.contractOpenNotifyAddEmail.addEventListener("click", () => addContractOpenNotifyEmailRow(""));
   els.contractNotifyTest.addEventListener("click", sendTestContractNotification);
   els.contractNotifyEmails.addEventListener("click", (event) => {
     const button = event.target.closest('[data-action="remove-email-row"]');
@@ -3990,6 +4187,12 @@ function bindEvents() {
     } else {
       button.closest(".email-row").querySelector("input").value = "";
     }
+  });
+  els.contractOpenNotifyEmails.addEventListener("click", (event) => {
+    const button = event.target.closest('[data-action="remove-email-row"]');
+    if (!button) return;
+    if (els.contractOpenNotifyEmails.children.length > 1) button.closest(".email-row").remove();
+    else button.closest(".email-row").querySelector("input").value = "";
   });
 
   els.offerSendForm.addEventListener("submit", submitOfferSendForm);
