@@ -8,6 +8,9 @@ require_once __DIR__ . '/includes/contract_pdf.php';
 require_once __DIR__ . '/includes/link_access.php';
 
 $pdo = db();
+ensure_offers_discount_column($pdo);
+ensure_offers_existing_contract_columns($pdo);
+expire_offer_discounts($pdo);
 $contractId = trim((string) ($_GET['contractId'] ?? ''));
 $offerId = trim((string) ($_GET['offerId'] ?? ''));
 $token = trim((string) ($_GET['token'] ?? ''));
@@ -44,7 +47,8 @@ if ($isPublicTokenAccess) {
     $stmt->execute(['offer_id' => $offer['id']]);
     $contract = $stmt->fetch();
 
-    if (strtotime($offer['expires_at'] . ' UTC') < time() && ($contract['status'] ?? '') !== 'signiert') {
+    if (strtotime($offer['expires_at'] . ' UTC') < time()
+        && empty($offer['discount_expired_at']) && ($contract['status'] ?? '') !== 'signiert') {
         http_response_code(410);
         echo 'Vertragslink abgelaufen. Bitte kontaktieren Sie das Clean-Team.';
         exit;

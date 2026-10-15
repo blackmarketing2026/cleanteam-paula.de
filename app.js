@@ -204,6 +204,17 @@ const els = {
   contractCorrectionObligationsText: document.querySelector("#contract-correction-obligations-text"),
   contractCorrectionCancel: document.querySelector("#contract-correction-cancel"),
   offerEditModal: document.querySelector("#offer-edit-modal"),
+  offerDeadlineModal: document.querySelector("#offer-deadline-modal"),
+  offerDeadlineForm: document.querySelector("#offer-deadline-form"),
+  offerDeadlineId: document.querySelector("#offer-deadline-id"),
+  offerDeadlineCustomer: document.querySelector("#offer-deadline-customer"),
+  offerDeadlineCurrent: document.querySelector("#offer-deadline-current"),
+  offerDeadlineDays: document.querySelector("#offer-deadline-days"),
+  offerDeadlineHours: document.querySelector("#offer-deadline-hours"),
+  offerDeadlinePrices: document.querySelector("#offer-deadline-prices"),
+  offerDeadlineEmail: document.querySelector("#offer-deadline-email"),
+  offerDeadlineMessage: document.querySelector("#offer-deadline-message"),
+  offerDeadlineCancel: document.querySelector("#offer-deadline-cancel"),
   offerEditForm: document.querySelector("#offer-edit-form"),
   offerEditId: document.querySelector("#offer-edit-id"),
   offerEditCustomerName: document.querySelector("#offer-edit-customer-name"),
@@ -437,6 +448,9 @@ function formatValidityDuration(days, hours) {
 }
 
 function offerValidity(offer) {
+  if (offer.discountExpiredAt) {
+    return { label: "Rabatt abgelaufen · regulärer Preis", className: "warning" };
+  }
   const diffMs = new Date(offer.expiresAt).getTime() - Date.now();
 
   if (diffMs <= 0) {
@@ -447,12 +461,12 @@ function offerValidity(offer) {
   if (hours > 24) {
     const days = Math.ceil(hours / 24);
     return {
-      label: `Noch ${days} ${days === 1 ? "Tag" : "Tage"} gültig`,
+      label: `${offer.discountPercent > 0 ? "Rabatt noch" : "Noch"} ${days} ${days === 1 ? "Tag" : "Tage"} gültig`,
       className: days <= 2 ? "warning" : "success",
     };
   }
 
-  return { label: `Noch ${hours} Std. gültig`, className: "warning" };
+  return { label: `${offer.discountPercent > 0 ? "Rabatt noch" : "Noch"} ${hours} Std. gültig`, className: "warning" };
 }
 
 function showToast(message) {
@@ -1387,6 +1401,11 @@ function renderOfferCard(offer) {
           <i data-lucide="mail" aria-hidden="true"></i>
           <span>E-Mail-Vorlage</span>
         </button>
+        ${!offer.isExistingContract && offer.discountPercent > 0 && !offer.discountExpiredAt
+          ? `<button class="secondary-button" type="button" data-action="edit-offer-deadline" data-id="${escapeHtml(offer.id)}">
+              <i data-lucide="clock-3" aria-hidden="true"></i>
+              <span>Ablaufzeit ändern</span>
+            </button>` : ""}
         ${contractActions}
         <button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="pencil" aria-hidden="true"></i>
@@ -2275,6 +2294,80 @@ function notifyContractPreviewUpdated(offerId) {
     localStorage.setItem("contract-preview-updated", JSON.stringify(message));
   } catch (error) {
     // Speicher blockiert (z. B. privater Modus) – dann bleibt nur manuelles Neuladen.
+  }
+}
+
+function openOfferDeadlineModal(id) {
+  const offer = getOffer(id);
+  if (!offer || offer.discountPercent <= 0 || offer.discountExpiredAt) {
+    showToast("Für diesen Entwurf gibt es keinen aktiven Rabatt mehr.");
+    return;
+  }
+  els.offerDeadlineId.value = offer.id;
+  els.offerDeadlineCustomer.textContent = `${offer.customer.name} · ${offer.customer.email}`;
+  els.offerDeadlineCurrent.textContent = `Aktuelle Rabattfrist: ${formatDateTime(offer.expiresAt)}`;
+  els.offerDeadlineDays.value = offer.validityDays ?? 14;
+  els.offerDeadlineHours.value = offer.validityHours ?? 0;
+  els.offerDeadlinePrices.textContent = `Jetzt: ${formatCurrency(offer.price)} netto monatlich · Nach Ablauf: ${formatCurrency(offer.basePrice)} netto monatlich.`;
+  els.offerDeadlineEmail.value = offer.customer.email || "";
+  els.offerDeadlineMessage.value = [
+    "Sehr geehrte Damen und Herren,",
+    "",
+    "wir haben die Rabattfrist für Ihren Vertragsentwurf angepasst. Bitte prüfen und unterschreiben Sie den Vertrag innerhalb der neuen Frist, damit Sie den vereinbarten Rabatt erhalten.",
+    "",
+    "Für Rückfragen stehen wir Ihnen gerne zur Verfügung.",
+  ].join("\n");
+  els.offerDeadlineModal.dataset.saved = "false";
+  els.offerDeadlineModal.hidden = false;
+  els.offerDeadlineDays.focus();
+}
+
+function closeOfferDeadlineModal() {
+  els.offerDeadlineModal.hidden = true;
+  els.offerDeadlineForm.reset();
+}
+
+async function handleOfferDeadlineSubmit(event) {
+  event.preventDefault();
+  const id = els.offerDeadlineId.value;
+  const days = Number(els.offerDeadlineDays.value);
+  const hours = Number(els.offerDeadlineHours.value);
+  const sendEmail = event.submitter?.dataset.email === "yes";
+  if (!Number.isInteger(days) || days < 0 || days > 365 || !Number.isInteger(hours)
+      || hours < 0 || hours > 24 || (days === 0 && hours === 0)) {
+    showToast("Bitte eine Frist zwischen einer Stunde und 365 Tagen wählen.");
+    els.offerDeadlineDays.focus();
+    return;
+  }
+  const toEmail = els.offerDeadlineEmail.value.trim();
+  const message = els.offerDeadlineMessage.value.trim();
+  if (sendEmail && (!isValidEmail(toEmail) || !message)) {
+    showToast("Für den E-Mail-Versand bitte Empfänger und Nachricht prüfen.");
+    els.offerDeadlineEmail.focus();
+    return;
+  }
+  const buttons = [...els.offerDeadlineForm.querySelectorAll('button[type="submit"]')];
+  buttons.forEach((button) => { button.disabled = true; });
+  try {
+    if (els.offerDeadlineModal.dataset.saved !== "true") {
+      const result = await apiPost(`api/offer-deadline.php?id=${encodeURIComponent(id)}`,
+        { action: "update", days, hours });
+      els.offerDeadlineModal.dataset.saved = "true";
+      els.offerDeadlineCurrent.textContent = `Neue Rabattfrist: ${formatDateTime(result.expiresAt)}`;
+      await loadAll();
+    }
+    if (sendEmail) {
+      await apiPost(`api/offer-deadline.php?id=${encodeURIComponent(id)}`,
+        { action: "email", toEmail, message });
+      showToast(`Neue Rabattfrist gespeichert und E-Mail an ${toEmail} versendet.`);
+    } else {
+      showToast("Neue Rabattfrist gespeichert.");
+    }
+    closeOfferDeadlineModal();
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    buttons.forEach((button) => { button.disabled = false; });
   }
 }
 
@@ -3706,6 +3799,10 @@ function handleRecordAction(event) {
     openOfferEditModal(id);
   }
 
+  if (action === "edit-offer-deadline") {
+    openOfferDeadlineModal(id);
+  }
+
   if (action === "delete-contract") {
     deleteContract(id);
   }
@@ -3949,6 +4046,14 @@ function bindEvents() {
 
   els.offerEditForm.addEventListener("submit", handleOfferEditSubmit);
   els.offerEditCancel.addEventListener("click", closeOfferEditModal);
+  els.offerDeadlineForm.addEventListener("submit", handleOfferDeadlineSubmit);
+  els.offerDeadlineCancel.addEventListener("click", closeOfferDeadlineModal);
+  [els.offerDeadlineDays, els.offerDeadlineHours].forEach((input) => {
+    input.addEventListener("input", () => { els.offerDeadlineModal.dataset.saved = "false"; });
+  });
+  els.offerDeadlineModal.addEventListener("click", (event) => {
+    if (event.target === els.offerDeadlineModal) closeOfferDeadlineModal();
+  });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !els.offerSendModal.hidden) {
@@ -3969,6 +4074,10 @@ function bindEvents() {
     }
     if (event.key === "Escape" && !els.offerEditModal.hidden) {
       closeOfferEditModal();
+      return;
+    }
+    if (event.key === "Escape" && !els.offerDeadlineModal.hidden) {
+      closeOfferDeadlineModal();
       return;
     }
     if (event.key === "Escape" && !els.contractSendModal.hidden) {

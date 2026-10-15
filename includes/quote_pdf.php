@@ -101,10 +101,12 @@ function prepare_quote_link(PDO $pdo, array $offer): string
         $token = generate_token();
         $pdo->prepare('UPDATE offers SET quote_token = :token WHERE id = :id')->execute(['token' => $token, 'id' => $offer['id']]);
     }
-    $pdo->prepare(
-        'UPDATE offers SET validity_days = :validity_days, validity_hours = 0,
-            expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY) WHERE id = :id'
-    )->execute(['validity_days' => QUOTE_VALIDITY_DAYS, 'validity_days2' => QUOTE_VALIDITY_DAYS, 'id' => $offer['id']]);
+    if ((float) ($offer['discount_percent'] ?? 0) <= 0 && empty($offer['discount_expired_at'])) {
+        $pdo->prepare(
+            'UPDATE offers SET validity_days = :validity_days, validity_hours = 0,
+                expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY) WHERE id = :id'
+        )->execute(['validity_days' => QUOTE_VALIDITY_DAYS, 'validity_days2' => QUOTE_VALIDITY_DAYS, 'id' => $offer['id']]);
+    }
     return $token;
 }
 

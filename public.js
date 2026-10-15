@@ -130,7 +130,7 @@ function showExpiredLink() {
   showScreen("error");
 }
 
-function startValidityCountdown(expiresAt, serverNow) {
+function startValidityCountdown(expiresAt, serverNow, hasDiscount = false) {
   window.clearInterval(validityTimer);
   const expiry = new Date(expiresAt).getTime();
   const serverTime = new Date(serverNow).getTime();
@@ -145,7 +145,12 @@ function startValidityCountdown(expiresAt, serverNow) {
     const remainingSeconds = Math.max(0, Math.ceil((expiry - currentServerTime) / 1000));
     if (remainingSeconds <= 0) {
       window.clearInterval(validityTimer);
-      showExpiredLink();
+      if (hasDiscount) {
+        els.linkValidity.textContent = "Rabattfrist abgelaufen – Preis wird aktualisiert";
+        window.setTimeout(loadOffer, 1000);
+      } else {
+        showExpiredLink();
+      }
       return;
     }
 
@@ -159,7 +164,7 @@ function startValidityCountdown(expiresAt, serverNow) {
     parts.push(`${minutes} Min.`);
     if (days === 0 && hours === 0) parts.push(`${seconds} Sek.`);
 
-    els.linkValidity.textContent = `Noch gültig: ${parts.join(" ")}`;
+    els.linkValidity.textContent = `${hasDiscount ? "Rabatt noch gültig" : "Noch gültig"}: ${parts.join(" ")}`;
     els.linkValidity.classList.remove("expired");
     els.linkValidity.hidden = false;
   };
@@ -229,11 +234,17 @@ function renderFinalContract() {
 function routeToState(data) {
   state.offer = data.offer;
   state.contract = data.contract;
-  if (data.offer.isExistingContract) {
+  if (data.offer.isExistingContract || data.offer.discountExpired || data.contract?.status === "signiert") {
     window.clearInterval(validityTimer);
-    els.linkValidity.hidden = true;
+    if (data.offer.discountExpired) {
+      els.linkValidity.textContent = "Rabatt abgelaufen – es gilt der reguläre Preis";
+      els.linkValidity.classList.add("expired");
+      els.linkValidity.hidden = false;
+    } else {
+      els.linkValidity.hidden = true;
+    }
   } else {
-    startValidityCountdown(data.offer.expiresAt, data.serverNow);
+    startValidityCountdown(data.offer.expiresAt, data.serverNow, data.offer.discountPercent > 0);
   }
 
   if (data.offer.isExistingContract) {
@@ -273,7 +284,7 @@ function routeToState(data) {
     if (["entwurf", "sent"].includes(data.offer.quoteStatus)) {
       document.title = "CleanTeam - Ihr Kostenvoranschlag";
       document.querySelector("#public-document-label").textContent = "Ihr persönlicher Kostenvoranschlag";
-      const quoteUrl = `quote.php?token=${encodeURIComponent(token)}&v=cleanteam-3`;
+      const quoteUrl = `quote.php?token=${encodeURIComponent(token)}&v=cleanteam-3&price=${encodeURIComponent(data.offer.price)}`;
       els.quotePdfLink.href = quoteUrl;
       if (els.quotePreviewFrame.getAttribute("src") !== quoteUrl) els.quotePreviewFrame.src = quoteUrl;
       showScreen("kostenvoranschlag");
@@ -352,6 +363,9 @@ async function handleAction(action, body) {
     if (error.code === "link_locked") {
       showLockedLink();
       return;
+    }
+    if (action === "sign" && error.message.includes("Der Preis hat sich geändert")) {
+      await loadOffer();
     }
     showToast(error.message);
   }
@@ -532,6 +546,7 @@ function bindEvents() {
     try {
       await handleAction("sign", {
         signatureDataUrl: els.signaturePad.toDataURL("image/png"),
+        acknowledgedPrice: state.offer.price,
         additionalSigners: signers,
       });
     } finally {

@@ -88,6 +88,7 @@ function offer_row_to_json(array $row): array
         'customerObligationsNote' => $row['customer_obligations_note'],
         'basePrice' => $basePrice,
         'discountPercent' => (float) ($row['discount_percent'] ?? 0),
+        'discountExpiredAt' => to_iso($row['discount_expired_at'] ?? null),
         'priceAdjustment' => (float) ($row['price_adjustment'] ?? 0),
         'priceAdjustmentNote' => $row['price_adjustment_note'] ?? null,
         'price' => $price,
@@ -121,6 +122,7 @@ const OFFER_SELECT = 'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone 
 
 ensure_offers_pricing_columns($pdo);
 ensure_offers_discount_column($pdo);
+ensure_offers_discount_expiry_column($pdo);
 ensure_offers_interval_label_length($pdo);
 ensure_offers_vat_column($pdo);
 ensure_offers_agb_snapshot_columns($pdo);
@@ -133,6 +135,7 @@ ensure_quote_workflow_columns($pdo);
 ensure_offer_link_access_columns($pdo);
 
 if ($method === 'GET') {
+    expire_offer_discounts($pdo);
     $rows = $pdo->query(OFFER_SELECT . ' ORDER BY o.created_at DESC')->fetchAll();
     json_response(array_map('offer_row_to_json', $rows));
 }
@@ -346,7 +349,8 @@ if ($method === 'PUT') {
         $pdo->prepare(
             'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date,
                 original_start_date = :original_start_date, signing_location = :signing_location,
-                price = :price, base_price = :base_price, discount_percent = :discount_percent, vat_applicable = :vat_applicable, notes = :notes,
+                price = :price, base_price = :base_price, discount_percent = :discount_percent,
+                discount_expired_at = NULL, vat_applicable = :vat_applicable, notes = :notes,
                 customer_obligations_note = :customer_obligations_note,
                 validity_days = :validity_days, validity_hours = :validity_hours,
                 expires_at = DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days2 DAY), INTERVAL :validity_hours2 HOUR) WHERE id = :id'

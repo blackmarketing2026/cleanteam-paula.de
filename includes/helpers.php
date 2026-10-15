@@ -142,6 +142,43 @@ function offer_discounted_price(float $basePrice, float $discountPercent): float
     return round($basePrice * (1 - ($discountPercent / 100)), 2);
 }
 
+function ensure_offers_discount_expiry_column(PDO $pdo): void
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM offers LIKE 'discount_expired_at'");
+    if (!$stmt->fetch()) {
+        $pdo->exec('ALTER TABLE offers ADD COLUMN discount_expired_at DATETIME NULL AFTER discount_percent');
+    }
+}
+
+// Ein abgelaufener Rabatt wird erst beim naechsten Zugriff materialisiert. Signierte
+// Vertraege und ihre archivierten Dokumente bleiben dabei unveraendert.
+function expire_offer_discounts(PDO $pdo, ?string $offerId = null): void
+{
+    ensure_offers_discount_expiry_column($pdo);
+    $sql = "SELECT o.id FROM offers o LEFT JOIN contracts ct ON ct.offer_id = o.id
+            WHERE o.discount_percent > 0 AND o.base_price > 0 AND o.expires_at <= UTC_TIMESTAMP()
+              AND COALESCE(o.is_existing_contract, 0) = 0
+              AND (ct.status IS NULL OR ct.status NOT IN ('signiert', 'bestaetigt'))";
+    $params = [];
+    if ($offerId !== null) {
+        $sql .= ' AND o.id = :id';
+        $params['id'] = $offerId;
+    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
+        $updated = $pdo->prepare(
+            "UPDATE offers SET price = base_price, discount_percent = 0, discount_expired_at = UTC_TIMESTAMP()
+             WHERE id = :id AND discount_percent > 0 AND base_price > 0 AND expires_at <= UTC_TIMESTAMP()
+               AND NOT EXISTS (SELECT 1 FROM contracts WHERE offer_id = :offer_id AND status IN ('signiert', 'bestaetigt'))"
+        );
+        $updated->execute(['id' => $id, 'offer_id' => $id]);
+        if ($updated->rowCount() > 0) {
+            invalidate_offer_generated_documents($pdo, $id);
+        }
+    }
+}
+
 function offer_month_start_date($value): ?string
 {
     $input = trim((string) $value);

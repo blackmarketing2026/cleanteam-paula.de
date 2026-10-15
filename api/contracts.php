@@ -149,6 +149,7 @@ function quote_documents_table_exists(PDO $pdo): bool
 }
 
 if ($method === 'GET') {
+    expire_offer_discounts($pdo);
     $rows = $pdo->query(CONTRACT_SELECT . ' ORDER BY c.name ASC, ct.created_at DESC')->fetchAll();
     json_response(array_map('contract_row_to_json', $rows));
 }

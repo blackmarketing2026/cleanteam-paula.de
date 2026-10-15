@@ -9,7 +9,8 @@ require_once __DIR__ . '/../includes/email_settings.php';
 require_once __DIR__ . '/../includes/quote_pdf.php';
 
 require_login(); require_method('POST');
-$pdo = db(); ensure_offers_existing_contract_columns($pdo); ensure_offers_discount_column($pdo); ensure_quote_workflow_columns($pdo);
+$pdo = db(); ensure_offers_existing_contract_columns($pdo); ensure_offers_discount_column($pdo);
+ensure_quote_workflow_columns($pdo); expire_offer_discounts($pdo);
 $sendAsQuote = defined('SEND_AS_QUOTE') && SEND_AS_QUOTE === true;
 email_delivery_assert_allowed($pdo, 'offer');
 $offerId = (string) ($_GET['id'] ?? '');
@@ -35,8 +36,18 @@ $publicUrl = base_url() . '/o.php?token=' . ($sendAsQuote ? $offer['quote_token'
 $contact = trim($offer['c_salutation'] . ' ' . $offer['c_contact_last_name']); $company = trim((string) $offer['c_name']);
 $validUntil = (new DateTimeImmutable($offer['expires_at'], new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i');
 $bodyContent = $sendAsQuote
-    ? '<p>Guten Tag ' . email_h($contact) . ',</p><p>Ihr Kostenvoranschlag von CleanTeam für ' . email_h($company) . ' steht für Sie online bereit.</p><p>Über den folgenden Button öffnen Sie Ihren Kostenvoranschlag online. Dort können Sie anschließend die Auftragsbestätigung annehmen und online unterschreiben.</p>' . email_button_html($publicUrl, 'Kostenvoranschlag öffnen') . '<p style="color:#51657d;font-size:13px;">Der Link ist bis ' . email_h($validUntil) . ' Uhr gültig.</p>'
-    : '<p>Guten Tag ' . email_h($contact) . ',</p><p>vielen Dank für Ihr Interesse an unserem Angebot für ' . email_h($company) . '.</p><p>Über den folgenden Link können Sie Ihren Vertrag wie gewohnt online prüfen und digital abschließen.</p>' . email_button_html($publicUrl, 'Jetzt Vertrag online abschließen') . '<p style="color:#51657d;font-size:13px;">Der Vertragslink ist bis ' . email_h($validUntil) . ' Uhr gültig.</p>';
+    ? '<p>Guten Tag ' . email_h($contact) . ',</p><p>Ihr Kostenvoranschlag von CleanTeam für ' . email_h($company) . ' steht für Sie online bereit.</p><p>Über den folgenden Button öffnen Sie Ihren Kostenvoranschlag online. Dort können Sie anschließend die Auftragsbestätigung annehmen und online unterschreiben.</p>' . email_button_html($publicUrl, 'Kostenvoranschlag öffnen')
+    : '<p>Guten Tag ' . email_h($contact) . ',</p><p>vielen Dank für Ihr Interesse an unserem Angebot für ' . email_h($company) . '.</p><p>Über den folgenden Link können Sie Ihren Vertrag wie gewohnt online prüfen und digital abschließen.</p>' . email_button_html($publicUrl, 'Jetzt Vertrag online abschließen');
+if ((float) ($offer['discount_percent'] ?? 0) > 0) {
+    $regularPrice = number_format((float) $offer['base_price'], 2, ',', '.') . ' €';
+    $bodyContent .= '<p style="color:#51657d;font-size:13px;">Der Rabatt gilt bis ' . email_h($validUntil)
+        . ' Uhr. Danach entfällt er automatisch; der monatliche Nettopreis beträgt dann '
+        . email_h($regularPrice) . '. Der Link bleibt zum regulären Preis nutzbar.</p>';
+} elseif (!empty($offer['discount_expired_at'])) {
+    $bodyContent .= '<p style="color:#51657d;font-size:13px;">Der Rabatt ist abgelaufen. Es gilt der reguläre Preis.</p>';
+} else {
+    $bodyContent .= '<p style="color:#51657d;font-size:13px;">Der Link ist bis ' . email_h($validUntil) . ' Uhr gültig.</p>';
+}
 $bodyContent .= '<img src="' . email_h(base_url() . '/api/track-open.php?token=' . $offer['token']) . '" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0;" />';
 $message = render_email_template_message($pdo, $bodyContent, ['title' => $sendAsQuote ? 'Ihr Kostenvoranschlag von CleanTeam' : 'Ihr Vertrag von CleanTeam', 'preheader' => $sendAsQuote ? 'Online-Vertrag ansehen und unterschreiben.' : 'Bitte schließen Sie Ihren Vertrag online ab.', 'fromName' => $settings['from_name'] ?? 'CleanTeam', 'signatureText' => $settings['signature'] ?? '', 'signatureContext' => 'offer']);
 try {

@@ -1320,6 +1320,37 @@
       </form>
     </div>
 
+    <div id="offer-deadline-modal" class="modal-overlay" hidden>
+      <form id="offer-deadline-form" class="modal-box" role="dialog" aria-modal="true" aria-labelledby="offer-deadline-heading" novalidate>
+        <h4 id="offer-deadline-heading">Rabattfrist ändern</h4>
+        <p id="offer-deadline-customer" class="muted"></p>
+        <p id="offer-deadline-current" class="muted"></p>
+        <p class="muted">Die neue Frist beginnt beim Speichern. Danach entfällt der Rabatt automatisch; der Vertragslink bleibt zum regulären Preis nutzbar.</p>
+        <input id="offer-deadline-id" type="hidden" />
+        <div class="offer-edit-subgrid">
+          <label class="modal-field">Neue Frist (Tage)
+            <input id="offer-deadline-days" type="number" min="0" max="365" step="1" required />
+          </label>
+          <label class="modal-field">Zusätzliche Stunden
+            <input id="offer-deadline-hours" type="number" min="0" max="24" step="1" required />
+          </label>
+        </div>
+        <p id="offer-deadline-prices" class="muted"></p>
+        <label class="modal-field">E-Mail an den Kunden
+          <input id="offer-deadline-email" type="email" />
+        </label>
+        <label class="modal-field">Vorgefertigter E-Mail-Text
+          <textarea id="offer-deadline-message" rows="6" maxlength="4000"></textarea>
+        </label>
+        <p class="muted">Die E-Mail ergänzt den genauen Ablaufzeitpunkt, beide Nettopreise und den Vertragslink automatisch.</p>
+        <div class="form-actions">
+          <button id="offer-deadline-cancel" class="ghost-button" type="button">Abbrechen</button>
+          <button class="secondary-button" type="submit" data-email="no">Frist speichern</button>
+          <button class="primary-button" type="submit" data-email="yes">Speichern &amp; E-Mail senden</button>
+        </div>
+      </form>
+    </div>
+
     <div id="offer-edit-modal" class="modal-overlay" hidden>
       <form id="offer-edit-form" class="modal-box" role="dialog" aria-modal="true" aria-labelledby="offer-edit-modal-heading">
         <h4 id="offer-edit-modal-heading">Vertragsentwurf bearbeiten</h4>
@@ -1543,7 +1574,7 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="protect.js?v=20261013b"></script>
-    <script src="app.js?v=link-lock-20261014"></script>
+    <script src="app.js?v=link-lock-discount-deadline-20261015"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

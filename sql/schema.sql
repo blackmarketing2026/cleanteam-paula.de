@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS offers (
   agb_snapshot_captured_at DATETIME NULL,
   base_price DECIMAL(10,2) NOT NULL DEFAULT 0,
   discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0,
+  discount_expired_at DATETIME NULL,
   price_adjustment DECIMAL(10,2) NOT NULL DEFAULT 0,
   price_adjustment_note VARCHAR(255) NULL,
   price DECIMAL(10,2) NOT NULL DEFAULT 0,

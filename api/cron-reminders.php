@@ -135,6 +135,15 @@ foreach ($offers as $offer) {
         $title = 'Letzte Erinnerung an Ihren Vertrag';
     }
 
+    if ((float) ($offer['discount_percent'] ?? 0) > 0) {
+        $regularPrice = number_format((float) $offer['base_price'], 2, ',', '.') . ' €';
+        $intro = '<p>Ihr rabattierter Vertrag für <strong>' . email_h($companyName)
+            . '</strong> wartet noch auf Ihre Unterschrift. Bitte schließen Sie ihn bis zum '
+            . email_h($validUntil) . ' ab, wenn Sie den Rabatt nutzen möchten:</p>';
+        $validityNote = '<p>Danach entfällt der Rabatt automatisch. Der monatliche Nettopreis beträgt dann '
+            . email_h($regularPrice) . '. Der Vertragslink bleibt zum regulären Preis nutzbar.</p>';
+    }
+
     $bodyContent = '<p style="margin:0 0 14px 0;">Guten Tag ' . email_h($contactName) . ',</p>'
         . $intro
         . email_button_html($publicUrl, 'Jetzt Vertrag online abschließen')

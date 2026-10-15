@@ -5,7 +5,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/quote_pdf.php';
 
 require_login(); require_method('POST');
-$pdo = db(); ensure_quote_workflow_columns($pdo);
+$pdo = db(); ensure_offers_discount_column($pdo); ensure_offers_existing_contract_columns($pdo);
+ensure_quote_workflow_columns($pdo); expire_offer_discounts($pdo);
 $offerId = (string) ($_GET['id'] ?? '');
 if ($offerId === '') json_error('Kostenvoranschlag fehlt.', 422);
 $stmt = $pdo->prepare('SELECT * FROM offers WHERE id = :id');

@@ -117,7 +117,7 @@ function ensure_contracts_authorized_signer_columns(PDO $pdo): void
 
 function offer_is_expired(array $offer): bool
 {
-    if (!empty($offer['is_existing_contract'])) {
+    if (!empty($offer['is_existing_contract']) || !empty($offer['discount_expired_at'])) {
         return false;
     }
     return strtotime($offer['expires_at'] . ' UTC') < time();
@@ -146,6 +146,7 @@ function public_state(array $offer, ?array $contract): array
                 ? (float) $offer['base_price']
                 : (float) $offer['price'],
             'discountPercent' => (float) ($offer['discount_percent'] ?? 0),
+            'discountExpired' => !empty($offer['discount_expired_at']),
             'priceAdjustment' => (float) ($offer['price_adjustment'] ?? 0),
             'priceAdjustmentNote' => $offer['price_adjustment_note'] ?? null,
             'price' => (float) $offer['price'],
@@ -229,6 +230,8 @@ ensure_quote_workflow_columns($pdo);
 $offer = load_offer($pdo, $token);
 // Gesperrte oder bereits in einem anderen Browser geoeffnete Links zeigen den Sperrbildschirm.
 require_offer_link_access_json($pdo, $offer);
+expire_offer_discounts($pdo, $offer['id']);
+$offer = load_offer($pdo, $token);
 $isQuoteAccess = !empty($offer['quote_token']) && hash_equals((string) $offer['quote_token'], $token);
 ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_privacy_accepted_at_column($pdo);
@@ -406,6 +409,12 @@ if ($method === 'POST' && $action === 'sign') {
     $contract = require_active_contract(load_contract($pdo, $offer['id']));
     $body = read_json_body();
     $signatureDataUrl = (string) ($body['signatureDataUrl'] ?? '');
+
+    if (((float) ($offer['discount_percent'] ?? 0) > 0 || !empty($offer['discount_expired_at']))
+        && (!isset($body['acknowledgedPrice']) || !is_numeric($body['acknowledgedPrice'])
+            || round((float) $body['acknowledgedPrice'], 2) !== round((float) $offer['price'], 2))) {
+        json_error('Der Preis hat sich geändert. Bitte laden Sie den Vertrag neu und prüfen Sie ihn vor der Unterschrift.', 409);
+    }
 
     if (!validate_contract_signature($signatureDataUrl)) {
         json_error('Ungültige Signatur.', 422);
