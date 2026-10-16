@@ -1892,7 +1892,6 @@ button.compact-item.selected {
 .link-history-list li:last-child { border-bottom: 0; padding-bottom: 0; }
 .link-history-list li span { display: block; margin-top: 3px; }
 
-.public-tracking-note { margin: 0 0 12px; color: var(--muted); font-size: 11px; line-height: 1.45; }
 
 .delivery-check[title] {
   cursor: help;

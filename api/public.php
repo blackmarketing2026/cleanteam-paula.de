@@ -254,6 +254,14 @@ if ($method === 'GET' && $action === 'offer') {
         )->execute(['quote_status' => $fallbackStatus, 'id' => $offer['id']]);
         $offer = load_offer($pdo, $token);
     }
+    // Der KVA-Link zeigt bei jedem Aufruf zuerst den Kostenvoranschlag; erst "annehmen"
+    // fuehrt wieder in den (weiterhin bestehenden) Vertragsabschluss.
+    if ($isQuoteAccess && ($offer['quote_status'] ?? '') === 'signing'
+        && ($contract === null || ($contract['status'] ?? '') !== 'signiert')) {
+        $pdo->prepare("UPDATE offers SET quote_status = 'sent' WHERE id = :id")
+            ->execute(['id' => $offer['id']]);
+        $offer = load_offer($pdo, $token);
+    }
     // Die Datenschutz-Zustimmung muss bei jedem Aufruf des Links erneut eingeholt werden -
     // ein bereits einmal bestaetigter Vertrag springt also nicht mehr dauerhaft zur
     // Signatur, solange er noch nicht unterschrieben ist. confirm-privacy ueberschreibt

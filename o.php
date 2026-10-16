@@ -31,8 +31,6 @@ header('Cache-Control: no-store, private');
         </div>
         <div id="link-validity" class="link-validity" hidden></div>
       </header>
-      <p class="public-tracking-note">Zur Nachvollziehbarkeit der Linknutzung werden das geöffnete Dokument, Ihre IP-Adresse sowie Öffnungszeit und Besuchsdauer protokolliert.</p>
-
       <div class="public-card" id="public-card">
         <section id="screen-loading" class="public-screen active-screen">
           <p class="muted">Vertrag wird geladen ...</p>
