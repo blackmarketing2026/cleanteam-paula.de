@@ -2458,7 +2458,7 @@ function openOfferDeadlineModal(id) {
   els.offerDeadlineMessage.value = [
     "Sehr geehrte Damen und Herren,",
     "",
-    "wir haben die Rabattfrist für Ihren Vertragsentwurf angepasst. Bitte prüfen und unterschreiben Sie den Vertrag innerhalb der neuen Frist, damit Sie den vereinbarten Rabatt erhalten.",
+    "wir haben die Rabattfrist für Ihr Angebot angepasst. Bitte erteilen Sie die Auftragsbestätigung innerhalb der neuen Frist, damit Sie den vereinbarten Rabatt erhalten.",
     "",
     "Für Rückfragen stehen wir Ihnen gerne zur Verfügung.",
   ].join("\n");

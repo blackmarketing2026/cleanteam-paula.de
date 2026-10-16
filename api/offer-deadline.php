@@ -78,11 +78,11 @@ if ($action === 'email') {
         . '<p><strong>Rabattpreis:</strong> ' . email_h($discounted) . ' netto monatlich<br>'
         . '<strong>Rabatt gültig bis:</strong> ' . email_h($deadline) . '<br>'
         . '<strong>Preis nach Ablauf:</strong> ' . email_h($regular) . ' netto monatlich</p>'
-        . '<p>Bitte schließen Sie den Vertrag bis zu diesem Zeitpunkt ab, wenn Sie den Rabatt nutzen möchten. Danach entfällt der Rabatt automatisch. Der Vertragslink bleibt zum regulären Preis nutzbar.</p>'
-        . email_button_html($url, 'Vertrag jetzt prüfen und abschließen');
+        . '<p>Bitte erteilen Sie die Auftragsbestätigung bis zu diesem Zeitpunkt, wenn Sie den Rabatt nutzen möchten. Danach entfällt der Rabatt automatisch. Der Link bleibt zum regulären Preis nutzbar.</p>'
+        . email_button_html($url, 'Jetzt die Auftragsbestätigung erteilen');
     $message = render_email_template_message($pdo, $content, [
-        'title' => 'Aktualisierte Rabattfrist für Ihren Vertrag',
-        'preheader' => 'Bitte schließen Sie den Vertrag innerhalb der neuen Rabattfrist ab.',
+        'title' => 'Aktualisierte Rabattfrist für Ihre Auftragsbestätigung',
+        'preheader' => 'Bitte erteilen Sie die Auftragsbestätigung innerhalb der neuen Rabattfrist.',
         'fromName' => $settings['from_name'] ?? 'CleanTeam',
         'signatureText' => $settings['signature'] ?? '',
         'signatureContext' => 'offer',
@@ -91,7 +91,7 @@ if ($action === 'email') {
         $mailer = new SmtpMailer($settings['host'], (int) $settings['smtp_port'], $settings['smtp_encryption'],
             $settings['username'], decrypt_secret($settings['password_encrypted']));
         $mailer->send($settings['username'], $settings['from_name'], $toEmail, (string) $offer['c_name'],
-            'Ihre neue Rabattfrist für den CleanTeam-Vertrag', $message['html'], true, $message['inlineImages']);
+            'Ihre neue Rabattfrist für die CleanTeam-Auftragsbestätigung', $message['html'], true, $message['inlineImages']);
     } catch (Throwable $exception) {
         json_error('Frist gespeichert, aber E-Mail-Versand fehlgeschlagen: ' . $exception->getMessage(), 502);
     }
