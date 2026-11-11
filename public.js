@@ -251,7 +251,10 @@ function renderFactGrid(items) {
 
 function renderServiceDetails() {
   const offer = state.offer;
-  const items = offer.isExistingContract
+  const items = offer.interval === "Einmalig" ? [
+        ["Einsatzdatum", formatDate(offer.startDate)],
+        ["Einmaliger Preis", `${formatCurrency(offer.price)} netto`],
+      ] : offer.isExistingContract
     ? [
         ["Ursprünglicher Vertrag", formatDate(offer.originalStartDate)],
         ["Neuer Vertrag in Kraft ab", formatDate(offer.startDate)],

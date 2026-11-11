@@ -471,6 +471,31 @@ function default_contract_template_html(): string
 HTML;
 }
 
+function one_time_contract_template_html(): string
+{
+    return <<<HTML
+<h2>§ 1 Einmaliger Reinigungsauftrag</h2>
+<p>Der Auftragnehmer übernimmt die einmalige Reinigung am <strong>{{beginn_datum}}</strong>. Ein wiederkehrendes Reinigungsverhältnis wird nicht vereinbart.</p>
+<p><strong>Leistungsort:</strong> {{leistungsort}}</p>
+<h2>§ 2 Art und Umfang der Reinigung</h2>
+<p>Gebuchte Leistung: {{leistung}}</p>
+{{zusatzhinweis_block}}
+<p>Weitere Leistungen bedürfen einer gesonderten Beauftragung und werden zusätzlich berechnet.</p>
+<h2>§ 3 Vergütung</h2>
+<p>{{ust_block}} Die Rechnung ist binnen {{zahlungsfrist_tage}} Arbeitstagen zu zahlen.</p>
+<h2>§ 4 Pflichten des Auftraggebers</h2>
+<p>Der Auftraggeber stellt den Zugang zum Einsatzort sicher und bereitet die zu reinigenden Bereiche vor.</p>
+<ol>{{zusaetzliche_pflichten_items}}</ol>
+<h2>§ 5 Schlussbestimmungen</h2>
+<p>Es gilt deutsches Recht; Vertragssprache ist Deutsch. Es gelten zusätzlich die Allgemeinen Geschäftsbedingungen des Auftragnehmers ({{agb_version}}), abrufbar unter {{agb_url}}. Beide Parteien erhalten nach elektronischer Unterzeichnung eine Ausfertigung.</p>
+HTML;
+}
+
+function contract_template_for_offer(PDO $pdo, array $offer): string
+{
+    return ($offer['interval_label'] ?? '') === 'Einmalig' ? one_time_contract_template_html() : get_contract_template_html($pdo);
+}
+
 // Der Vertragstext ist nicht mehr ueber die Einstellungen anpassbar - es gibt nur noch den
 // fest im Code hinterlegten Standardtext, damit er nicht unbemerkt vom aktuellen Stand abweicht.
 function get_contract_template_html(PDO $pdo): string
@@ -588,6 +613,12 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
             . ' (aktuell ' . rtrim(rtrim(number_format(VAT_RATE, 1, ',', '.'), '0'), ',') . '&nbsp;%). Der Bruttobetrag beträgt zum Zeitpunkt der Vertragserstellung <strong>' . contract_format_money($grossPrice) . '</strong>.'
         : 'Die monatliche Pauschalvergütung beträgt <strong>' . contract_format_money($netPrice) . '</strong>. Es wird keine Umsatzsteuer berechnet.';
 
+    if (($offer['interval_label'] ?? '') === 'Einmalig') {
+        $values['ust_block'] = $vatApplicable
+            ? 'Die einmalige Vergütung beträgt <strong>' . contract_format_money($netPrice) . ' netto</strong> zuzüglich Umsatzsteuer. Der Bruttobetrag beträgt <strong>' . contract_format_money($grossPrice) . '</strong>.'
+            : 'Die einmalige Vergütung beträgt <strong>' . contract_format_money($netPrice) . '</strong>. Es wird keine Umsatzsteuer berechnet.';
+    }
+
     return $values;
 }
 
@@ -697,7 +728,7 @@ function render_contract_document(array $offer, array $customer, ?array $contrac
     $logoHtml = contract_logo_html();
     $currentDate = h(contract_current_date());
 
-    $templateHtml = get_contract_template_html(db());
+    $templateHtml = contract_template_for_offer(db(), $offer);
     if (!empty($options['excludeAgb'])) {
         $templateHtml = preg_replace('/<h2>[^<]*(?:§|&sect;)\s*8\b.*?<\/h2>.*?(?=<h2>[^<]*(?:§|&sect;)\s*9\b)/si', '', $templateHtml) ?? $templateHtml;
     }

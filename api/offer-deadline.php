@@ -75,9 +75,9 @@ if ($action === 'email') {
     $regular = number_format((float) $offer['base_price'], 2, ',', '.') . ' €';
     $url = base_url() . '/o.php?token=' . $offer['token'];
     $content = '<p>' . email_plain_text_html($messageText) . '</p>'
-        . '<p><strong>Rabattpreis:</strong> ' . email_h($discounted) . ' netto monatlich<br>'
+        . '<p><strong>Rabattpreis:</strong> ' . email_h($discounted) . (($offer['interval_label'] ?? '') === 'Einmalig' ? ' netto<br>' : ' netto monatlich<br>')
         . '<strong>Rabatt gültig bis:</strong> ' . email_h($deadline) . '<br>'
-        . '<strong>Preis nach Ablauf:</strong> ' . email_h($regular) . ' netto monatlich</p>'
+        . '<strong>Preis nach Ablauf:</strong> ' . email_h($regular) . (($offer['interval_label'] ?? '') === 'Einmalig' ? ' netto</p>' : ' netto monatlich</p>')
         . '<p>Bitte erteilen Sie die Auftragsbestätigung bis zu diesem Zeitpunkt, wenn Sie den Rabatt nutzen möchten. Danach entfällt der Rabatt automatisch. Der Link bleibt zum regulären Preis nutzbar.</p>'
         . email_button_html($url, 'Jetzt die Auftragsbestätigung erteilen');
     $message = render_email_template_message($pdo, $content, [

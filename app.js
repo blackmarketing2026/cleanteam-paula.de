@@ -632,6 +632,16 @@ function toggleNavGroup(group) {
   setExpanded(shouldOpen);
 }
 
+let oneTimeIntake = false;
+function configureOneTimeIntake() {
+  document.querySelector("#offer-interval-field").hidden = oneTimeIntake;
+  document.querySelector("#offer-time-field").hidden = !oneTimeIntake;
+  document.querySelector("#offer-price-label").textContent = oneTimeIntake ? "Einmaliger Gesamtpreis (netto) *" : "Gesamtpreis (monatlich, netto) *";
+  document.querySelector("#offer-date-label").textContent = oneTimeIntake ? "Einsatzdatum *" : "Beginn der Dienstleistung *";
+  document.querySelector("#offer-form-heading").textContent = oneTimeIntake ? "Einmal-Vertrag erstellen" : "Neuer Vertrag erstellen";
+  if (oneTimeIntake) els.offerInterval.value = "Einmalig";
+}
+
 function switchView(view) {
   if (hiddenViews.has(view)) {
     view = "overview";
@@ -703,6 +713,7 @@ function switchView(view) {
 
   if (view === "offers-new") {
     resetOfferIntake();
+    configureOneTimeIntake();
   }
 
   loadAll();
@@ -1419,7 +1430,7 @@ function renderOfferCard(offer) {
         </div>
         <div class="record-side">
           ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}</span>` : ""}
-          ${offer.isExistingContract ? '<span class="badge">Bestand</span>' : ""}
+          ${offer.isExistingContract ? '<span class="badge">Bestand</span>' : offer.interval === "Einmalig" ? '<span class="badge">Einmalig</span>' : ""}
           <span class="badge ${validity.className}">${escapeHtml(validity.label)}</span>
           ${renderLinkLockBadge(offer)}
         </div>
@@ -1789,7 +1800,7 @@ function renderContractRow(contract) {
 
   return `
     <tr class="contract-data-row${selected}">
-      <td data-label="Art">${contract.isExistingContract ? '<span class="badge">Bestand</span>' : '<span class="muted">Neu</span>'}</td>
+      <td data-label="Art">${contract.isExistingContract ? '<span class="badge">Bestand</span>' : contract.offer.interval === "Einmalig" ? '<span class="badge">Einmalig</span>' : '<span class="muted">Neu</span>'}</td>
       <td data-label="Name">${escapeHtml(contract.customer.name)}</td>
       <td data-label="Kontakt">${escapeHtml(contactName(contract.customer))}</td>
       <td data-label="Datum">${escapeHtml(formatDate(contract.createdAt))}</td>
@@ -1847,7 +1858,7 @@ async function handleExistingOfferSubmit(event) {
   const discountPercent = Number(value("#existing-offer-discount") || 0);
 
   if (!Number.isFinite(basePrice) || basePrice <= 0) {
-    showToast("Bitte den monatlichen Gesamtpreis eintragen.");
+    showToast("Bitte den Gesamtpreis eintragen.");
     document.querySelector("#existing-offer-price").focus();
     return;
   }
@@ -1925,7 +1936,8 @@ async function handleOfferSubmit(event) {
   const signingLocation = els.offerSigningLocation.value;
   const validityDays = Number(els.offerValidityDays.value);
   const validityHours = Number(els.offerValidityHours.value);
-  const serviceText = els.offerServiceText.value.replace(/\r\n?/g, "\n");
+  let serviceText = els.offerServiceText.value.replace(/\r\n?/g, "\n");
+  const eventTime = document.querySelector("#offer-event-time").value;
   const obligationsText = els.offerObligationsText.value.replace(/\r\n?/g, "\n");
 
   if (!customerName) {
@@ -1971,7 +1983,7 @@ async function handleOfferSubmit(event) {
   }
 
   if (!Number.isFinite(basePrice) || basePrice <= 0) {
-    showToast("Bitte den monatlichen Gesamtpreis eintragen.");
+    showToast("Bitte den Gesamtpreis eintragen.");
     els.offerPrice.focus();
     return;
   }
@@ -2001,6 +2013,8 @@ async function handleOfferSubmit(event) {
     els.offerValidityDays.focus();
     return;
   }
+
+  if (oneTimeIntake && eventTime) serviceText = `Einsatzzeit: ${eventTime} Uhr\n\n${serviceText}`;
 
   const payload = {
     customerName,
@@ -2350,6 +2364,9 @@ function openContractCorrectionModal(id) {
   els.contractCorrectionSquareMeters.value = contract.offer.squareMeters || "";
   ensureSelectHasValue(els.contractCorrectionInterval, contract.offer.interval);
   els.contractCorrectionInterval.value = contract.offer.interval;
+  els.contractCorrectionInterval.closest("label").hidden = contract.offer.interval === "Einmalig";
+  document.querySelector("#contract-correction-price-label").textContent = contract.offer.interval === "Einmalig" ? "Einmaliger Gesamtpreis (netto) *" : "Gesamtpreis (monatlich, netto) *";
+  document.querySelector("#contract-correction-date-label").textContent = contract.offer.interval === "Einmalig" ? "Einsatzdatum *" : "Beginn der Dienstleistung *";
   els.contractCorrectionPrice.value = contract.offer.basePrice ?? contract.offer.price;
   els.contractCorrectionDiscount.value = contract.offer.discountPercent ?? 0;
   updateDiscountPricePreview(
@@ -2397,7 +2414,7 @@ async function handleContractCorrectionSubmit(event) {
   };
 
   if (!Number.isFinite(payload.basePrice) || payload.basePrice <= 0) {
-    showToast("Bitte den monatlichen Gesamtpreis eintragen.");
+    showToast("Bitte den Gesamtpreis eintragen.");
     els.contractCorrectionPrice.focus();
     return;
   }
@@ -2453,7 +2470,7 @@ function openOfferDeadlineModal(id) {
   els.offerDeadlineCurrent.textContent = `Aktuelle Rabattfrist: ${formatDateTime(offer.expiresAt)}`;
   els.offerDeadlineDays.value = offer.validityDays ?? 14;
   els.offerDeadlineHours.value = offer.validityHours ?? 0;
-  els.offerDeadlinePrices.textContent = `Jetzt: ${formatCurrency(offer.price)} netto monatlich · Nach Ablauf: ${formatCurrency(offer.basePrice)} netto monatlich.`;
+  els.offerDeadlinePrices.textContent = `Jetzt: ${formatCurrency(offer.price)} netto${offer.interval === "Einmalig" ? "" : " monatlich"} · Nach Ablauf: ${formatCurrency(offer.basePrice)} netto${offer.interval === "Einmalig" ? "" : " monatlich"}.`;
   els.offerDeadlineEmail.value = offer.customer.email || "";
   els.offerDeadlineMessage.value = [
     "Sehr geehrte Damen und Herren,",
@@ -2533,6 +2550,9 @@ function openOfferEditModal(id) {
   els.offerEditSquareMeters.value = offer.squareMeters || "";
   ensureSelectHasValue(els.offerEditInterval, offer.interval);
   els.offerEditInterval.value = offer.interval;
+  els.offerEditInterval.closest("label").hidden = offer.interval === "Einmalig";
+  document.querySelector("#offer-edit-price-label").textContent = offer.interval === "Einmalig" ? "Einmaliger Gesamtpreis (netto) *" : "Gesamtpreis (monatlich, netto) *";
+  document.querySelector("#offer-edit-date-label").textContent = offer.interval === "Einmalig" ? "Einsatzdatum *" : "Beginn der Dienstleistung *";
   els.offerEditPrice.value = offer.basePrice ?? offer.price;
   els.offerEditDiscount.value = offer.discountPercent ?? 0;
   els.offerEditVat.value = offer.vatApplicable === false ? "no" : "yes";
@@ -2613,7 +2633,7 @@ async function handleOfferEditSubmit(event) {
   };
 
   if (!Number.isFinite(payload.basePrice) || payload.basePrice <= 0) {
-    showToast("Bitte den monatlichen Gesamtpreis eintragen.");
+    showToast("Bitte den Gesamtpreis eintragen.");
     els.offerEditPrice.focus();
     return;
   }
@@ -4029,6 +4049,7 @@ function bindEvents() {
 
   els.navLinks.forEach((button) => {
     button.addEventListener("click", () => {
+      if (button.dataset.view === "offers-new") oneTimeIntake = button.dataset.oneTime === "true";
       switchView(button.dataset.view);
     });
   });

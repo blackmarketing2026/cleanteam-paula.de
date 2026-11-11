@@ -208,9 +208,12 @@ if ($method === 'PATCH') {
         $serviceText = str_replace(["\r\n", "\r"], "\n", (string) ($body['serviceText'] ?? ''));
         $customerObligationsNote = str_replace(["\r\n", "\r"], "\n", (string) ($body['customerObligationsNote'] ?? ''));
 
-        $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
+        $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig', 'Einmalig'];
         if (!in_array($interval, $allowedIntervals, true)) {
             json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
+        }
+        if (($interval === 'Einmalig') !== ($row['interval_label'] === 'Einmalig')) {
+            json_error('Die Vertragsart kann nach der Erstellung nicht geändert werden.', 422);
         }
         $intervalLabel = $interval;
 

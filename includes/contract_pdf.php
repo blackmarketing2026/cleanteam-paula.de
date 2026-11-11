@@ -1487,7 +1487,7 @@ function render_contract_pdf(array $offer, array $customer, ?array $contract, ar
             ? 'Wir bestätigen den folgenden Vertrag zur Gebäudereinigung:'
             : 'Wir bestätigen den folgenden Auftrag zur Gebäudereinigung:'));
 
-    $templateHtml = get_contract_template_html(db());
+    $templateHtml = contract_template_for_offer(db(), $offer);
     $pdfPlaceholders = contract_template_placeholder_map($offer, $customer, $contract, true);
     $templateBodyHtml = render_contract_template_body($templateHtml, $pdfPlaceholders);
     contract_template_html_to_pdf($pdf, $templateBodyHtml);

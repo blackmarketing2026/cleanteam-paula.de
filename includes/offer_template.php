@@ -35,6 +35,8 @@ function render_offer_document(array $offer, array $customer): string
 
     $signUrl = h(base_url() . '/o.php?token=' . $offer['token']);
 
+    $priceRow = ($offer['interval_label'] ?? '') === 'Einmalig' ? '<dt>Einmaliger Preis</dt><dd>' . $priceFormatted . ' netto</dd>' : '<dt>Monatlicher Preis</dt><dd>' . $priceFormatted . ' netto monatlich</dd>';
+
     return <<<HTML
 <!doctype html>
 <html lang="de">
@@ -81,7 +83,7 @@ function render_offer_document(array $offer, array $customer): string
 <dl>
   {$areaRow}
   <dt>Startdatum</dt><dd>{$startDate}</dd>
-  <dt>Monatlicher Preis</dt><dd>{$priceFormatted} netto monatlich</dd>
+  {$priceRow}
   <dt>Gültig bis</dt><dd>{$validUntil}</dd>
 </dl>
 {$notesBlock}

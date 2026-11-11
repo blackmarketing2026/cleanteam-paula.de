@@ -68,6 +68,7 @@
               <i data-lucide="file-plus-2" aria-hidden="true"></i>
               <span>Neuer Vertrag erstellen</span>
             </button>
+            <button class="nav-link" type="button" data-view="offers-new" data-one-time="true"><i data-lucide="calendar-check" aria-hidden="true"></i><span>Einmal-Vertrag erstellen</span></button>
             <button class="nav-link" type="button" data-view="offers-existing-new">
               <i data-lucide="copy-plus" aria-hidden="true"></i>
               <span>Neuen Bestandsvertrag erstellen</span>
@@ -281,9 +282,10 @@
                 Quadratmeter
                 <input id="offer-square-meters" type="number" min="0" step="1" placeholder="optional" />
               </label>
-              <label>
+              <label id="offer-interval-field">
                 Reinigungsintervall *
                 <select id="offer-interval" required>
+                  <option value="Einmalig" hidden>Einmalig</option>
                   <option value="">Bitte wählen</option>
                   <option value="Täglich">Täglich</option>
                   <option value="Einmal wöchentlich">Einmal wöchentlich</option>
@@ -294,7 +296,7 @@
                 </select>
               </label>
               <label>
-                Gesamtpreis (monatlich, netto) *
+                <span id="offer-price-label">Gesamtpreis (monatlich, netto) *</span>
                 <input id="offer-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" />
               </label>
               <label>
@@ -308,9 +310,10 @@
                 <div class="vat-price-preview" hidden><span>Preis nach Rabatt mit Umsatzsteuer</span><strong id="offer-gross-price-preview">0,00&nbsp;&euro;</strong></div>
               </div>
               <label>
-                Beginn der Dienstleistung *
+                <span id="offer-date-label">Beginn der Dienstleistung *</span>
                 <input id="offer-start-date" type="date" required />
               </label>
+              <label id="offer-time-field" hidden>Uhrzeit (optional)<input id="offer-event-time" type="time" /></label>
               <label>
                 Signaturort *
                 <select id="offer-signing-location" required>
@@ -1319,7 +1322,7 @@
           </select>
         </label>
         <label class="modal-field">
-          Gesamtpreis (monatlich, netto) *
+          <span id="contract-correction-price-label">Gesamtpreis (monatlich, netto) *</span>
           <input id="contract-correction-price" type="number" min="0" step="0.01" required />
         </label>
         <label class="modal-field">
@@ -1332,7 +1335,7 @@
           <div><span>Preis nach Rabatt</span><strong id="contract-correction-final-price-preview">0,00&nbsp;&euro;</strong></div>
         </div>
         <label class="modal-field">
-          Beginn der Dienstleistung *
+          <span id="contract-correction-date-label">Beginn der Dienstleistung *</span>
           <input id="contract-correction-start-date" type="date" required />
         </label>
         <label class="modal-field">
@@ -1437,7 +1440,7 @@
           </select>
         </label>
         <label class="modal-field">
-          Gesamtpreis (monatlich, netto) *
+          <span id="offer-edit-price-label">Gesamtpreis (monatlich, netto) *</span>
           <input id="offer-edit-price" type="number" min="0" step="0.01" required />
         </label>
         <label class="modal-field">
@@ -1451,7 +1454,7 @@
           <div class="vat-price-preview" hidden><span>Preis nach Rabatt mit Umsatzsteuer</span><strong id="offer-edit-gross-price-preview">0,00&nbsp;&euro;</strong></div>
         </div>
         <label id="offer-edit-start-date-field" class="modal-field">
-          Beginn der Dienstleistung *
+          <span id="offer-edit-date-label">Beginn der Dienstleistung *</span>
           <input id="offer-edit-start-date" type="date" required />
         </label>
         <div id="offer-edit-original-start-fields" class="offer-edit-subgrid" hidden>

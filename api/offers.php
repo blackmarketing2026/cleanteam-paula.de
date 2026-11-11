@@ -161,7 +161,7 @@ if ($method === 'POST') {
     $validityHours = (int) ($body['validityHours'] ?? 0);
     $signingLocation = normalize_contract_signing_location($body['signingLocation'] ?? null);
 
-    $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
+    $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig', 'Einmalig'];
     if (!in_array($interval, $allowedIntervals, true)) {
         json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
     }
@@ -255,7 +255,7 @@ if ($method === 'PUT') {
     }
 
     $stmt = $pdo->prepare(
-        'SELECT o.id, o.customer_id, o.is_existing_contract, o.sent_at, ct.status AS contract_status
+        'SELECT o.id, o.customer_id, o.is_existing_contract, o.interval_label, o.sent_at, ct.status AS contract_status
          FROM offers o LEFT JOIN contracts ct ON ct.offer_id = o.id WHERE o.id = :id'
     );
     $stmt->execute(['id' => $id]);
@@ -294,9 +294,12 @@ if ($method === 'PUT') {
         $originalStartInput = sprintf('%04d-%02d', $legacyOriginalStartYear, $legacyOriginalStartMonth);
     }
 
-    $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig'];
+    $allowedIntervals = ['Täglich', 'Einmal wöchentlich', 'Zweimal wöchentlich', 'Dreimal wöchentlich', 'Viermal wöchentlich', '14-tägig', 'Einmalig'];
     if (!in_array($interval, $allowedIntervals, true)) {
         json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
+    }
+    if (($interval === 'Einmalig') !== ($existing['interval_label'] === 'Einmalig')) {
+        json_error('Die Vertragsart kann nach der Erstellung nicht geändert werden.', 422);
     }
     $intervalLabel = $interval;
 

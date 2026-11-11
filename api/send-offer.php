@@ -41,7 +41,7 @@ $bodyContent = $sendAsQuote
 if ((float) ($offer['discount_percent'] ?? 0) > 0) {
     $regularPrice = number_format((float) $offer['base_price'], 2, ',', '.') . ' €';
     $bodyContent .= '<p style="color:#51657d;font-size:13px;">Der Rabatt gilt bis ' . email_h($validUntil)
-        . ' Uhr. Danach entfällt er automatisch; der monatliche Nettopreis beträgt dann '
+        . ' Uhr. Danach entfällt er automatisch; der ' . (($offer['interval_label'] ?? '') === 'Einmalig' ? 'einmalige' : 'monatliche') . ' Nettopreis beträgt dann '
         . email_h($regularPrice) . '. Der Link bleibt zum regulären Preis nutzbar.</p>';
 } elseif (!empty($offer['discount_expired_at'])) {
     $bodyContent .= '<p style="color:#51657d;font-size:13px;">Der Rabatt ist abgelaufen. Es gilt der reguläre Preis.</p>';

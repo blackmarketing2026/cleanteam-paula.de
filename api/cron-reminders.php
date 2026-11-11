@@ -140,7 +140,7 @@ foreach ($offers as $offer) {
         $intro = '<p>Ihr rabattierter Vertrag für <strong>' . email_h($companyName)
             . '</strong> wartet noch auf Ihre Unterschrift. Bitte schließen Sie ihn bis zum '
             . email_h($validUntil) . ' ab, wenn Sie den Rabatt nutzen möchten:</p>';
-        $validityNote = '<p>Danach entfällt der Rabatt automatisch. Der monatliche Nettopreis beträgt dann '
+        $validityNote = '<p>Danach entfällt der Rabatt automatisch. Der ' . (($offer['interval_label'] ?? '') === 'Einmalig' ? 'einmalige' : 'monatliche') . ' Nettopreis beträgt dann '
             . email_h($regularPrice) . '. Der Vertragslink bleibt zum regulären Preis nutzbar.</p>';
     }
 
