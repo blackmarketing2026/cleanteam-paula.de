@@ -473,21 +473,67 @@ HTML;
 
 function one_time_contract_template_html(): string
 {
+    // Der Feiertags-, laufende Betriebs- und Unterhaltsreinigungstext bezieht sich
+    // auf wiederkehrende Leistungen und gilt daher nicht für einen Einmaleinsatz.
+    $obligations = '<ol class="obligations">';
+    foreach ([0, 2, 3, 4, 8, 9] as $index) {
+        $obligations .= '<li>' . h(CUSTOMER_OBLIGATIONS[$index]) . '</li>';
+    }
+    $obligations .= '{{zusaetzliche_pflichten_items}}</ol>';
+
     return <<<HTML
-<h2>§ 1 Einmaliger Reinigungsauftrag</h2>
-<p>Der Auftragnehmer übernimmt die einmalige Reinigung am <strong>{{beginn_datum}}</strong>. Ein wiederkehrendes Reinigungsverhältnis wird nicht vereinbart.</p>
-<p><strong>Leistungsort:</strong> {{leistungsort}}</p>
-<h2>§ 2 Art und Umfang der Reinigung</h2>
+<h2>§ 1 Beginn, Rechtswahl, Vertragssprache</h2>
+<p>1. Die einmalige Reinigung findet am <strong>{{beginn_datum}}</strong> statt.<br>
+2. Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.</p>
+
+<h2>§ 2 Vertragsgegenstand und Objekt</h2>
+<p>Vertragsgegenstand sind die in § 3 genannten Reinigungsarbeiten für das nachfolgend näher bezeichnete Objekt:</p>
+<p><strong>Leistungsort:</strong><br>
+Ort: {{leistungsort_ort}}<br>
+Postleitzahl: {{leistungsort_plz}}<br>
+Straße: {{leistungsort_strasse}}</p>
+
+<h2>§ 3 Art und Umfang der Reinigung</h2>
+<p>Die Reinigung erfolgt einmalig.</p>
 <p>Gebuchte Leistung: {{leistung}}</p>
 {{zusatzhinweis_block}}
-<p>Weitere Leistungen bedürfen einer gesonderten Beauftragung und werden zusätzlich berechnet.</p>
-<h2>§ 3 Vergütung</h2>
-<p>{{ust_block}} Die Rechnung ist binnen {{zahlungsfrist_tage}} Arbeitstagen zu zahlen.</p>
-<h2>§ 4 Pflichten des Auftraggebers</h2>
-<p>Der Auftraggeber stellt den Zugang zum Einsatzort sicher und bereitet die zu reinigenden Bereiche vor.</p>
-<ol>{{zusaetzliche_pflichten_items}}</ol>
-<h2>§ 5 Schlussbestimmungen</h2>
-<p>Es gilt deutsches Recht; Vertragssprache ist Deutsch. Es gelten zusätzlich die Allgemeinen Geschäftsbedingungen des Auftragnehmers ({{agb_version}}), abrufbar unter {{agb_url}}. Beide Parteien erhalten nach elektronischer Unterzeichnung eine Ausfertigung.</p>
+<p>Leistungen, die nicht in diesem Vertrag aufgeführt sind, bedürfen einer gesonderten Beauftragung und werden zusätzlich berechnet.</p>
+
+<h2>§ 4 Vergütung</h2>
+<p>{{ust_block}} Leistungen außerhalb von § 3 sind separat zu beauftragen und werden zusätzlich berechnet. Rechnungen sind binnen
+{{zahlungsfrist_tage}} Arbeitstagen zu zahlen; nach {{verzug_tage}} Tagen fallen automatisch Verzugszinsen an.</p>
+<p><strong>Zahlungsverzug / Zurückbehaltungsrecht:</strong> Die vereinbarte Vergütung ist innerhalb von {{zahlungsfrist_tage}}
+Arbeitstagen nach Zugang der Rechnung ohne Abzug auf das von uns benannte Konto zu überweisen. Geht innerhalb dieser
+Frist kein vollständiger Zahlungseingang ein und erfolgt keine vorherige Mitteilung oder anderweitige Vereinbarung durch
+den Auftraggeber, sind wir berechtigt, von unserem Zurückbehaltungsrecht gemäß § 320 BGB Gebrauch zu machen und die
+vertraglich geschuldeten Reinigungsleistungen bis zum vollständigen Ausgleich der offenen Forderung auszusetzen.</p>
+
+<h2>§ 5 Pflichten des Auftraggebers</h2>
+{$obligations}
+
+<h2>§ 6 Vertraulichkeit</h2>
+<p>Die Parteien vereinbaren, während der Laufzeit dieses Vertrags über die Geschäfts- und Betriebsgeheimnisse der jeweils
+anderen Partei, einschließlich dieses Vertrags, über jedes Know-how, jegliches von einer Partei ausgehändigte Material
+und sämtliche Informationen, die eine Partei über das Geschäft der jeweils anderen erhält ("vertrauliche Informationen"),
+vertraulich zu behandeln und nicht an Dritte weiterzugeben.</p>
+
+<h2>§ 7 Erfüllungsort, Gerichtsstand und Schlussbestimmungen</h2>
+<p>1. Der Erfüllungsort richtet sich nach dem Sitz des Auftraggebers.<br>
+2. Ausschließlicher Gerichtsstand für Streitigkeiten im Zusammenhang mit dem Vertragsverhältnis ist <strong>{{gerichtsstand}}</strong>.<br>
+3. Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter
+Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen.<br>
+4. Sollte eine Bestimmung dieses Vertrags unwirksam sein, wird die Wirksamkeit der übrigen Bestimmungen hiervon nicht
+berührt. Die Parteien werden über eine die unwirksame Bestimmung ersetzende Regelung verhandeln, die dem Inhalt der
+ursprünglichen Bestimmung möglichst nahekommt. Gleiches gilt für mögliche Vertragslücken.</p>
+
+<h2>§ 8 Einbeziehung der Allgemeinen Geschäftsbedingungen</h2>
+<p>Es gelten zusätzlich die Allgemeinen Geschäftsbedingungen des Auftragnehmers. Die gültige Fassung mit
+<strong>{{agb_version}}</strong> ist auf der Website <strong>{{agb_url}}</strong> einsehbar. Auf Wunsch kann dem Auftraggeber
+eine Ausfertigung der Allgemeinen Geschäftsbedingungen auch postalisch zugesendet werden.</p>
+
+<h2>§ 9 Ausfertigungen und elektronische Dokumentation</h2>
+<p>{{ausfertigung_satz}} Bei elektronischer Unterzeichnung wird jeder
+Partei nach Abschluss des Signaturvorgangs eine Ausfertigung zur Verfügung gestellt.</p>
 HTML;
 }
 

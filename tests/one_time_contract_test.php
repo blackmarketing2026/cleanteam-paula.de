@@ -6,7 +6,10 @@ $body = render_contract_template_body(one_time_contract_template_html(), contrac
 foreach (['12.12.2026', '20:00 Uhr', '100,00', '119,00', 'Zugang bereitstellen'] as $expected) {
     if (!str_contains($body, $expected)) throw new RuntimeException('Missing: ' . $expected);
 }
-foreach (['monatliche Pauschal', 'regulären Arbeitstag', 'Tariferhöhung', '{{'] as $forbidden) {
+foreach (['§ 1 Beginn, Rechtswahl, Vertragssprache', '§ 2 Vertragsgegenstand und Objekt', '§ 3 Art und Umfang der Reinigung', '§ 4 Vergütung', '§ 5 Pflichten des Auftraggebers', '§ 6 Vertraulichkeit', '§ 7 Erfüllungsort, Gerichtsstand und Schlussbestimmungen', '§ 8 Einbeziehung der Allgemeinen Geschäftsbedingungen', '§ 9 Ausfertigungen und elektronische Dokumentation', 'Reklamationsportal', 'Parkgebühren', 'Elektronische Geräte', 'Solingen', 'Verzugszinsen'] as $expected) {
+    if (!str_contains($body, $expected)) throw new RuntimeException('Missing contract section or provision: ' . $expected);
+}
+foreach (['monatliche Pauschal', 'regulären Arbeitstag', 'Tariferhöhung', 'ausfallenden Reinigungstermine', 'Unterhaltsreinigung', 'im laufenden Betrieb', '{{'] as $forbidden) {
     if (str_contains($body, $forbidden)) throw new RuntimeException('Unexpected: ' . $forbidden);
 }
 $offer['vat_applicable'] = 0;
