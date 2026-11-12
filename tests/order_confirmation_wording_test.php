@@ -30,7 +30,7 @@ if (!str_contains($publicPage, 'Auftragsbest&auml;tigung unterschreiben')
 foreach ([
     'Vertrag unterschreiben',
     'Ihre Vertragsaktualisierung',
-    'Ihr Vertrag ab ',
+    'Ihre Vertragsaktualisierung ab dem ',
     'Lesen Sie die Vertragsaktualisierung bitte vollständig durch.',
     'Vertrag erfolgreich abgeschlossen',
 ] as $existingContractWording) {

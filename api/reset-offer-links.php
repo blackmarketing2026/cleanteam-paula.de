@@ -4,6 +4,7 @@ require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/link_access.php';
 require_once __DIR__ . '/../includes/contract_notify.php';
+require_once __DIR__ . '/../includes/link_visits.php';
 
 // Setzt den Kundenfortschritt von Vertrags- und KVA-Link zurück, damit beide wieder
 // wie beim ersten Öffnen starten und wieder einmal geöffnet werden können.
@@ -22,6 +23,7 @@ if ($contract && in_array($contract['status'], ['signiert', 'bestaetigt'], true)
     json_error('Der Vertrag ist bereits unterschrieben. Die Links können nicht mehr zurückgesetzt werden.', 409);
 }
 
+ensure_link_visits_table($pdo);
 $pdo->beginTransaction();
 try {
     if ($contract) {
@@ -36,6 +38,7 @@ try {
             quote_accepted_ip = NULL, quote_accepted_user_agent = NULL,
             link_opened_at = NULL, link_session_hash = NULL, contract_open_notified_at = NULL WHERE id = :id'
     )->execute(['quote_status' => empty($offer['quote_token']) ? 'entwurf' : 'sent', 'id' => $offerId]);
+    $pdo->prepare('DELETE FROM offer_link_visits WHERE offer_id = :offer_id')->execute(['offer_id' => $offerId]);
     $pdo->commit();
 } catch (Throwable $exception) {
     $pdo->rollBack();

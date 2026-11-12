@@ -327,7 +327,7 @@ function routeToState(data) {
     const contractDate = formatDate(data.offer.startDate);
     document.title = "CleanTeam - Ihre Vertragsaktualisierung";
     document.querySelector("#public-document-label").textContent = "Ihre Vertragsaktualisierung";
-    document.querySelector("#screen-signatur h2").textContent = `Ihr Vertrag ab ${contractDate}`;
+    document.querySelector("#screen-signatur h2").textContent = `Ihre Vertragsaktualisierung ab dem ${contractDate}`;
     document.querySelector("#screen-signatur p.muted").textContent = "Lesen Sie die Vertragsaktualisierung bitte vollständig durch.";
     document.querySelector(".signature-section-heading").textContent = "Vertrag unterschreiben";
     els.saveSignature.textContent = "Vertrag unterschreiben";

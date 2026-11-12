@@ -2705,13 +2705,14 @@ async function copyQuoteLink(id) {
 }
 
 async function resetOfferLinks(id) {
-  const confirmed = window.confirm("Alle Links zurücksetzen? Der Kunde startet beim nächsten Öffnen wieder von vorne, bisherige Angaben im Link gehen verloren. Die Links können danach wieder einmal geöffnet werden, ihre Gültigkeit bleibt gleich.");
+  const confirmed = window.confirm("Alle Links zurücksetzen? Der Kunde startet beim nächsten Öffnen wieder von vorne. Bisherige Angaben und der Link- und Vertragsverlauf werden gelöscht. Die Links können danach wieder einmal geöffnet werden, ihre Gültigkeit bleibt gleich.");
   if (!confirmed) {
     return;
   }
 
   try {
     await apiPost(`api/reset-offer-links.php?id=${encodeURIComponent(id)}`, {});
+    closeLinkHistory();
     await loadAll();
     showToast("Links wurden zurückgesetzt und können wieder geöffnet werden.");
   } catch (error) {
