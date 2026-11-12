@@ -50,7 +50,7 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
 
 const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.is_existing_contract, o.original_start_date, o.notes AS offer_notes,
     o.customer_obligations_note AS offer_customer_obligations_note,
-    o.base_price, o.discount_percent, o.price, o.vat_applicable, o.created_at AS offer_created_at, o.token,
+    o.base_price, o.discount_percent, o.price, o.vat_applicable, o.billing_mode, o.created_at AS offer_created_at, o.token,
     o.sent_at AS offer_sent_at, o.email_opened_at AS offer_email_opened_at, o.link_opened_at AS offer_link_opened_at,
     c.name AS c_name, c.email AS c_email, c.phone AS c_phone, c.salutation AS c_salutation,
     c.contact_last_name AS c_contact_last_name, c.address AS c_address, c.house_number AS c_house_number,
@@ -102,6 +102,7 @@ function contract_row_to_json(array $row): array
             'id' => $row['offer_id'],
             'squareMeters' => (int) $row['square_meters'],
             'interval' => $row['interval_label'],
+            'billingMode' => $row['billing_mode'] ?? 'fixed',
             'service' => $row['service'],
             'startDate' => $row['start_date'],
             'isExistingContract' => (bool) ($row['is_existing_contract'] ?? false),
@@ -126,6 +127,7 @@ ensure_contracts_terms_accepted_at_column($pdo);
 ensure_contracts_privacy_accepted_at_column($pdo);
 ensure_contracts_authorization_columns($pdo);
 ensure_contracts_number_column_dropped($pdo);
+ensure_offer_billing_mode_column($pdo);
 ensure_offers_interval_label_length($pdo);
 ensure_offers_discount_column($pdo);
 ensure_offers_vat_column($pdo);

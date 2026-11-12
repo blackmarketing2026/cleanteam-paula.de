@@ -389,3 +389,10 @@ function calculate_offer_price(float $squareMeters, string $interval, string $se
 
     return max(0, round($squareMeters * $rate * $factor + $setup, 2));
 }
+
+function ensure_offer_billing_mode_column(PDO $pdo): void
+{
+    if (!$pdo->query("SHOW COLUMNS FROM offers LIKE 'billing_mode'")->fetch()) {
+        $pdo->exec("ALTER TABLE offers ADD COLUMN billing_mode VARCHAR(10) NOT NULL DEFAULT 'fixed'");
+    }
+}

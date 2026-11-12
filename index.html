@@ -295,6 +295,10 @@
                   <option value="14-tägig">14-tägig</option>
                 </select>
               </label>
+              <label id="offer-billing-mode-field" hidden>
+                Abrechnungsart *
+                <select id="offer-billing-mode"><option value="fixed">Einmaliger Gesamtpreis</option><option value="hourly">Preis nach Stunde</option></select>
+              </label>
               <label>
                 <span id="offer-price-label">Gesamtpreis (monatlich, netto) *</span>
                 <input id="offer-price" type="number" min="0" step="0.01" required placeholder="z. B. 650" />
@@ -304,7 +308,7 @@
                 <input id="offer-discount" type="number" min="0" max="99.99" step="0.01" value="0" />
               </label>
               <div class="price-preview span-2" aria-live="polite">
-                <div><span>Gesamtpreis</span><strong id="offer-base-price-preview">0,00&nbsp;&euro;</strong></div>
+                <div><span id="offer-base-price-label">Gesamtpreis</span><strong id="offer-base-price-preview">0,00&nbsp;&euro;</strong></div>
                 <div><span>Rabatt</span><strong id="offer-discount-amount-preview">0,00&nbsp;&euro;</strong></div>
                 <div><span>Preis nach Rabatt</span><strong id="offer-final-price-preview">0,00&nbsp;&euro;</strong></div>
                 <div class="vat-price-preview" hidden><span>Preis nach Rabatt mit Umsatzsteuer</span><strong id="offer-gross-price-preview">0,00&nbsp;&euro;</strong></div>
@@ -1617,7 +1621,7 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="protect.js?v=20261013b"></script>
-    <script src="app.js?v=link-reset-history-20261112"></script>
+    <script src="app.js?v=hourly-billing-20261112"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

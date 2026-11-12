@@ -137,6 +137,7 @@ function public_state(array $offer, ?array $contract): array
         'offer' => [
             'squareMeters' => (int) $offer['square_meters'],
             'interval' => $offer['interval_label'],
+            'billingMode' => $offer['billing_mode'] ?? 'fixed',
             'service' => $offer['service'],
             'startDate' => $offer['start_date'],
             'isExistingContract' => (bool) ($offer['is_existing_contract'] ?? false),

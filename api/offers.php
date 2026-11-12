@@ -67,6 +67,7 @@ function offer_row_to_json(array $row): array
         'customerId' => $row['customer_id'],
         'isExistingContract' => (bool) ($row['is_existing_contract'] ?? false),
         'originalStartDate' => $row['original_start_date'] ?? null,
+        'billingMode' => $row['billing_mode'] ?? 'fixed',
         'signingLocation' => contract_offer_signing_location($row),
         'customer' => [
             'id' => $row['customer_id'],
@@ -121,6 +122,7 @@ const OFFER_SELECT = 'SELECT o.*, c.name AS c_name, c.email AS c_email, c.phone 
     LEFT JOIN contracts ct ON ct.offer_id = o.id';
 
 ensure_offers_pricing_columns($pdo);
+ensure_offer_billing_mode_column($pdo);
 ensure_offers_discount_column($pdo);
 ensure_offers_discount_expiry_column($pdo);
 ensure_offers_interval_label_length($pdo);
@@ -166,6 +168,10 @@ if ($method === 'POST') {
         json_error('Bitte ein gültiges Reinigungsintervall auswählen.', 422);
     }
     $intervalLabel = $interval;
+    $billingMode = (string) ($body['billingMode'] ?? 'fixed');
+    if (!in_array($billingMode, ['fixed', 'hourly'], true) || ($billingMode === 'hourly' && $interval !== 'Einmalig')) {
+        json_error('Bitte eine gueltige Abrechnungsart waehlen.', 422);
+    }
 
     if ($customerName === '' || $contactPerson === '' || $email === ''
         || $address === '' || $zip === '' || $city === '' || trim($serviceText) === '') {
@@ -213,14 +219,15 @@ if ($method === 'POST') {
     $token = generate_token();
 
     $stmt = $pdo->prepare(
-        'INSERT INTO offers (id, customer_id, square_meters, interval_label, service, start_date, signing_location, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
-         VALUES (:id, :customer_id, :square_meters, :interval_label, :service, :start_date, :signing_location, :notes, :customer_obligations_note, :base_price, :discount_percent, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), INTERVAL :validity_hours HOUR), :validity_days2, :validity_hours2)'
+        'INSERT INTO offers (id, customer_id, square_meters, interval_label, billing_mode, service, start_date, signing_location, notes, customer_obligations_note, base_price, discount_percent, price_adjustment, price_adjustment_note, price, vat_applicable, token, created_at, expires_at, validity_days, validity_hours)
+         VALUES (:id, :customer_id, :square_meters, :interval_label, :billing_mode, :service, :start_date, :signing_location, :notes, :customer_obligations_note, :base_price, :discount_percent, 0, NULL, :price, :vat_applicable, :token, UTC_TIMESTAMP(), DATE_ADD(DATE_ADD(UTC_TIMESTAMP(), INTERVAL :validity_days DAY), INTERVAL :validity_hours HOUR), :validity_days2, :validity_hours2)'
     );
     $stmt->execute([
         'id' => $id,
         'customer_id' => $customerId,
         'square_meters' => $squareMeters,
         'interval_label' => $intervalLabel,
+        'billing_mode' => $billingMode,
         'service' => 'Individuelle Leistung',
         'start_date' => $startDate,
         'signing_location' => $signingLocation,

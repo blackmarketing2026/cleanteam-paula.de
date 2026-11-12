@@ -480,7 +480,7 @@ final class SimplePdfDocument
         } while ($remaining !== []);
     }
 
-    public function quoteNetTotal(string $netPrice, ?string $basePrice = null, float $discountPercent = 0.0, ?string $discountAmount = null): void
+    public function quoteNetTotal(string $netPrice, ?string $basePrice = null, float $discountPercent = 0.0, ?string $discountAmount = null, bool $hourly = false): void
     {
         $hasDiscount = $discountPercent > 0.0 && $basePrice !== null && $discountAmount !== null;
         $boxHeight = $hasDiscount ? 66.0 : 31.0;
@@ -494,9 +494,9 @@ final class SimplePdfDocument
         if ($hasDiscount) {
             $discountLabel = 'Rabatt (' . rtrim(rtrim(number_format($discountPercent, 2, ',', '.'), '0'), ',') . ' %):';
             $rows = [
-                ['Gesamtpreis netto:', $basePrice, 'F1'],
+                [$hourly ? 'Stundensatz netto:' : 'Gesamtpreis netto:', $basePrice, 'F1'],
                 [$discountLabel, '- ' . $discountAmount, 'F1'],
-                ['Endpreis netto:', $netPrice, 'F2'],
+                [$hourly ? 'Stundensatz netto:' : 'Endpreis netto:', $netPrice, 'F2'],
             ];
             foreach ($rows as $index => [$label, $value, $font]) {
                 $rowY = $boxBottom + $boxHeight - 18.0 - ($index * 18.0);
@@ -506,7 +506,7 @@ final class SimplePdfDocument
                 $this->line($value, $priceX, $rowY, $fontSize, $font);
             }
         } else {
-            $this->line('Pauschalpreis netto:', $x + 12.0, $boxBottom + 11.0, 9.5, 'F2');
+            $this->line($hourly ? 'Stundensatz netto:' : 'Pauschalpreis netto:', $x + 12.0, $boxBottom + 11.0, 9.5, 'F2');
             $priceX = self::PAGE_WIDTH - self::MARGIN_RIGHT - 9.0 - ($this->textLength($netPrice) * 9.5 * 0.48);
             $this->line($netPrice, $priceX, $boxBottom + 11.0, 9.5, 'F2');
         }

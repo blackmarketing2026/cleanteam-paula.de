@@ -636,11 +636,18 @@ let oneTimeIntake = false;
 function configureOneTimeIntake() {
   document.querySelector("#offer-interval-field").hidden = oneTimeIntake;
   document.querySelector("#offer-time-field").hidden = !oneTimeIntake;
-  document.querySelector("#offer-price-label").textContent = oneTimeIntake ? "Einmaliger Gesamtpreis (netto) *" : "Gesamtpreis (monatlich, netto) *";
+  document.querySelector("#offer-billing-mode-field").hidden = !oneTimeIntake;
+  const hourly = oneTimeIntake && document.querySelector("#offer-billing-mode").value === "hourly";
+  document.querySelector("#offer-base-price-label").textContent = hourly ? "Stundensatz" : "Gesamtpreis";
+  document.querySelector("#offer-final-price-preview").previousElementSibling.textContent = hourly ? "Stundensatz nach Rabatt" : "Preis nach Rabatt";
+  document.querySelector("#offer-gross-price-preview").previousElementSibling.textContent = hourly ? "Stundensatz nach Rabatt mit Umsatzsteuer" : "Preis nach Rabatt mit Umsatzsteuer";
+  document.querySelector("#offer-price-label").textContent = oneTimeIntake ? (hourly ? "Stundensatz (netto) *" : "Einmaliger Gesamtpreis (netto) *") : "Gesamtpreis (monatlich, netto) *";
   document.querySelector("#offer-date-label").textContent = oneTimeIntake ? "Einsatzdatum *" : "Beginn der Dienstleistung *";
   document.querySelector("#offer-form-heading").textContent = oneTimeIntake ? "Einmal-Vertrag erstellen" : "Neuer Vertrag erstellen";
   if (oneTimeIntake) els.offerInterval.value = "Einmalig";
 }
+
+document.querySelector("#offer-billing-mode").addEventListener("change", configureOneTimeIntake);
 
 function switchView(view) {
   if (hiddenViews.has(view)) {
@@ -791,7 +798,7 @@ function renderMetrics() {
                 <strong>${escapeHtml(offer.customer.name)}</strong>
                 <span>Erstellt am ${formatDate(offer.createdAt)}</span>
               </div>
-              ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}</span>` : ""}
+              ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}${offer.billingMode === "hourly" ? " / Std." : ""}</span>` : ""}
             </article>
           `;
         })
@@ -1421,7 +1428,7 @@ function renderOfferCard(offer) {
           </div>
         </div>
         <div class="record-side">
-          ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}</span>` : ""}
+          ${offer.price > 0 ? `<span class="badge">${formatCurrency(offer.price)}${offer.billingMode === "hourly" ? " / Std." : ""}</span>` : ""}
           ${offer.isExistingContract ? '<span class="badge">Bestand</span>' : offer.interval === "Einmalig" ? '<span class="badge">Einmalig</span>' : ""}
           <span class="badge ${validity.className}">${escapeHtml(validity.label)}</span>
           ${renderLinkLockBadge(offer)}
@@ -2016,6 +2023,7 @@ async function handleOfferSubmit(event) {
     city,
     squareMeters,
     interval,
+    billingMode: oneTimeIntake ? document.querySelector("#offer-billing-mode").value : "fixed",
     basePrice,
     discountPercent,
     vatApplicable: els.offerVat.value === "yes",
@@ -2356,7 +2364,9 @@ function openContractCorrectionModal(id) {
   ensureSelectHasValue(els.contractCorrectionInterval, contract.offer.interval);
   els.contractCorrectionInterval.value = contract.offer.interval;
   els.contractCorrectionInterval.closest("label").hidden = contract.offer.interval === "Einmalig";
-  document.querySelector("#contract-correction-price-label").textContent = contract.offer.interval === "Einmalig" ? "Einmaliger Gesamtpreis (netto) *" : "Gesamtpreis (monatlich, netto) *";
+  els.contractCorrectionBasePricePreview.previousElementSibling.textContent = contract.offer.billingMode === "hourly" ? "Stundensatz" : "Gesamtpreis";
+  els.contractCorrectionFinalPricePreview.previousElementSibling.textContent = contract.offer.billingMode === "hourly" ? "Stundensatz nach Rabatt" : "Preis nach Rabatt";
+  document.querySelector("#contract-correction-price-label").textContent = contract.offer.interval === "Einmalig" ? (contract.offer.billingMode === "hourly" ? "Stundensatz (netto) *" : "Einmaliger Gesamtpreis (netto) *") : "Gesamtpreis (monatlich, netto) *";
   document.querySelector("#contract-correction-date-label").textContent = contract.offer.interval === "Einmalig" ? "Einsatzdatum *" : "Beginn der Dienstleistung *";
   els.contractCorrectionPrice.value = contract.offer.basePrice ?? contract.offer.price;
   els.contractCorrectionDiscount.value = contract.offer.discountPercent ?? 0;
@@ -2461,7 +2471,7 @@ function openOfferDeadlineModal(id) {
   els.offerDeadlineCurrent.textContent = `Aktuelle Rabattfrist: ${formatDateTime(offer.expiresAt)}`;
   els.offerDeadlineDays.value = offer.validityDays ?? 14;
   els.offerDeadlineHours.value = offer.validityHours ?? 0;
-  els.offerDeadlinePrices.textContent = `Jetzt: ${formatCurrency(offer.price)} netto${offer.interval === "Einmalig" ? "" : " monatlich"} · Nach Ablauf: ${formatCurrency(offer.basePrice)} netto${offer.interval === "Einmalig" ? "" : " monatlich"}.`;
+  els.offerDeadlinePrices.textContent = `Jetzt: ${formatCurrency(offer.price)} netto${offer.billingMode === "hourly" ? " pro Stunde" : offer.interval === "Einmalig" ? "" : " monatlich"} · Nach Ablauf: ${formatCurrency(offer.basePrice)} netto${offer.billingMode === "hourly" ? " pro Stunde" : offer.interval === "Einmalig" ? "" : " monatlich"}.`;
   els.offerDeadlineEmail.value = offer.customer.email || "";
   els.offerDeadlineMessage.value = [
     "Sehr geehrte Damen und Herren,",
@@ -2542,7 +2552,10 @@ function openOfferEditModal(id) {
   ensureSelectHasValue(els.offerEditInterval, offer.interval);
   els.offerEditInterval.value = offer.interval;
   els.offerEditInterval.closest("label").hidden = offer.interval === "Einmalig";
-  document.querySelector("#offer-edit-price-label").textContent = offer.interval === "Einmalig" ? "Einmaliger Gesamtpreis (netto) *" : "Gesamtpreis (monatlich, netto) *";
+  els.offerEditBasePricePreview.previousElementSibling.textContent = offer.billingMode === "hourly" ? "Stundensatz" : "Gesamtpreis";
+  els.offerEditFinalPricePreview.previousElementSibling.textContent = offer.billingMode === "hourly" ? "Stundensatz nach Rabatt" : "Preis nach Rabatt";
+  els.offerEditGrossPricePreview.previousElementSibling.textContent = offer.billingMode === "hourly" ? "Stundensatz nach Rabatt mit Umsatzsteuer" : "Preis nach Rabatt mit Umsatzsteuer";
+  document.querySelector("#offer-edit-price-label").textContent = offer.interval === "Einmalig" ? (offer.billingMode === "hourly" ? "Stundensatz (netto) *" : "Einmaliger Gesamtpreis (netto) *") : "Gesamtpreis (monatlich, netto) *";
   document.querySelector("#offer-edit-date-label").textContent = offer.interval === "Einmalig" ? "Einsatzdatum *" : "Beginn der Dienstleistung *";
   els.offerEditPrice.value = offer.basePrice ?? offer.price;
   els.offerEditDiscount.value = offer.discountPercent ?? 0;

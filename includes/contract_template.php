@@ -661,9 +661,14 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
         : 'Die monatliche Pauschalvergütung beträgt <strong>' . contract_format_money($netPrice) . '</strong>. Es wird keine Umsatzsteuer berechnet.';
 
     if (($offer['interval_label'] ?? '') === 'Einmalig') {
-        $values['ust_block'] = $vatApplicable
-            ? 'Die einmalige Vergütung beträgt <strong>' . contract_format_money($netPrice) . ' netto</strong> zuzüglich Umsatzsteuer. Der Bruttobetrag beträgt <strong>' . contract_format_money($grossPrice) . '</strong>.'
-            : 'Die einmalige Vergütung beträgt <strong>' . contract_format_money($netPrice) . '</strong>. Es wird keine Umsatzsteuer berechnet.';
+        if (($offer['billing_mode'] ?? 'fixed') === 'hourly') {
+            $values['ust_block'] = 'Der Stundensatz beträgt <strong>' . contract_format_money($netPrice) . ($vatApplicable ? ' netto</strong> zuzüglich Umsatzsteuer.' : '</strong>. Es wird keine Umsatzsteuer berechnet.')
+                . ' Die Abrechnung erfolgt nach den tatsächlich geleisteten Stunden anhand eines Stundennachweises.';
+        } else {
+            $values['ust_block'] = $vatApplicable
+                ? 'Die einmalige Vergütung beträgt <strong>' . contract_format_money($netPrice) . ' netto</strong> zuzüglich Umsatzsteuer. Der Bruttobetrag beträgt <strong>' . contract_format_money($grossPrice) . '</strong>.'
+                : 'Die einmalige Vergütung beträgt <strong>' . contract_format_money($netPrice) . '</strong>. Es wird keine Umsatzsteuer berechnet.';
+        }
     }
 
     return $values;

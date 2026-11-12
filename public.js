@@ -253,7 +253,7 @@ function renderServiceDetails() {
   const offer = state.offer;
   const items = offer.interval === "Einmalig" ? [
         ["Einsatzdatum", formatDate(offer.startDate)],
-        ["Einmaliger Preis", `${formatCurrency(offer.price)} netto`],
+        [offer.billingMode === "hourly" ? "Stundensatz" : "Einmaliger Preis", `${formatCurrency(offer.price)} netto${offer.billingMode === "hourly" ? " pro Stunde" : ""}`],
       ] : offer.isExistingContract
     ? [
         ["Ursprünglicher Vertrag", formatDate(offer.originalStartDate)],

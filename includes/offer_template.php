@@ -35,7 +35,7 @@ function render_offer_document(array $offer, array $customer): string
 
     $signUrl = h(base_url() . '/o.php?token=' . $offer['token']);
 
-    $priceRow = ($offer['interval_label'] ?? '') === 'Einmalig' ? '<dt>Einmaliger Preis</dt><dd>' . $priceFormatted . ' netto</dd>' : '<dt>Monatlicher Preis</dt><dd>' . $priceFormatted . ' netto monatlich</dd>';
+    $priceRow = ($offer['billing_mode'] ?? 'fixed') === 'hourly' ? '<dt>Stundensatz</dt><dd>' . $priceFormatted . ' netto pro Stunde</dd>' : (($offer['interval_label'] ?? '') === 'Einmalig' ? '<dt>Einmaliger Preis</dt><dd>' . $priceFormatted . ' netto</dd>' : '<dt>Monatlicher Preis</dt><dd>' . $priceFormatted . ' netto monatlich</dd>');
 
     return <<<HTML
 <!doctype html>

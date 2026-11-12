@@ -15,4 +15,13 @@ foreach (['monatliche Pauschal', 'regulären Arbeitstag', 'Tariferhöhung', 'aus
 $offer['vat_applicable'] = 0;
 $body = render_contract_template_body(one_time_contract_template_html(), contract_template_placeholder_map($offer, $customer, null, true));
 if (!str_contains($body, 'keine Umsatzsteuer') || str_contains($body, '119,00')) throw new RuntimeException('Incorrect VAT');
-echo "PASS: one-time contract date, service, price, VAT and obligations\n";
+$offer['billing_mode'] = 'hourly';
+foreach ([0, 1] as $vat) {
+    $offer['vat_applicable'] = $vat;
+    $body = render_contract_template_body(one_time_contract_template_html(), contract_template_placeholder_map($offer, $customer, null, true));
+    foreach (['Stundensatz', '100,00', 'Stundennachweises'] as $expected) {
+        if (!str_contains($body, $expected)) throw new RuntimeException('Missing hourly term: ' . $expected);
+    }
+    if (str_contains($body, '119,00') || str_contains($body, 'einmalige Vergütung beträgt')) throw new RuntimeException('Hourly rate shown as a total');
+}
+echo "PASS: fixed and hourly one-time contracts\n";
