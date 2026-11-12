@@ -1401,20 +1401,12 @@ function renderOfferCard(offer) {
   if (offer.quoteSentAt) deliveryLabels.push(`Kostenvoranschlag gesendet am ${formatDate(offer.quoteSentAt)}`);
   const sentLabel = deliveryLabels.length ? deliveryLabels.join(" · ") : "Noch nicht per E-Mail versendet";
 
-  const contractActions = offer.contractId
-    ? `
-      <button class="secondary-button" type="button" data-action="open-contract" data-id="${escapeHtml(offer.contractId)}">
-        <i data-lucide="signature" aria-hidden="true"></i>
-        <span>Vertrag ansehen</span>
-      </button>
-    `
-    : "";
-  const contractProcessAction = offer.contractId
+  const contractProcessAction = offer.contractId || offer.isExistingContract
     ? ""
     : `
       <button class="secondary-button" type="button" data-action="open-offer-contract-link" data-id="${escapeHtml(offer.id)}">
         <i data-lucide="signature" aria-hidden="true"></i>
-        <span>${offer.isExistingContract ? "Vertrag ansehen" : "Neuen Vertrag erstellen"}</span>
+        <span>Neuen Vertrag erstellen</span>
       </button>
     `;
   return `
@@ -1482,7 +1474,6 @@ function renderOfferCard(offer) {
               <i data-lucide="clock-3" aria-hidden="true"></i>
               <span>Ablaufzeit ändern</span>
             </button>` : ""}
-        ${contractActions}
         <button class="secondary-button" type="button" data-action="edit-offer" data-id="${escapeHtml(offer.id)}">
           <i data-lucide="pencil" aria-hidden="true"></i>
           <span>Bearbeiten</span>
