@@ -257,7 +257,6 @@ function renderServiceDetails() {
       ] : offer.isExistingContract
     ? [
         ["Ursprünglicher Vertrag", formatDate(offer.originalStartDate)],
-        ["Neuer Vertrag in Kraft ab", formatDate(offer.startDate)],
         ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
       ]
     : [

@@ -64,8 +64,8 @@ if (!str_contains($createApi, '$effectiveStartDate')
     || !str_contains($updateApi, '$isExistingContract ? $effectiveStartDate : $startDate')) {
     throw new RuntimeException('Das Inkrafttreten des neuen Vertrags wird nicht gespeichert.');
 }
-if (!str_contains($publicJs, 'Neuer Vertrag in Kraft ab') || !str_contains($app, 'Neuer Vertrag ab')) {
-    throw new RuntimeException('Die beiden Vertragsdaten werden nicht verständlich angezeigt.');
+if (str_contains($publicJs, 'Neuer Vertrag in Kraft ab') || !str_contains($publicJs, 'Ursprünglicher Vertrag')) {
+    throw new RuntimeException('Die Kundenübersicht muss nur das ursprüngliche Vertragsdatum anzeigen.');
 }
 
 $existingContractOffer = [
@@ -91,32 +91,22 @@ $existingContractCustomer = [
     'contact_last_name' => 'Max Mustermann',
 ];
 
-$previewPlaceholders = contract_template_placeholder_map($existingContractOffer, $existingContractCustomer, null, false);
-
-if ($previewPlaceholders['beginn_datum'] !== '19.11.2027') {
-    throw new RuntimeException('Im neuen Bestandsvertrag wird nicht das neue Inkrafttreten mit Tag verwendet.');
-}
-if (!str_contains($previewPlaceholders['beginn_block'], 'Der ursprüngliche Vertrag besteht seit')
-    || !str_contains($previewPlaceholders['beginn_block'], '15.04.2018')
-    || !str_contains($previewPlaceholders['beginn_block'], 'Der neue Vertrag tritt am')
-    || !str_contains($previewPlaceholders['beginn_block'], '19.11.2027')) {
-    throw new RuntimeException('Die Kundenübersicht nennt ursprünglichen Vertrag und neues Inkrafttreten nicht vollständig mit Tag.');
+foreach ([false, true] as $forPdf) {
+    $previewPlaceholders = contract_template_placeholder_map($existingContractOffer, $existingContractCustomer, null, $forPdf);
+    if ($previewPlaceholders['beginn_datum'] !== '15.04.2018'
+        || !str_contains($previewPlaceholders['beginn_block'], '15.04.2018')
+        || str_contains($previewPlaceholders['beginn_block'], '19.11.2027')) {
+        throw new RuntimeException('Der nicht unterschriebene Vertrag muss nur das ursprüngliche Vertragsdatum nennen.');
+    }
+    $signedPlaceholders = contract_template_placeholder_map($existingContractOffer, $existingContractCustomer, ['status' => 'signiert'], $forPdf);
+    if ($signedPlaceholders['beginn_datum'] !== '19.11.2027'
+        || !str_contains($signedPlaceholders['beginn_block'], '19.11.2027')
+        || str_contains($signedPlaceholders['beginn_block'], '15.04.2018')) {
+        throw new RuntimeException('Der unterschriebene Vertrag muss das neue Inkrafttreten nennen.');
+    }
 }
 if ($previewPlaceholders['ausfertigung_satz'] !== 'Beide Parteien erhalten eine Ausfertigung dieses Vertrags.') {
     throw new RuntimeException('Der Bestandskundenvertrag wird in der Ausfertigungsklausel nicht als Vertrag bezeichnet.');
 }
 
-$pdfPlaceholders = contract_template_placeholder_map($existingContractOffer, $existingContractCustomer, null, true);
-
-if ($pdfPlaceholders['beginn_datum'] !== '19.11.2027') {
-    throw new RuntimeException('Im finalen PDF wird nicht das neue Inkrafttreten mit Tag verwendet.');
-}
-if (str_contains($pdfPlaceholders['beginn_block'], 'Der ursprüngliche Vertrag besteht seit')
-    || str_contains($pdfPlaceholders['beginn_block'], '15.04.2018')) {
-    throw new RuntimeException('Das finale PDF nennt noch das ursprüngliche Vertragsdatum, obwohl nur das neue Inkrafttreten stehen soll.');
-}
-if (!str_contains($pdfPlaceholders['beginn_block'], '19.11.2027')) {
-    throw new RuntimeException('Das finale PDF nennt das neue Inkrafttreten nicht mit Tag.');
-}
-
-echo "PASS: preview shows both contract dates, final PDF shows only the new effective date\n";
+echo "PASS: unsigned documents show the original date, signed documents show the new effective date\n";
