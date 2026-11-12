@@ -94,19 +94,20 @@ $existingContractCustomer = [
 foreach ([false, true] as $forPdf) {
     foreach ([null, ['status' => 'signiert']] as $contract) {
         $previewPlaceholders = contract_template_placeholder_map($existingContractOffer, $existingContractCustomer, $contract, $forPdf);
-        if ($previewPlaceholders['beginn_datum'] !== '19.11.2027'
-            || !str_contains($previewPlaceholders['beginn_block'], '19.11.2027')
-            || str_contains($previewPlaceholders['beginn_block'], '15.04.2018')) {
-            throw new RuntimeException('Der Vertrag muss das neue Inkrafttreten nennen.');
+        $expectedDate = $contract === null ? '15.04.2018' : '19.11.2027';
+        $otherDate = $contract === null ? '19.11.2027' : '15.04.2018';
+        if ($previewPlaceholders['beginn_datum'] !== $expectedDate
+            || !str_contains($previewPlaceholders['beginn_block'], $expectedDate)
+            || str_contains($previewPlaceholders['beginn_block'], $otherDate)) {
+            throw new RuntimeException('Der Vertrag zeigt nicht das zum Vertragsstatus passende Datum.');
         }
     }
 }
-if (!str_contains($publicJs, 'formatDate(data.offer.startDate)')
-    || str_contains($publicJs, 'formatDate(data.offer.originalStartDate)')) {
-    throw new RuntimeException('Die Signaturansicht muss das neue Vertragsdatum nennen.');
+if (!str_contains($publicJs, 'formatDate(data.offer.originalStartDate)')) {
+    throw new RuntimeException('Die Signaturansicht muss das urspruengliche Vertragsdatum nennen.');
 }
 if ($previewPlaceholders['ausfertigung_satz'] !== 'Beide Parteien erhalten eine Ausfertigung dieses Vertrags.') {
     throw new RuntimeException('Der Bestandskundenvertrag wird in der Ausfertigungsklausel nicht als Vertrag bezeichnet.');
 }
 
-echo "PASS: contract documents show the new effective date\n";
+echo "PASS: unsigned and signed documents show their respective dates\n";

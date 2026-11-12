@@ -324,10 +324,10 @@ function routeToState(data) {
     privacyEyebrow.textContent = "Aktualisierung zu Ihrem bestehenden Vertrag";
     privacyText.textContent = "Dürfen wir Ihre Daten für den aktualisierten Vertrag hier abspeichern?";
 
-    const contractDate = formatDate(data.offer.startDate);
+    const contractDate = formatDate(data.offer.originalStartDate);
     document.title = "CleanTeam - Ihre Vertragsaktualisierung";
     document.querySelector("#public-document-label").textContent = "Ihre Vertragsaktualisierung";
-    document.querySelector("#screen-signatur h2").textContent = `Ihre Vertragsaktualisierung ab dem ${contractDate}`;
+    document.querySelector("#screen-signatur h2").textContent = `Ihre Vertragsaktualisierung zum Vertrag vom ${contractDate}`;
     document.querySelector("#screen-signatur p.muted").textContent = "Lesen Sie die Vertragsaktualisierung bitte vollständig durch.";
     document.querySelector(".signature-section-heading").textContent = "Vertrag unterschreiben";
     els.saveSignature.textContent = "Vertrag unterschreiben";
