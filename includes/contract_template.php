@@ -593,11 +593,7 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $vatAmount = $vatApplicable ? round($netPrice * VAT_RATE / 100, 2) : 0.0;
     $grossPrice = $vatApplicable ? round($netPrice + $vatAmount, 2) : $netPrice;
     $isExistingContract = !empty($offer['is_existing_contract']);
-    $isSigned = ($contract['status'] ?? null) === 'signiert';
-    $dateValue = $isExistingContract && !$isSigned
-        ? ($offer['original_start_date'] ?? $offer['start_date'] ?? $offer['created_at'])
-        : ($offer['start_date'] ?? $offer['original_start_date'] ?? $offer['created_at']);
-    $effectiveDate = contract_format_date($dateValue);
+    $effectiveDate = contract_format_date($offer['start_date'] ?? $offer['original_start_date'] ?? $offer['created_at']);
     $customerAddress = trim((string) $customer['address'] . ' ' . (string) $customer['house_number']);
     $customerZipCity = trim((string) $customer['zip'] . ' ' . (string) $customer['city']);
     $customerFullAddress = trim($customerAddress . ', ' . $customerZipCity, ', ');
@@ -644,9 +640,7 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
 
     $values['logo'] = $forPdf ? '' : contract_logo_html();
     $legalChoiceText = 'Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.';
-    $values['beginn_block'] = $isExistingContract && !$isSigned
-        ? '<p>1. Der ursprüngliche Vertrag besteht seit <strong>' . h($effectiveDate) . '</strong>.<br>2. ' . h($legalChoiceText) . '</p>'
-        : '<p>1. Der Vertrag zur Gebäudereinigung tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>2. ' . h($legalChoiceText) . '</p>';
+    $values['beginn_block'] = '<p>1. Der Vertrag zur Gebäudereinigung tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>2. ' . h($legalChoiceText) . '</p>';
     $values['ausfertigung_satz'] = $isExistingContract
         ? 'Beide Parteien erhalten eine Ausfertigung dieses Vertrags.'
         : 'Beide Parteien erhalten eine Ausfertigung dieser Auftragsbestätigung.';

@@ -92,21 +92,21 @@ $existingContractCustomer = [
 ];
 
 foreach ([false, true] as $forPdf) {
-    $previewPlaceholders = contract_template_placeholder_map($existingContractOffer, $existingContractCustomer, null, $forPdf);
-    if ($previewPlaceholders['beginn_datum'] !== '15.04.2018'
-        || !str_contains($previewPlaceholders['beginn_block'], '15.04.2018')
-        || str_contains($previewPlaceholders['beginn_block'], '19.11.2027')) {
-        throw new RuntimeException('Der nicht unterschriebene Vertrag muss nur das ursprüngliche Vertragsdatum nennen.');
+    foreach ([null, ['status' => 'signiert']] as $contract) {
+        $previewPlaceholders = contract_template_placeholder_map($existingContractOffer, $existingContractCustomer, $contract, $forPdf);
+        if ($previewPlaceholders['beginn_datum'] !== '19.11.2027'
+            || !str_contains($previewPlaceholders['beginn_block'], '19.11.2027')
+            || str_contains($previewPlaceholders['beginn_block'], '15.04.2018')) {
+            throw new RuntimeException('Der Vertrag muss das neue Inkrafttreten nennen.');
+        }
     }
-    $signedPlaceholders = contract_template_placeholder_map($existingContractOffer, $existingContractCustomer, ['status' => 'signiert'], $forPdf);
-    if ($signedPlaceholders['beginn_datum'] !== '19.11.2027'
-        || !str_contains($signedPlaceholders['beginn_block'], '19.11.2027')
-        || str_contains($signedPlaceholders['beginn_block'], '15.04.2018')) {
-        throw new RuntimeException('Der unterschriebene Vertrag muss das neue Inkrafttreten nennen.');
-    }
+}
+if (!str_contains($publicJs, 'formatDate(data.offer.startDate)')
+    || str_contains($publicJs, 'formatDate(data.offer.originalStartDate)')) {
+    throw new RuntimeException('Die Signaturansicht muss das neue Vertragsdatum nennen.');
 }
 if ($previewPlaceholders['ausfertigung_satz'] !== 'Beide Parteien erhalten eine Ausfertigung dieses Vertrags.') {
     throw new RuntimeException('Der Bestandskundenvertrag wird in der Ausfertigungsklausel nicht als Vertrag bezeichnet.');
 }
 
-echo "PASS: unsigned documents show the original date, signed documents show the new effective date\n";
+echo "PASS: contract documents show the new effective date\n";
