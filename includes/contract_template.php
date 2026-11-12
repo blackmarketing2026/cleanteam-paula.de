@@ -393,6 +393,7 @@ function default_contract_template_html(): string
     return <<<HTML
 <h2>§ 1 Beginn, Rechtswahl, Vertragssprache</h2>
 {{beginn_block}}
+{{vertragszeitraum_block}}
 
 <h2>§ 2 Vertragsgegenstand und Objekt</h2>
 <p>
@@ -483,6 +484,7 @@ function one_time_contract_template_html(): string
 
     return <<<HTML
 <h2>§ 1 Beginn, Rechtswahl, Vertragssprache</h2>
+{{vertragszeitraum_block}}
 <p>1. Die einmalige Reinigung findet am <strong>{{beginn_datum}}</strong> statt.<br>
 2. Für sämtliche Rechtsbeziehungen der Parteien gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss aller kollisionsrechtlichen Bestimmungen, die in eine andere Rechtsordnung verweisen. Die Vertragssprache ist Deutsch.</p>
 
@@ -647,6 +649,8 @@ function contract_template_placeholder_map(array $offer, array $customer, ?array
     $values['beginn_block'] = $isExistingContract && !$isSigned
         ? '<p>1. Der ursprüngliche Vertrag besteht seit <strong>' . h($effectiveDate) . '</strong>.<br>2. ' . h($legalChoiceText) . '</p>'
         : '<p>1. Der Vertrag zur Gebäudereinigung tritt am <strong>' . h($effectiveDate) . '</strong> in Kraft.<br>2. ' . h($legalChoiceText) . '</p>';
+    $values['vertragszeitraum_block'] = '<p><strong>Vertragsbeginn:</strong> ' . h(!empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'Nicht vereinbart')
+        . '<br><strong>Vertragsende:</strong> ' . h(!empty($offer['end_date']) ? contract_format_date($offer['end_date']) : 'Nicht vereinbart') . '</p>';
     $values['ausfertigung_satz'] = $isExistingContract
         ? 'Beide Parteien erhalten eine Ausfertigung dieses Vertrags.'
         : 'Beide Parteien erhalten eine Ausfertigung dieser Auftragsbestätigung.';

@@ -19,6 +19,7 @@ function render_offer_document(array $offer, array $customer): string
 
     $squareMeters = (int) $offer['square_meters'];
     $areaRow = $squareMeters > 0 ? "<dt>Fläche</dt><dd>{$squareMeters} m²</dd>" : '';
+    $endDate = !empty($offer['end_date']) ? contract_format_date($offer['end_date']) : 'Nicht vereinbart';
     $startDate = $offer['start_date'] !== null
         ? contract_format_date($offer['start_date'])
         : 'Nach Absprache';
@@ -82,7 +83,8 @@ function render_offer_document(array $offer, array $customer): string
 <h2>Vertragsdaten</h2>
 <dl>
   {$areaRow}
-  <dt>Startdatum</dt><dd>{$startDate}</dd>
+  <dt>Vertragsbeginn</dt><dd>{$startDate}</dd>
+  <dt>Vertragsende</dt><dd>{$endDate}</dd>
   {$priceRow}
   <dt>Gültig bis</dt><dd>{$validUntil}</dd>
 </dl>

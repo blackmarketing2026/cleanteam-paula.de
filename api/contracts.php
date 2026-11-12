@@ -48,7 +48,7 @@ function ensure_contracts_authorization_columns(PDO $pdo): void
     }
 }
 
-const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.is_existing_contract, o.original_start_date, o.notes AS offer_notes,
+const CONTRACT_SELECT = 'SELECT ct.*, o.square_meters, o.interval_label, o.service, o.start_date, o.end_date, o.is_existing_contract, o.original_start_date, o.notes AS offer_notes,
     o.customer_obligations_note AS offer_customer_obligations_note,
     o.base_price, o.discount_percent, o.price, o.vat_applicable, o.billing_mode, o.created_at AS offer_created_at, o.token,
     o.sent_at AS offer_sent_at, o.email_opened_at AS offer_email_opened_at, o.link_opened_at AS offer_link_opened_at,
@@ -105,6 +105,7 @@ function contract_row_to_json(array $row): array
             'billingMode' => $row['billing_mode'] ?? 'fixed',
             'service' => $row['service'],
             'startDate' => $row['start_date'],
+            'endDate' => $row['end_date'] ?? null,
             'isExistingContract' => (bool) ($row['is_existing_contract'] ?? false),
             'originalStartDate' => $row['original_start_date'] ?? null,
             'notes' => $row['offer_notes'],
@@ -207,6 +208,7 @@ if ($method === 'PATCH') {
         $price = offer_discounted_price($basePrice, $discountPercent);
         $vatApplicable = (bool) ($body['vatApplicable'] ?? true);
         $startDate = trim((string) ($body['startDate'] ?? ''));
+        $endDate = trim((string) ($body['endDate'] ?? ''));
         $serviceText = str_replace(["\r\n", "\r"], "\n", (string) ($body['serviceText'] ?? ''));
         $customerObligationsNote = str_replace(["\r\n", "\r"], "\n", (string) ($body['customerObligationsNote'] ?? ''));
 
@@ -233,6 +235,10 @@ if ($method === 'PATCH') {
             json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
         }
 
+        if (!valid_offer_end_date($endDate, $startDate)) {
+            json_error('Das Vertragsende muss am oder nach dem Vertragsbeginn liegen.', 422);
+        }
+
         $pdo->beginTransaction();
         try {
             $pdo->prepare(
@@ -249,11 +255,12 @@ if ($method === 'PATCH') {
             ]);
 
             $pdo->prepare(
-                'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date, price = :price, base_price = :base_price, discount_percent = :discount_percent, vat_applicable = :vat_applicable, notes = :notes, customer_obligations_note = :customer_obligations_note WHERE id = :id'
+                'UPDATE offers SET square_meters = :square_meters, interval_label = :interval_label, start_date = :start_date, end_date = :end_date, price = :price, base_price = :base_price, discount_percent = :discount_percent, vat_applicable = :vat_applicable, notes = :notes, customer_obligations_note = :customer_obligations_note WHERE id = :id'
             )->execute([
                     'square_meters' => $squareMeters,
                     'interval_label' => $intervalLabel,
                     'start_date' => $startDate,
+                    'end_date' => $endDate !== '' ? $endDate : null,
                     'price' => $price,
                     'base_price' => $basePrice,
                     'discount_percent' => $discountPercent,

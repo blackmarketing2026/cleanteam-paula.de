@@ -3,8 +3,8 @@ require_once __DIR__ . '/../includes/quote_pdf.php';
 restore_exception_handler();
 
 $offer = ['id' => 'offer-fixture-123456', 'created_at' => '2026-09-12 10:00:00', 'expires_at' => '2026-09-26 10:00:00',
-    'start_date' => '2026-10-01', 'original_start_date' => null, 'is_existing_contract' => 0,
-    'interval_label' => 'Zweimal wöchentlich', 'square_meters' => 555,
+    'start_date' => '2026-10-01', 'end_date' => '2027-09-30', 'original_start_date' => null, 'is_existing_contract' => 0,
+    'interval_label' => 'Zweimal wöchentlich', 'square_meters' => 555, 'service' => 'Reinigung',
     'base_price' => 400.0, 'discount_percent' => 8.0, 'price' => 368.0,
     'vat_applicable' => 1, 'notes' => implode("\n", [
         'Sanitäranlagen und WCs werden hygienisch gereinigt und desinfiziert.',
@@ -23,6 +23,17 @@ $customer = ['name' => 'Test GmbH', 'salutation' => '', 'contact_last_name' => '
     'address' => 'Musterstraße', 'house_number' => '8', 'zip' => '55555', 'city' => 'Musterstadt'];
 
 $pdf = render_quote_pdf($offer, $customer);
+foreach (['Vertragsbeginn', '01.10.2026', 'Vertragsende', '30.09.2027'] as $periodText) {
+    if (!str_contains($pdf, $periodText)) throw new RuntimeException('Missing quote period: ' . $periodText);
+}
+$period = contract_template_placeholder_map($offer, $customer, null, true)['vertragszeitraum_block'];
+foreach (['01.10.2026', '30.09.2027'] as $periodText) {
+    if (!str_contains($period, $periodText)) throw new RuntimeException('Missing contract period: ' . $periodText);
+}
+if (!valid_offer_end_date('', '2026-10-01') || !valid_offer_end_date('2026-10-01', '2026-10-01')
+    || valid_offer_end_date('2026-09-30', '2026-10-01') || valid_offer_end_date('2026-02-30', '2026-01-01')) {
+    throw new RuntimeException('Invalid contract period validation.');
+}
 $contractPdfSource = file_get_contents(__DIR__ . '/../includes/contract_pdf.php');
 if (!str_starts_with($pdf, '%PDF-1.4') || strlen($pdf) < 3000) throw new RuntimeException('KVA-PDF wurde nicht korrekt erzeugt.');
 if (!str_contains($pdf, '8680') || !str_contains($pdf, 'K2130')) throw new RuntimeException('Die festen KVA- und Kundennummern fehlen.');

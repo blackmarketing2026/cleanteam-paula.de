@@ -269,6 +269,7 @@ function ensure_offers_existing_contract_columns(PDO $pdo): void
 {
     $columns = [
         'is_existing_contract' => 'ALTER TABLE offers ADD COLUMN is_existing_contract TINYINT(1) NOT NULL DEFAULT 0 AFTER customer_id',
+        'end_date' => 'ALTER TABLE offers ADD COLUMN end_date DATE NULL AFTER start_date',
         'original_start_date' => 'ALTER TABLE offers ADD COLUMN original_start_date DATE NULL AFTER start_date',
         'signing_location' => "ALTER TABLE offers ADD COLUMN signing_location VARCHAR(80) NOT NULL DEFAULT 'Linz, Österreich' AFTER original_start_date",
     ];
@@ -279,6 +280,13 @@ function ensure_offers_existing_contract_columns(PDO $pdo): void
             $pdo->exec($sql);
         }
     }
+}
+
+function valid_offer_end_date(string $endDate, string $startDate): bool
+{
+    if ($endDate === '') return true;
+    $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $endDate);
+    return $parsed !== false && $parsed->format('Y-m-d') === $endDate && $endDate >= $startDate;
 }
 
 function now_iso(): string

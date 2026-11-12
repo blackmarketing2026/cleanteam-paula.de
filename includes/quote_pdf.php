@@ -63,6 +63,8 @@ function render_quote_pdf(array $offer, array $customer): string
         $discountPercent > 0 ? contract_format_money($discountAmount) : null,
         $hourly
     );
+    $pdf->paragraph('Vertragsbeginn: ' . (!empty($offer['start_date']) ? contract_format_date($offer['start_date']) : 'Nicht vereinbart')
+        . ' | Vertragsende: ' . (!empty($offer['end_date']) ? contract_format_date($offer['end_date']) : 'Nicht vereinbart'), 9.0);
     $pdf->quoteRemarkAndManagement(
         ($hourly ? 'Abrechnung nach tatsächlich geleisteten Stunden anhand eines Stundennachweises. ' : '') . 'Alle genannten Preise verstehen sich als Nettobeträge zuzüglich Mehrwertsteuer. Die Bereitstellung von Reinigungsmitteln sowie die Anfahrtskosten sind im Preis enthalten. Toilettenpapier, Seife und spezielle Müllsäcke werden vom Auftraggeber zur Verfügung gestellt.',
         'Thomas Mündlein'

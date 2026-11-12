@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS offers (
   interval_label VARCHAR(40) NOT NULL,
   service VARCHAR(80) NOT NULL,
   start_date DATE NULL,
+  end_date DATE NULL,
   original_start_date DATE NULL,
   signing_location VARCHAR(80) NOT NULL DEFAULT 'Linz, Österreich',
   notes TEXT NULL,

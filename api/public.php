@@ -140,6 +140,7 @@ function public_state(array $offer, ?array $contract): array
             'billingMode' => $offer['billing_mode'] ?? 'fixed',
             'service' => $offer['service'],
             'startDate' => $offer['start_date'],
+            'endDate' => $offer['end_date'] ?? null,
             'isExistingContract' => (bool) ($offer['is_existing_contract'] ?? false),
             'originalStartDate' => $offer['original_start_date'] ?? null,
             'notes' => $offer['notes'],

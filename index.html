@@ -317,6 +317,7 @@
                 <span id="offer-date-label">Beginn der Dienstleistung *</span>
                 <input id="offer-start-date" type="date" required />
               </label>
+              <label>Vertragsende (optional)<input id="offer-end-date" type="date" /><small class="muted">Leer lassen, wenn kein Ende vereinbart ist.</small></label>
               <label id="offer-time-field" hidden>Uhrzeit (optional)<input id="offer-event-time" type="time" /></label>
               <label>
                 Signaturort *
@@ -408,6 +409,7 @@
               <label>Umsatzsteuer berechnen? *<select id="existing-offer-vat" required><option value="yes" selected>Ja</option><option value="no">Nein</option></select></label>
               <label>Urspr&uuml;nglicher Vertrag *<input id="existing-offer-original-start" type="date" min="1900-01-01" required /></label>
               <label>Neuer Vertrag tritt in Kraft ab *<input id="existing-offer-effective-start" type="date" min="1900-01-01" required /></label>
+              <label>Vertragsende (optional)<input id="existing-offer-end-date" type="date" /><small class="muted">Leer lassen, wenn kein Ende vereinbart ist.</small></label>
               <label>Signaturort *<select id="existing-offer-signing-location" required><option value="">Bitte w&auml;hlen</option><option value="Linz, &Ouml;sterreich">Linz, &Ouml;sterreich</option><option value="Solingen, Deutschland">Solingen, Deutschland</option></select></label>
               <label>Gültigkeitsdauer (Tage) *<input id="existing-offer-validity-days" type="number" min="0" step="1" required value="14" /></label>
               <label>Zusätzliche Stunden (0–24) *
@@ -519,6 +521,8 @@
                     <th>Name</th>
                     <th>Geschäftsführer/Inhaber</th>
                     <th>Datum</th>
+                    <th>Vertragsbeginn</th>
+                    <th>Vertragsende</th>
                     <th>Signatur</th>
                     <th>Status</th>
                     <th>Dokumente</th>
@@ -1342,6 +1346,7 @@
           <span id="contract-correction-date-label">Beginn der Dienstleistung *</span>
           <input id="contract-correction-start-date" type="date" required />
         </label>
+        <label>Vertragsende (optional)<input id="contract-correction-end-date" type="date" /></label>
         <label class="modal-field">
           Umsatzsteuer berechnen? *
           <select id="contract-correction-vat" required>
@@ -1461,6 +1466,7 @@
           <span id="offer-edit-date-label">Beginn der Dienstleistung *</span>
           <input id="offer-edit-start-date" type="date" required />
         </label>
+        <label class="modal-field">Vertragsende (optional)<input id="offer-edit-end-date" type="date" /><small class="muted">Leer lassen, wenn kein Ende vereinbart ist.</small></label>
         <div id="offer-edit-original-start-fields" class="offer-edit-subgrid" hidden>
           <label class="modal-field">Urspr&uuml;nglicher Vertrag *
             <input id="offer-edit-original-start" type="date" min="1900-01-01" />
@@ -1621,7 +1627,7 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="protect.js?v=20261013b"></script>
-    <script src="app.js?v=delete-offer-20261112"></script>
+    <script src="app.js?v=contract-dates-20261112"></script>
     <script src="customer-email-series.js?v=20260908-5"></script>
   </body>
 </html>

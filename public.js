@@ -260,9 +260,13 @@ function renderServiceDetails() {
         ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
       ]
     : [
-        ["Startdatum", offer.startDate ? formatDate(offer.startDate) : "Nach Absprache"],
         ["Monatlicher Preis", `${formatCurrency(offer.price)} netto monatlich`],
       ];
+
+  items.unshift(
+    ["Vertragsbeginn", offer.startDate ? formatDate(offer.startDate) : "Nicht vereinbart"],
+    ["Vertragsende", offer.endDate ? formatDate(offer.endDate) : "Nicht vereinbart"],
+  );
 
   els.serviceDetails.innerHTML = `
     <div class="public-service-card">
