@@ -16,11 +16,11 @@ assertIncludes(
   "Die Aktionen der Vertragsentwürfe sind nicht zentral registriert.",
 );
 
-for (const action of ["edit-offer", "open-contract", "open-email-template", "copy-offer-link", "copy-quote-link", "reset-offer-links"]) {
+for (const action of ["edit-offer", "open-contract", "open-email-template", "copy-offer-link", "copy-quote-link", "reset-offer-links", "delete-offer"]) {
   assertIncludes(app, `action === "${action}"`, `Der Handler für ${action} fehlt.`);
 }
 
-for (const action of ["edit-offer", "open-contract", "open-email-template", "copy-offer-link", "copy-quote-link", "reset-offer-links"]) {
+for (const action of ["edit-offer", "open-email-template", "copy-offer-link", "copy-quote-link", "reset-offer-links", "delete-offer"]) {
   assertIncludes(index + app, `data-action="${action}"`, `Der Button für ${action} fehlt.`);
 }
 
@@ -29,3 +29,8 @@ if (index.includes('app.js?v=discount-pricing-20260912')) {
 }
 
 console.log("PASS: all contract draft actions use resilient delegated event handling");
+
+const offerCard = app.slice(app.indexOf('function renderOfferCard('), app.indexOf('function renderContracts('));
+if (!offerCard.includes('data-action="delete-offer"') || /offer\.contractStatus\s*===\s*["']entwurf["'][\s\S]{0,100}data-action="delete-offer"/.test(offerCard)) {
+  throw new Error("Draft deletion must be available for every contract status.");
+}

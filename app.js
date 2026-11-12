@@ -1485,12 +1485,10 @@ function renderOfferCard(offer) {
           <i data-lucide="pencil" aria-hidden="true"></i>
           <span>Bearbeiten</span>
         </button>
-        ${offer.contractStatus === "entwurf"
-          ? ""
-            : `<button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
-              <i data-lucide="trash-2" aria-hidden="true"></i>
-              <span>Löschen</span>
-            </button>`}
+        <button class="ghost-button" type="button" data-action="delete-offer" data-id="${escapeHtml(offer.id)}">
+          <i data-lucide="trash-2" aria-hidden="true"></i>
+          <span>Löschen</span>
+        </button>
       </div>
     </article>
   `;

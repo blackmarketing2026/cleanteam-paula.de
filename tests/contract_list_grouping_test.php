@@ -36,10 +36,8 @@ assert_contract_list_source_contains(
     "(string) \$row['status'] === 'entwurf'",
     'Offene Verträge sind in der Vertrags-API nicht gegen Löschen geschützt.'
 );
-assert_contract_list_source_contains(
-    $offersApi,
-    "status = 'entwurf'",
-    'Offene Verträge können weiterhin indirekt über den Vertragsentwurf gelöscht werden.'
-);
+if (str_contains($offersApi, "SELECT id FROM contracts WHERE offer_id = :id AND status = 'entwurf' LIMIT 1")) {
+    throw new RuntimeException('Draft deletion must not be blocked by pending contracts.');
+}
 
-echo "PASS: contracts are grouped and pending signatures are protected from deletion\n";
+echo "PASS: contracts are grouped and pending contracts remain protected in the contract list\n";
