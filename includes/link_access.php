@@ -3,13 +3,11 @@
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/auth.php';
 
-// Zugriffsschutz fuer die oeffentlichen Kundenlinks (Vertrags- und KVA-Link) eines
-// Vertragsentwurfs:
-// - "Link sperren" im Adminbereich sperrt alle Links des Entwurfs sofort.
-// - Jeder Link laesst sich nur einmal oeffnen. Der erste Aufruf bindet den Link an
-//   diesen Browser (Sitzungs-Cookie); Neuladen und Folgeschritte in derselben Sitzung
-//   funktionieren weiter, jeder spaetere Aufruf zeigt den Sperrbildschirm.
-// Angemeldete CleanTeam-Nutzer verbrauchen den einmaligen Aufruf nicht.
+// Oeffentliche Kundenlinks duerfen auf mehreren Geraeten geoeffnet werden.
+// Beispielsweise prueft ein Mitarbeiter den Link vor dem Versand und der Kunde
+// oeffnet ihn spaeter auf seinem eigenen Smartphone.
+// Eine explizite Sperre durch "Link sperren" im Adminbereich bleibt wirksam.
+// Ablaufdatum und Vertragsstatus werden von den jeweiligen Endpunkten geprueft.
 
 const LINK_LOCKED_MESSAGE = 'Link ist gesperrt. Bitte melden Sie sich bei CleanTeam.';
 
@@ -29,52 +27,16 @@ function ensure_offer_link_access_columns(PDO $pdo): void
     }
 }
 
-function offer_link_cookie_name(array $offer): string
-{
-    return 'ct_link_' . substr(hash('sha256', (string) $offer['id']), 0, 16);
-}
-
-// Liefert true, wenn der aktuelle Aufruf den Link nutzen darf. Ein noch nie
-// geoeffneter Link wird dabei fuer diesen Browser beansprucht.
+// Ein vorheriger Browser-Aufruf sperrt den Link nicht mehr fuer den Kunden.
+// Bereits gesetzte link_opened_at/link_session_hash-Werte sind nur Altdaten.
 function offer_link_access_allowed(PDO $pdo, array $offer): bool
 {
     ensure_offer_link_access_columns($pdo);
-    $stmt = $pdo->prepare('SELECT link_locked, link_opened_at, link_session_hash FROM offers WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT link_locked FROM offers WHERE id = :id');
     $stmt->execute(['id' => $offer['id']]);
     $access = $stmt->fetch();
-    if (!$access || (int) $access['link_locked'] === 1) {
-        return false;
-    }
-    if (current_user_id() !== null) {
-        return true;
-    }
 
-    $cookieName = offer_link_cookie_name($offer);
-    $cookie = (string) ($_COOKIE[$cookieName] ?? '');
-    if ($access['link_opened_at'] !== null) {
-        return $cookie !== '' && !empty($access['link_session_hash'])
-            && hash_equals((string) $access['link_session_hash'], hash('sha256', $cookie));
-    }
-
-    $secret = bin2hex(random_bytes(32));
-    $claim = $pdo->prepare(
-        'UPDATE offers SET link_opened_at = UTC_TIMESTAMP(), link_session_hash = :hash
-         WHERE id = :id AND link_opened_at IS NULL AND link_locked = 0'
-    );
-    $claim->execute(['hash' => hash('sha256', $secret), 'id' => $offer['id']]);
-    if ($claim->rowCount() !== 1) {
-        // Ein paralleler Aufruf war schneller.
-        return false;
-    }
-    setcookie($cookieName, $secret, [
-        'expires' => 0,
-        'path' => '/',
-        'samesite' => 'Lax',
-        'secure' => is_https_request(),
-        'httponly' => true,
-    ]);
-    $_COOKIE[$cookieName] = $secret;
-    return true;
+    return $access && (int) $access['link_locked'] !== 1;
 }
 
 function require_offer_link_access_json(PDO $pdo, array $offer): void
