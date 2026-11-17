@@ -636,6 +636,7 @@ let oneTimeIntake = false;
 function configureOneTimeIntake() {
   document.querySelector("#offer-interval-field").hidden = oneTimeIntake;
   document.querySelector("#offer-time-field").hidden = !oneTimeIntake;
+  document.querySelector("#offer-end-date-field").hidden = !oneTimeIntake;
   document.querySelector("#offer-billing-mode-field").hidden = !oneTimeIntake;
   const hourly = oneTimeIntake && document.querySelector("#offer-billing-mode").value === "hourly";
   document.querySelector("#offer-base-price-label").textContent = hourly ? "Stundensatz" : "Gesamtpreis";
@@ -1424,7 +1425,7 @@ function renderOfferCard(offer) {
           <div class="record-meta">
             ${offer.squareMeters > 0 ? `<span>${offer.squareMeters} m²</span>` : ""}
             <span>Erstellt am ${formatDate(offer.createdAt)}${offer.isExistingContract ? ` · Ursprünglicher Vertrag ${formatDate(offer.originalStartDate)} · Neuer Vertrag ab ${formatDate(offer.startDate)}` : offer.startDate ? ` · Start ${formatDate(offer.startDate)}` : ""}</span>
-            <span>Vertragsbeginn: ${offer.startDate ? formatDate(offer.startDate) : "Nicht vereinbart"} · Vertragsende: ${offer.endDate ? formatDate(offer.endDate) : "Nicht vereinbart"}</span>
+            ${!offer.isExistingContract && offer.interval === "Einmalig" ? `<span>Vertragsbeginn: ${offer.startDate ? formatDate(offer.startDate) : "Nicht vereinbart"} · Vertragsende: ${offer.endDate ? formatDate(offer.endDate) : "Nicht vereinbart"}</span>` : ""}
             <span>${escapeHtml(sentLabel)}</span>
           </div>
         </div>
@@ -1801,8 +1802,8 @@ function renderContractRow(contract) {
       <td data-label="Name">${escapeHtml(contract.customer.name)}</td>
       <td data-label="Kontakt">${escapeHtml(contactName(contract.customer))}</td>
       <td data-label="Datum">${escapeHtml(formatDate(contract.createdAt))}</td>
-      <td data-label="Vertragsbeginn">${escapeHtml(contract.offer.startDate ? formatDate(contract.offer.startDate) : "Nicht vereinbart")}</td>
-      <td data-label="Vertragsende">${escapeHtml(contract.offer.endDate ? formatDate(contract.offer.endDate) : "Nicht vereinbart")}</td>
+      <td data-label="Vertragsbeginn">${contract.offer.interval === "Einmalig" && !contract.isExistingContract ? escapeHtml(contract.offer.startDate ? formatDate(contract.offer.startDate) : "Nicht vereinbart") : "—"}</td>
+      <td data-label="Vertragsende">${contract.offer.interval === "Einmalig" && !contract.isExistingContract ? escapeHtml(contract.offer.endDate ? formatDate(contract.offer.endDate) : "Nicht vereinbart") : "—"}</td>
       <td data-label="Signatur">${escapeHtml(signedAt)}</td>
       <td data-label="Status"><span class="badge ${badgeClass}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span></td>
       <td data-label="Dokumente">
@@ -1892,7 +1893,6 @@ async function handleExistingOfferSubmit(event) {
       vatApplicable: value("#existing-offer-vat") === "yes",
       originalStartDate: value("#existing-offer-original-start"),
       startDate: value("#existing-offer-effective-start"),
-      endDate: value("#existing-offer-end-date"),
       signingLocation: value("#existing-offer-signing-location"),
       validityDays,
       validityHours,
@@ -2030,7 +2030,7 @@ async function handleOfferSubmit(event) {
     discountPercent,
     vatApplicable: els.offerVat.value === "yes",
     startDate,
-    endDate: document.querySelector("#offer-end-date").value,
+    endDate: oneTimeIntake ? document.querySelector("#offer-end-date").value : "",
     signingLocation,
     validityDays,
     validityHours,
@@ -2382,7 +2382,8 @@ function openContractCorrectionModal(id) {
   );
   els.contractCorrectionVat.value = contract.offer.vatApplicable === false ? "no" : "yes";
   els.contractCorrectionStartDate.value = contract.offer.startDate || "";
-  document.querySelector("#contract-correction-end-date").value = contract.offer.endDate || "";
+  document.querySelector("#contract-correction-end-date-field").hidden = contract.isExistingContract || contract.offer.interval !== "Einmalig";
+  document.querySelector("#contract-correction-end-date").value = contract.offer.interval === "Einmalig" && !contract.isExistingContract ? (contract.offer.endDate || "") : "";
   els.contractCorrectionServiceText.value = contract.offer.notes || "";
   els.contractCorrectionObligationsText.value = contract.offer.customerObligationsNote || "";
   els.contractCorrectionModal.hidden = false;
@@ -2414,7 +2415,7 @@ async function handleContractCorrectionSubmit(event) {
     discountPercent: Number(els.contractCorrectionDiscount.value || 0),
     vatApplicable: els.contractCorrectionVat.value === "yes",
     startDate: els.contractCorrectionStartDate.value,
-    endDate: document.querySelector("#contract-correction-end-date").value,
+    endDate: interval === "Einmalig" ? document.querySelector("#contract-correction-end-date").value : "",
     serviceText: els.contractCorrectionServiceText.value.replace(/\r\n?/g, "\n"),
     customerObligationsNote: els.contractCorrectionObligationsText.value.replace(/\r\n?/g, "\n"),
   };
@@ -2575,7 +2576,8 @@ function openOfferEditModal(id) {
     els.offerEditGrossPricePreview,
   );
   els.offerEditStartDate.value = offer.isExistingContract ? "" : (offer.startDate || "");
-  document.querySelector("#offer-edit-end-date").value = offer.endDate || "";
+  document.querySelector("#offer-edit-end-date-field").hidden = offer.isExistingContract || offer.interval !== "Einmalig";
+  document.querySelector("#offer-edit-end-date").value = offer.interval === "Einmalig" && !offer.isExistingContract ? (offer.endDate || "") : "";
   els.offerEditModal.dataset.existingContract = offer.isExistingContract ? "true" : "false";
   els.offerEditStartDateField.hidden = offer.isExistingContract;
   els.offerEditStartDate.required = !offer.isExistingContract;
@@ -2634,7 +2636,7 @@ async function handleOfferEditSubmit(event) {
     discountPercent: Number(els.offerEditDiscount.value || 0),
     vatApplicable: els.offerEditVat.value === "yes",
     startDate: isExistingContract ? els.offerEditEffectiveStart.value : els.offerEditStartDate.value,
-    endDate: document.querySelector("#offer-edit-end-date").value,
+    endDate: !isExistingContract && interval === "Einmalig" ? document.querySelector("#offer-edit-end-date").value : "",
     validityDays,
     validityHours,
     serviceText: els.offerEditServiceText.value.replace(/\r\n?/g, "\n"),
