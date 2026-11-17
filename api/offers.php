@@ -235,7 +235,7 @@ if ($method === 'POST') {
         'billing_mode' => $billingMode,
         'service' => 'Individuelle Leistung',
         'start_date' => $startDate,
-        'end_date' => !$isExistingContract && $interval === 'Einmalig' && $endDate !== '' ? $endDate : null,
+        'end_date' => $interval === 'Einmalig' && $endDate !== '' ? $endDate : null,
         'signing_location' => $signingLocation,
         'notes' => $serviceText,
         'customer_obligations_note' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
