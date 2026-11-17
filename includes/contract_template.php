@@ -393,7 +393,6 @@ function default_contract_template_html(): string
     return <<<HTML
 <h2>§ 1 Beginn, Rechtswahl, Vertragssprache</h2>
 {{beginn_block}}
-{{vertragszeitraum_block}}
 
 <h2>§ 2 Vertragsgegenstand und Objekt</h2>
 <p>
