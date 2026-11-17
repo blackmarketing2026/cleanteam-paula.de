@@ -1441,7 +1441,7 @@ function renderOfferCard(offer) {
         <span>${escapeHtml(customerAddress(offer.customer))}</span>
       </div>
       <div class="record-actions">
-        <a class="secondary-button" href="${offer.isExistingContract ? `contract.php?token=${encodeURIComponent(offer.token)}&preview=1` : `contract.php?offerId=${encodeURIComponent(offer.id)}&preview=1`}" target="contract-preview-${escapeHtml(offer.id)}" rel="noopener">
+        <a class="secondary-button" href="contract.php?offerId=${encodeURIComponent(offer.id)}&preview=1" target="contract-preview-${escapeHtml(offer.id)}" rel="noopener">
           <i data-lucide="eye" aria-hidden="true"></i>
           <span>Vertrag Vorschau</span>
         </a>
