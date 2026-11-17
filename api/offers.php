@@ -190,7 +190,7 @@ if ($method === 'POST') {
     if ($startDate === '' || strtotime($startDate) === false) {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
     }
-    if (!valid_offer_end_date($endDate, $startDate)) {
+    if ($interval === 'Einmalig' && !valid_offer_end_date($endDate, $startDate)) {
         json_error('Das Vertragsende muss ein gültiges Datum ab Vertragsbeginn sein.', 422);
     }
     if ($signingLocation === null) {
@@ -235,7 +235,7 @@ if ($method === 'POST') {
         'billing_mode' => $billingMode,
         'service' => 'Individuelle Leistung',
         'start_date' => $startDate,
-        'end_date' => $endDate !== '' ? $endDate : null,
+        'end_date' => !$isExistingContract && $interval === 'Einmalig' && $endDate !== '' ? $endDate : null,
         'signing_location' => $signingLocation,
         'notes' => $serviceText,
         'customer_obligations_note' => $customerObligationsNote !== '' ? $customerObligationsNote : null,
@@ -330,7 +330,7 @@ if ($method === 'PUT') {
     if (!$isExistingContract && ($startDate === '' || strtotime($startDate) === false)) {
         json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
     }
-    if (!valid_offer_end_date($endDate, $startDate)) {
+    if (!$isExistingContract && $interval === 'Einmalig' && !valid_offer_end_date($endDate, $startDate)) {
         json_error('Das Vertragsende muss ein gültiges Datum ab Vertragsbeginn sein.', 422);
     }
     if ($signingLocation === null) {
@@ -378,7 +378,7 @@ if ($method === 'PUT') {
             'square_meters' => $squareMeters,
             'interval_label' => $intervalLabel,
             'start_date' => $isExistingContract ? $effectiveStartDate : $startDate,
-            'end_date' => $endDate !== '' ? $endDate : null,
+            'end_date' => !$isExistingContract && $interval === 'Einmalig' && $endDate !== '' ? $endDate : null,
             'original_start_date' => $originalStartDate,
             'signing_location' => $signingLocation,
             'price' => $price,
