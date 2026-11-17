@@ -235,7 +235,7 @@ if ($method === 'PATCH') {
             json_error('Bitte den Beginn der Dienstleistung eintragen.', 422);
         }
 
-        if (!valid_offer_end_date($endDate, $startDate)) {
+        if ($interval === 'Einmalig' && empty($row['is_existing_contract']) && !valid_offer_end_date($endDate, $startDate)) {
             json_error('Das Vertragsende muss am oder nach dem Vertragsbeginn liegen.', 422);
         }
 
@@ -260,7 +260,7 @@ if ($method === 'PATCH') {
                     'square_meters' => $squareMeters,
                     'interval_label' => $intervalLabel,
                     'start_date' => $startDate,
-                    'end_date' => $endDate !== '' ? $endDate : null,
+                    'end_date' => $interval === 'Einmalig' && empty($row['is_existing_contract']) && $endDate !== '' ? $endDate : null,
                     'price' => $price,
                     'base_price' => $basePrice,
                     'discount_percent' => $discountPercent,
