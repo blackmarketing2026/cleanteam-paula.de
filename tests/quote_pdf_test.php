@@ -23,8 +23,14 @@ $customer = ['name' => 'Test GmbH', 'salutation' => '', 'contact_last_name' => '
     'address' => 'Musterstraße', 'house_number' => '8', 'zip' => '55555', 'city' => 'Musterstadt'];
 
 $pdf = render_quote_pdf($offer, $customer);
+foreach (['Vertragsbeginn:', 'Vertragsende:', '30.09.2027'] as $unexpectedText) {
+    if (str_contains($pdf, $unexpectedText)) throw new RuntimeException('Recurring quote must not show one-time period: ' . $unexpectedText);
+}
+$oneTimeOffer = $offer;
+$oneTimeOffer['interval_label'] = 'Einmalig';
+$oneTimePdf = render_quote_pdf($oneTimeOffer, $customer);
 foreach (['Vertragsbeginn', '01.10.2026', 'Vertragsende', '30.09.2027'] as $periodText) {
-    if (!str_contains($pdf, $periodText)) throw new RuntimeException('Missing quote period: ' . $periodText);
+    if (!str_contains($oneTimePdf, $periodText)) throw new RuntimeException('Missing one-time quote period: ' . $periodText);
 }
 $period = contract_template_placeholder_map($offer, $customer, null, true)['vertragszeitraum_block'];
 foreach (['01.10.2026', '30.09.2027'] as $periodText) {
