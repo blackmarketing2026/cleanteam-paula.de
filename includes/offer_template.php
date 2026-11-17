@@ -23,6 +23,9 @@ function render_offer_document(array $offer, array $customer): string
     $startDate = $offer['start_date'] !== null
         ? contract_format_date($offer['start_date'])
         : 'Nach Absprache';
+    $dateRows = (($offer['interval_label'] ?? '') === 'Einmalig' && empty($offer['is_existing_contract']))
+        ? '<dt>Vertragsbeginn</dt><dd>' . h($startDate) . '</dd><dt>Vertragsende</dt><dd>' . h($endDate) . '</dd>'
+        : '<dt>Startdatum</dt><dd>' . h($startDate) . '</dd>';
     $validUntil = contract_format_datetime($offer['expires_at']);
     $price = (float) $offer['price'];
     $priceFormatted = contract_format_money($price);
@@ -83,8 +86,7 @@ function render_offer_document(array $offer, array $customer): string
 <h2>Vertragsdaten</h2>
 <dl>
   {$areaRow}
-  <dt>Vertragsbeginn</dt><dd>{$startDate}</dd>
-  <dt>Vertragsende</dt><dd>{$endDate}</dd>
+  {$dateRows}
   {$priceRow}
   <dt>Gültig bis</dt><dd>{$validUntil}</dd>
 </dl>
