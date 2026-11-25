@@ -576,17 +576,20 @@ function bindEvents() {
 
   document.querySelector("#price-guarantee-back").addEventListener("click", () => showScreen("datenschutz"));
   document.querySelector("#price-guarantee-next").addEventListener("click", () => {
-    const checkbox = document.querySelector("#price-guarantee-accepted");
+    const checkboxes = [document.querySelector("#price-guarantee-accepted"), document.querySelector("#cancellation-accepted")];
     const error = document.querySelector("#price-guarantee-error");
-    if (!checkbox.checked) {
+    const missing = checkboxes.filter((checkbox) => !checkbox.checked);
+    checkboxes.forEach((checkbox) => {
+      if (!checkbox.checked) checkbox.setAttribute("aria-describedby", "price-guarantee-error");
+      else checkbox.removeAttribute("aria-describedby");
+    });
+    if (missing.length) {
       error.hidden = false;
-      checkbox.setAttribute("aria-describedby", "price-guarantee-error");
-      checkbox.focus();
+      missing[0].focus();
       return;
     }
     error.hidden = true;
-    checkbox.removeAttribute("aria-describedby");
-    handleAction("confirm-privacy", { confirmed: true, priceGuaranteeAccepted: true });
+    handleAction("confirm-privacy", { confirmed: true, priceGuaranteeAccepted: true, cancellationAccepted: true });
   });
 
   els.identityCheckYes.addEventListener("click", () => {

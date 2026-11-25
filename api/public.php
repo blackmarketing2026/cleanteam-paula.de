@@ -322,8 +322,8 @@ if ($method === 'POST' && $action === 'confirm-privacy') {
     $body = read_json_body();
     $confirmed = (bool) ($body['confirmed'] ?? false);
 
-    if ($confirmed && empty($offer['is_existing_contract']) && ($body['priceGuaranteeAccepted'] ?? false) !== true) {
-        json_error('Bitte bestaetigen Sie den Hinweis zur Preisgarantie und Kuendigung.', 422);
+    if ($confirmed && empty($offer['is_existing_contract']) && (($body['priceGuaranteeAccepted'] ?? false) !== true || ($body['cancellationAccepted'] ?? false) !== true)) {
+        json_error('Bitte bestaetigen Sie beide Hinweise zur Preisgarantie und Kuendigung.', 422);
     }
 
     if ($confirmed) {

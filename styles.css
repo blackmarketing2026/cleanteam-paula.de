@@ -2999,3 +2999,5 @@ button.compact-item.selected {
 .price-guarantee-confirmation .checkbox-row { align-items: flex-start; cursor: pointer; }
 .price-guarantee-confirmation .checkbox-row input { flex: 0 0 auto; }
 .price-guarantee-error { margin: 8px 0 0; color: #b42318; font-size: 14px; }
+
+.price-guarantee-confirmation .checkbox-row + .checkbox-row { margin-top: 14px; }
