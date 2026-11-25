@@ -70,20 +70,11 @@ header('Cache-Control: no-store, private');
           <p class="step-indicator">Eine kurze Frage</p>
           <h2>D&uuml;rfen wir Ihre Daten speichern?</h2>
           <p class="muted">D&uuml;rfen wir Ihre Daten f&uuml;r die Vertragserstellung hier abspeichern?</p>
-          <div class="form-actions">
-            <button class="ghost-button" data-yesno="no" type="button">Nein</button>
-            <button class="primary-button" data-yesno="yes" type="button">Ja, einverstanden</button>
-          </div>
-        </section>
-
-        <section id="screen-preisgarantie" class="public-screen wizard-screen">
-          <p class="step-indicator">Gut zu wissen</p>
-          <h2>Ein gutes Gef&uuml;hl von Anfang an</h2>
-          <div class="price-guarantee-confirmation">
+          <div id="price-guarantee-confirmation" class="price-guarantee-confirmation" hidden>
             <p class="muted">Uns ist wichtig, dass Sie sich bei uns sicher und flexibel f&uuml;hlen. Darauf k&ouml;nnen Sie sich freuen:</p>
             <label class="checkbox-row">
               <input id="price-guarantee-accepted" type="checkbox" />
-              <span>Preisgarantie: Ihr vereinbarter Preis bleibt bestehen.</span>
+              <span>Preisgarantie: Ihr vereinbarter Preis bleibt bestehen, solange Sie mit uns zusammenarbeiten.</span>
             </label>
             <label class="checkbox-row">
               <input id="cancellation-accepted" type="checkbox" />
@@ -92,8 +83,8 @@ header('Cache-Control: no-store, private');
             <p id="price-guarantee-error" class="price-guarantee-error" role="alert" hidden>Bitte setzen Sie beide H&auml;kchen, um fortzufahren.</p>
           </div>
           <div class="form-actions">
-            <button id="price-guarantee-back" class="ghost-button" type="button">Zur&uuml;ck</button>
-            <button id="price-guarantee-next" class="primary-button" type="button">Weiter</button>
+            <button class="ghost-button" data-yesno="no" type="button">Nein</button>
+            <button class="primary-button" data-yesno="yes" type="button">Ja, ich bin einverstanden</button>
           </div>
         </section>
 
@@ -179,6 +170,6 @@ header('Cache-Control: no-store, private');
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <script src="protect.js?v=20261013b"></script>
-    <script src="public.js?v=two-confirmations-20261125"></script>
+    <script src="public.js?v=privacy-benefits-20261125"></script>
   </body>
 </html>

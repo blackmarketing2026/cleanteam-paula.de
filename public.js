@@ -306,6 +306,7 @@ function renderFinalContract() {
 function routeToState(data) {
   state.offer = data.offer;
   state.contract = data.contract;
+  document.querySelector("#price-guarantee-confirmation").hidden = Boolean(data.offer.isExistingContract);
   if (data.offer.isExistingContract || data.offer.discountExpired || data.contract?.status === "signiert") {
     window.clearInterval(validityTimer);
     if (data.offer.discountExpired) {
@@ -555,7 +556,20 @@ function bindEvents() {
       const confirmed = yesNoButton.dataset.yesno === "yes";
       if (screen.id === "screen-datenschutz") {
         if (confirmed && !state.offer.isExistingContract) {
-          showScreen("preisgarantie");
+          const checkboxes = [document.querySelector("#price-guarantee-accepted"), document.querySelector("#cancellation-accepted")];
+          const error = document.querySelector("#price-guarantee-error");
+          const missing = checkboxes.filter((checkbox) => !checkbox.checked);
+          checkboxes.forEach((checkbox) => {
+            if (!checkbox.checked) checkbox.setAttribute("aria-describedby", "price-guarantee-error");
+            else checkbox.removeAttribute("aria-describedby");
+          });
+          if (missing.length) {
+            error.hidden = false;
+            missing[0].focus();
+            return;
+          }
+          error.hidden = true;
+          handleAction("confirm-privacy", { confirmed: true, priceGuaranteeAccepted: true, cancellationAccepted: true });
         } else {
           handleAction("confirm-privacy", { confirmed });
         }
@@ -572,24 +586,6 @@ function bindEvents() {
         termsAccepted: nextButton.dataset.next === "identitaet" ? true : undefined,
       });
     }
-  });
-
-  document.querySelector("#price-guarantee-back").addEventListener("click", () => showScreen("datenschutz"));
-  document.querySelector("#price-guarantee-next").addEventListener("click", () => {
-    const checkboxes = [document.querySelector("#price-guarantee-accepted"), document.querySelector("#cancellation-accepted")];
-    const error = document.querySelector("#price-guarantee-error");
-    const missing = checkboxes.filter((checkbox) => !checkbox.checked);
-    checkboxes.forEach((checkbox) => {
-      if (!checkbox.checked) checkbox.setAttribute("aria-describedby", "price-guarantee-error");
-      else checkbox.removeAttribute("aria-describedby");
-    });
-    if (missing.length) {
-      error.hidden = false;
-      missing[0].focus();
-      return;
-    }
-    error.hidden = true;
-    handleAction("confirm-privacy", { confirmed: true, priceGuaranteeAccepted: true, cancellationAccepted: true });
   });
 
   els.identityCheckYes.addEventListener("click", () => {
