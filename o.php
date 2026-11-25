@@ -69,7 +69,7 @@ header('Cache-Control: no-store, private');
         <section id="screen-datenschutz" class="public-screen wizard-screen">
           <p class="step-indicator">Eine kurze Frage</p>
           <h2>D&uuml;rfen wir Ihre Daten speichern?</h2>
-          <p class="muted">Wir brauchen Ihre Zustimmung, um den Vertrag zu erstellen. Sind Sie damit einverstanden, dass wir Ihre Daten f&uuml;r die Vertragserstellung speichern?</p>
+          <p class="muted">Sind Sie damit einverstanden, dass wir Ihre Daten in unserem System speichern?</p>
           <div id="price-guarantee-confirmation" class="price-guarantee-confirmation" hidden>
             <p class="muted">Uns ist wichtig, dass Sie sich bei uns sicher und flexibel f&uuml;hlen. Darauf k&ouml;nnen Sie sich freuen:</p>
             <label class="checkbox-row">
