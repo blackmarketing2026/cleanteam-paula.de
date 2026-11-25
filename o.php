@@ -77,19 +77,19 @@ header('Cache-Control: no-store, private');
         </section>
 
         <section id="screen-preisgarantie" class="public-screen wizard-screen">
-          <p class="step-indicator">Bitte best&auml;tigen</p>
-          <h2>Preisgarantie und K&uuml;ndigung</h2>
+          <p class="step-indicator">Gut zu wissen</p>
+          <h2>Ein gutes Gef&uuml;hl von Anfang an</h2>
           <div class="price-guarantee-confirmation">
-            <p class="muted">Ihr Preis bleibt bestehen und Sie k&ouml;nnen jederzeit k&uuml;ndigen.</p>
+            <p class="muted">Uns ist wichtig, dass Sie sich bei uns sicher und flexibel f&uuml;hlen. Darauf k&ouml;nnen Sie sich freuen:</p>
             <label class="checkbox-row">
               <input id="price-guarantee-accepted" type="checkbox" />
-              <span>Ich habe gelesen und verstanden, dass mein Preis bestehen bleibt.</span>
+              <span>Preisgarantie: Ihr vereinbarter Preis bleibt bestehen.</span>
             </label>
             <label class="checkbox-row">
               <input id="cancellation-accepted" type="checkbox" />
-              <span>Ich habe gelesen und verstanden, dass ich jederzeit k&uuml;ndigen kann.</span>
+              <span>Flexibel bleiben: Sie k&ouml;nnen monatlich k&uuml;ndigen.</span>
             </label>
-            <p id="price-guarantee-error" class="price-guarantee-error" role="alert" hidden>Bitte best&auml;tigen Sie beide Hinweise, um fortzufahren.</p>
+            <p id="price-guarantee-error" class="price-guarantee-error" role="alert" hidden>Bitte setzen Sie beide H&auml;kchen, um fortzufahren.</p>
           </div>
           <div class="form-actions">
             <button id="price-guarantee-back" class="ghost-button" type="button">Zur&uuml;ck</button>
