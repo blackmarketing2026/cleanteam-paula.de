@@ -87,7 +87,7 @@ header('Cache-Control: no-store, private');
             </label>
             <label class="checkbox-row">
               <input id="cancellation-accepted" type="checkbox" />
-              <span>Flexibel bleiben: Sie k&ouml;nnen jederzeit k&uuml;ndigen.</span>
+              <span>Sie k&ouml;nnen jederzeit k&uuml;ndigen.</span>
             </label>
             <p id="price-guarantee-error" class="price-guarantee-error" role="alert" hidden>Bitte setzen Sie beide H&auml;kchen, um fortzufahren.</p>
           </div>
