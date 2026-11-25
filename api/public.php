@@ -322,6 +322,10 @@ if ($method === 'POST' && $action === 'confirm-privacy') {
     $body = read_json_body();
     $confirmed = (bool) ($body['confirmed'] ?? false);
 
+    if ($confirmed && empty($offer['is_existing_contract']) && ($body['priceGuaranteeAccepted'] ?? false) !== true) {
+        json_error('Bitte bestaetigen Sie den Hinweis zur Preisgarantie und Kuendigung.', 422);
+    }
+
     if ($confirmed) {
         $pdo->prepare("UPDATE contracts SET current_step = 'signatur', data_confirmed = 1, interval_confirmed = 1, privacy_accepted_at = UTC_TIMESTAMP() WHERE id = :id")
             ->execute(['id' => $contract['id']]);

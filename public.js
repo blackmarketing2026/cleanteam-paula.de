@@ -306,6 +306,7 @@ function renderFinalContract() {
 function routeToState(data) {
   state.offer = data.offer;
   state.contract = data.contract;
+  document.querySelector("#price-guarantee-confirmation").hidden = Boolean(data.offer.isExistingContract);
   if (data.offer.isExistingContract || data.offer.discountExpired || data.contract?.status === "signiert") {
     window.clearInterval(validityTimer);
     if (data.offer.discountExpired) {
@@ -554,7 +555,17 @@ function bindEvents() {
       const screen = yesNoButton.closest(".public-screen");
       const confirmed = yesNoButton.dataset.yesno === "yes";
       if (screen.id === "screen-datenschutz") {
-        handleAction("confirm-privacy", { confirmed });
+        const checkbox = document.querySelector("#price-guarantee-accepted");
+        const error = document.querySelector("#price-guarantee-error");
+        if (confirmed && !state.offer.isExistingContract && !checkbox.checked) {
+          error.hidden = false;
+          checkbox.setAttribute("aria-describedby", "price-guarantee-error");
+          checkbox.focus();
+          return;
+        }
+        error.hidden = true;
+        checkbox.removeAttribute("aria-describedby");
+        handleAction("confirm-privacy", { confirmed, priceGuaranteeAccepted: checkbox.checked });
       } else if (screen.id === "screen-daten") {
         handleAction("confirm-data", { confirmed });
       }

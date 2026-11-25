@@ -2992,3 +2992,10 @@ button.compact-item.selected {
     animation: none;
   }
 }
+
+/* Hinweis vor dem Abschluss eines neuen Vertrags. */
+.price-guarantee-confirmation { margin-top: 24px; padding: 18px; border: 1px solid #d8e2ee; border-radius: 8px; background: #f2f8ff; }
+.price-guarantee-confirmation h3 { margin: 0 0 8px; color: #06203d; font-size: 16px; }
+.price-guarantee-confirmation .checkbox-row { align-items: flex-start; cursor: pointer; }
+.price-guarantee-confirmation .checkbox-row input { flex: 0 0 auto; }
+.price-guarantee-error { margin: 8px 0 0; color: #b42318; font-size: 14px; }

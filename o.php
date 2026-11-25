@@ -16,7 +16,7 @@ header('Cache-Control: no-store, private');
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=paula-updates-20261015" />
+    <link rel="stylesheet" href="styles.css?v=price-confirmation-20261125" />
     <link rel="stylesheet" href="protect.css?v=20261013b" />
   </head>
   <body data-token="<?php echo $token; ?>">
@@ -70,6 +70,15 @@ header('Cache-Control: no-store, private');
           <p class="step-indicator">Eine kurze Frage</p>
           <h2>D&uuml;rfen wir Ihre Daten speichern?</h2>
           <p class="muted">D&uuml;rfen wir Ihre Daten f&uuml;r die Vertragserstellung hier abspeichern?</p>
+          <div id="price-guarantee-confirmation" class="price-guarantee-confirmation" hidden>
+            <h3>Preisgarantie und K&uuml;ndigung</h3>
+            <p class="muted">Ihr Preis bleibt bestehen und Sie k&ouml;nnen jederzeit k&uuml;ndigen.</p>
+            <label class="checkbox-row">
+              <input id="price-guarantee-accepted" type="checkbox" />
+              <span>Ich habe die Preisgarantie und die jederzeitige K&uuml;ndigungsm&ouml;glichkeit gelesen und verstanden.</span>
+            </label>
+            <p id="price-guarantee-error" class="price-guarantee-error" role="alert" hidden>Bitte best&auml;tigen Sie diesen Hinweis, um fortzufahren.</p>
+          </div>
           <div class="form-actions">
             <button class="ghost-button" data-yesno="no" type="button">Nein</button>
             <button class="primary-button" data-yesno="yes" type="button">Ja, einverstanden</button>
@@ -158,6 +167,6 @@ header('Cache-Control: no-store, private');
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <script src="protect.js?v=20261013b"></script>
-    <script src="public.js?v=contract-types-20261117"></script>
+    <script src="public.js?v=price-confirmation-20261125"></script>
   </body>
 </html>
