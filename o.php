@@ -70,8 +70,16 @@ header('Cache-Control: no-store, private');
           <p class="step-indicator">Eine kurze Frage</p>
           <h2>D&uuml;rfen wir Ihre Daten speichern?</h2>
           <p class="muted">D&uuml;rfen wir Ihre Daten f&uuml;r die Vertragserstellung hier abspeichern?</p>
-          <div id="price-guarantee-confirmation" class="price-guarantee-confirmation" hidden>
-            <h3>Preisgarantie und K&uuml;ndigung</h3>
+          <div class="form-actions">
+            <button class="ghost-button" data-yesno="no" type="button">Nein</button>
+            <button class="primary-button" data-yesno="yes" type="button">Ja, einverstanden</button>
+          </div>
+        </section>
+
+        <section id="screen-preisgarantie" class="public-screen wizard-screen">
+          <p class="step-indicator">Bitte best&auml;tigen</p>
+          <h2>Preisgarantie und K&uuml;ndigung</h2>
+          <div class="price-guarantee-confirmation">
             <p class="muted">Ihr Preis bleibt bestehen und Sie k&ouml;nnen jederzeit k&uuml;ndigen.</p>
             <label class="checkbox-row">
               <input id="price-guarantee-accepted" type="checkbox" />
@@ -80,8 +88,8 @@ header('Cache-Control: no-store, private');
             <p id="price-guarantee-error" class="price-guarantee-error" role="alert" hidden>Bitte best&auml;tigen Sie diesen Hinweis, um fortzufahren.</p>
           </div>
           <div class="form-actions">
-            <button class="ghost-button" data-yesno="no" type="button">Nein</button>
-            <button class="primary-button" data-yesno="yes" type="button">Ja, einverstanden</button>
+            <button id="price-guarantee-back" class="ghost-button" type="button">Zur&uuml;ck</button>
+            <button id="price-guarantee-next" class="primary-button" type="button">Weiter</button>
           </div>
         </section>
 
@@ -167,6 +175,6 @@ header('Cache-Control: no-store, private');
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <script src="protect.js?v=20261013b"></script>
-    <script src="public.js?v=price-confirmation-20261125"></script>
+    <script src="public.js?v=price-step-20261125"></script>
   </body>
 </html>
